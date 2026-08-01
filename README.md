@@ -21,6 +21,11 @@ root richiesto.
   a seconda di dove ti trovi: aggiungere/rimuovere dalla home o dal dock,
   spostare un'app alla pagina home precedente/successiva, vedere le info
   dell'app, disinstallarla, oppure **nasconderla**.
+- **Sposta un'app tra le pagine home tenendola premuta**: tieni premuta
+  un'icona in home e trascinala a sinistra o a destra (senza rilasciare) —
+  superata una certa distanza va alla pagina precedente/successiva. Se la
+  tieni premuta senza spostarla (o la sposti pochissimo) si apre invece il
+  menu contestuale di cui sopra, come prima.
 - **App nascoste**: raggiungibili dal menu del cassetto ("⋮ → App
   nascoste") o tenendo premuto su un punto vuoto della home. Si apre
   direttamente la lista, senza PIN o impronta: da lì un interruttore
@@ -28,6 +33,9 @@ root richiesto.
 - Tieni premuto su un punto vuoto della home per aggiungere un'app, cambiare
   sfondo (apre il selettore di sfondo di sistema) o accedere alle app
   nascoste.
+- **Per chiudere** cassetto e app nascoste: trascina verso il basso dalla
+  barra di ricerca in alto (funziona sempre), oppure la X, oppure il tasto
+  indietro di sistema.
 
 ## Dock: limite di 5 app
 
@@ -90,12 +98,15 @@ dal menu contestuale di un'icona o da Gestisci app).
   sottosistema a parte (`AppWidgetHost`) che non è stato incluso per tenere
   lo scope gestibile e verificabile. Può essere aggiunto in un secondo
   momento.
-- **Nessun drag & drop** per riordinare le icone all'interno di una stessa
-  pagina: si può però spostare un'app a una pagina diversa dal menu
-  contestuale ("Sposta a pagina precedente/successiva").
-- Lo sfondo sfocato del cassetto/app nascoste usa `Modifier.blur()`, che ha
-  effetto solo da Android 12 (API 31) in su: su Android 8-11 lo sfondo si
-  vede nitido invece che sfocato (nessun crash, solo niente blur).
-- Le interazioni gestuali (swipe-up, long-press) e le animazioni sono state
-  scritte secondo i pattern standard di Jetpack Compose ma non tutte
-  verificate su un device reale in questa sessione.
+- **Nessun riordino via drag & drop all'interno della stessa pagina**: si
+  può spostare un'app da una pagina all'altra tenendola premuta (o dal menu
+  contestuale), ma non ancora cambiarne la posizione tra le icone della
+  stessa pagina.
+- Lo sfondo sfocato del cassetto/app nascoste è calcolato una sola volta
+  (blur software su una copia piccola dello sfondo, non un effetto live),
+  quindi funziona su tutte le versioni Android supportate (26+), non solo
+  da Android 12 in su.
+- Le interazioni gestuali (swipe-up, swipe-down, drag tra pagine) e le
+  animazioni sono state scritte secondo i pattern standard di Jetpack
+  Compose ma non tutte verificate su un device reale in questa sessione —
+  se qualcosa si comporta in modo imprevisto, segnalalo pure.

@@ -33,6 +33,7 @@ import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppGridTile
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
+import com.hiddenlayer.launcher.ui.dragDownToClose
 import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
 
 /**
@@ -61,6 +62,7 @@ fun HiddenDrawerScreen(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
+                    modifier = Modifier.dragDownToClose(onClose),
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                     title = {
                         OutlinedTextField(

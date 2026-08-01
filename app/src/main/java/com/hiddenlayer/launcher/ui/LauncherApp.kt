@@ -63,7 +63,8 @@ fun LauncherApp(viewModel: LauncherViewModel) {
                 onAppLongPress = { app, origin, slot -> viewModel.showContextMenu(app, origin, slot) },
                 onDockSlotLongPress = { slot -> viewModel.openDrawerForDockPick(slot) },
                 onEmptyPageLongPress = { showEmptyPageMenu = true },
-                onOpenDrawer = viewModel::openDrawer
+                onOpenDrawer = viewModel::openDrawer,
+                onMoveAppToAdjacentPage = viewModel::moveToAdjacentPage
             )
 
             Screen.DRAWER -> DrawerScreen(

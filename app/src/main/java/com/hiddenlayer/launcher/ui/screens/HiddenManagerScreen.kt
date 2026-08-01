@@ -25,6 +25,7 @@ import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
+import com.hiddenlayer.launcher.ui.dragDownToClose
 import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
 
 /**
@@ -49,6 +50,7 @@ fun HiddenManagerScreen(
             containerColor = Color.Transparent,
             topBar = {
                 TopAppBar(
+                    modifier = Modifier.dragDownToClose(onDone),
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = Color.Transparent,
                         titleContentColor = Color.White
