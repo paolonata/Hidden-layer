@@ -2,13 +2,14 @@ package com.hiddenlayer.launcher
 
 import android.content.Intent
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.fragment.app.FragmentActivity
+import com.hiddenlayer.launcher.auth.BiometricHelper
 import com.hiddenlayer.launcher.ui.LauncherApp
 import com.hiddenlayer.launcher.ui.theme.HiddenLayerTheme
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     private val viewModel: LauncherViewModel by viewModels()
 
@@ -18,7 +19,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             HiddenLayerTheme {
-                LauncherApp(viewModel = viewModel)
+                LauncherApp(
+                    viewModel = viewModel,
+                    canUseBiometrics = { BiometricHelper.canUseBiometrics(this) },
+                    onRequestBiometric = {
+                        BiometricHelper.authenticate(this) { viewModel.onUnlockSucceeded() }
+                    }
+                )
             }
         }
     }
@@ -26,6 +33,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshApps()
+    }
+
+    /** Leaving the launcher for any reason — opening an app, screen off, task switcher —
+     * closes the vault, so it is never left open behind your back and coming back always
+     * lands on the home screen. */
+    override fun onStop() {
+        super.onStop()
+        viewModel.lockVault()
     }
 
     override fun onNewIntent(intent: Intent) {

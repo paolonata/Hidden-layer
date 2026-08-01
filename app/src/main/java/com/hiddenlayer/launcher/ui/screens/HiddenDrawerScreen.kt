@@ -35,6 +35,7 @@ import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppGridTile
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
+import com.hiddenlayer.launcher.ui.SecureScreen
 import com.hiddenlayer.launcher.ui.closeOnDragDown
 
 /**
@@ -54,6 +55,7 @@ fun HiddenDrawerScreen(
     onClose: () -> Unit
 ) {
     BackHandler(onBack = onClose)
+    SecureScreen()
     val gridState = rememberLazyGridState()
 
     Box(

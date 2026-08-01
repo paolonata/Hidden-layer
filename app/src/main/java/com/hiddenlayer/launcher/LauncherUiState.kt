@@ -4,7 +4,7 @@ import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 
-enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER }
+enum class Screen { HOME, DRAWER, VAULT_UNLOCK, HIDDEN_DRAWER, HIDDEN_MANAGER }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
@@ -29,6 +29,9 @@ data class LauncherUiState(
     /** How many icons fit on one home page, measured from the real screen height by
      * HomeScreen (rows that fit x columns) rather than hardcoded. */
     val pageSize: Int = HomeLayoutRepository.DEFAULT_PAGE_SIZE,
+    /** Whether opening the vault asks for biometrics/PIN first (off until switched on). */
+    val unlockRequired: Boolean = false,
+    val unlockError: Boolean = false,
     val loaded: Boolean = false
 ) {
     val homeApps: List<AppInfo>

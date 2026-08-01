@@ -3,9 +3,20 @@
 Launcher Android sostitutivo, pensato per MIUI/HyperOS: home a pagine + dock
 personalizzabile (5 posizioni) + cassetto delle app, esattamente come il
 layout "Home + cassetto applicazioni" che MIUI offre di serie — con in più
-la possibilità di **nascondere singole app** per pulire la vista, senza
-nessuna protezione da sblocco: è solo un filtro, non una cassaforte. Nessun
-root richiesto.
+un'area riservata per le app che non vuoi far vedere. Nessun root richiesto.
+
+## Tre livelli, non due
+
+Sono due esigenze diverse e vanno tenute separate, altrimenti si finisce per
+usare lo strumento della riservatezza per fare le pulizie:
+
+1. **Home** — solo i tuoi preferiti. Togliere un'app dalla home *non* la
+   nasconde: sparisce dalla home e basta, resta nel cassetto.
+2. **Cassetto** — l'indice completo delle app installate, comprese quelle in
+   home. È dove cerchi ciò che usi di rado. Nessun blocco, nessuna cerimonia.
+3. **App nascoste** — le poche app davvero private. Non compaiono in home,
+   **non compaiono nel cassetto e non escono nella ricerca**: esistono solo
+   dentro la loro area.
 
 ## Come funziona
 
@@ -29,15 +40,41 @@ root richiesto.
   tieni premuta senza spostarla (o la sposti pochissimo) si apre invece il
   menu contestuale di cui sopra, come prima.
 - **App nascoste**: raggiungibili dal menu del cassetto ("⋮ → App
-  nascoste") o tenendo premuto su un punto vuoto della home. Si apre
-  direttamente la lista, senza PIN o impronta: da lì un interruttore
-  nasconde/mostra ogni app, e toccare un'app nascosta la apre.
+  nascoste") o tenendo premuto su un punto vuoto della home. Si apre un
+  cassetto a parte, con sfondo più scuro, che contiene solo le app nascoste:
+  ricerca e tocco per aprirle. L'icona ingranaggio lì dentro porta alle
+  impostazioni, dove scegli quali app nascondere e se richiedere lo sblocco.
 - Tieni premuto su un punto vuoto della home per aggiungere un'app, cambiare
   sfondo (apre il selettore di sfondo di sistema) o accedere alle app
   nascoste.
 - **Per chiudere** cassetto e app nascoste: trascina verso il basso da un
   punto qualsiasi (quando la griglia è già in cima), oppure dalla
   maniglietta in alto, oppure la X, oppure il tasto indietro di sistema.
+
+## Riservatezza: cosa fa e cosa non può fare
+
+**Cosa fa.** Le app nascoste spariscono da home, cassetto e ricerca del
+launcher. L'elenco è cifrato a riposo (AES-256-GCM, chiave nel Keystore
+hardware), quindi non è leggibile da altre app senza root. In più:
+
+- **Sblocco facoltativo** (interruttore nelle impostazioni): impronta con
+  PIN di riserva. Attivarlo obbliga a impostare un PIN, perché la biometria
+  può smettere di funzionare e non devi restare fuori dalle tue app.
+- **Niente anteprime né screenshot** mentre sei nell'area riservata
+  (`FLAG_SECURE`): non compare nella schermata delle app recenti.
+- **Richiusura automatica**: appena esci dal launcher — apri un'app, spegni
+  lo schermo, cambi task — l'area si richiude. Riaprendo riparti dalla home,
+  mai da dove eri rimasto.
+
+**Cosa NON può fare.** Un launcher nasconde le app solo dentro di sé. Senza
+root non è possibile toglierle da: Impostazioni > App, la ricerca globale di
+MIUI, il Play Store, le notifiche, le statistiche di utilizzo e batteria, e
+le schermate recenti dell'app stessa una volta aperta. Chi ispeziona
+davvero il telefono le trova.
+
+Detto in breve: protegge da chi dà un'occhiata al tuo telefono, non da chi
+lo esamina. Se serve di più, su MIUI l'unica strada seria è il **Secondo
+Spazio** di sistema.
 
 ## Dock: limite di 5 app
 

@@ -26,18 +26,23 @@ import com.hiddenlayer.launcher.ui.screens.DrawerScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenDrawerScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenManagerScreen
 import com.hiddenlayer.launcher.ui.screens.HomeScreen
+import com.hiddenlayer.launcher.ui.screens.VaultUnlockScreen
 
 /** Nesting depth of each screen, used purely to pick the slide direction: going to a
  * shallower screen plays as "closing" (slides down), going deeper plays as "opening"
  * (slides up) — e.g. HIDDEN_MANAGER is nested one level under HIDDEN_DRAWER. */
 private fun screenDepth(screen: Screen): Int = when (screen) {
     Screen.HOME -> 0
-    Screen.DRAWER, Screen.HIDDEN_DRAWER -> 1
+    Screen.DRAWER, Screen.VAULT_UNLOCK, Screen.HIDDEN_DRAWER -> 1
     Screen.HIDDEN_MANAGER -> 2
 }
 
 @Composable
-fun LauncherApp(viewModel: LauncherViewModel) {
+fun LauncherApp(
+    viewModel: LauncherViewModel,
+    canUseBiometrics: () -> Boolean,
+    onRequestBiometric: () -> Unit
+) {
     val state by viewModel.uiState.collectAsState()
     val context = LocalContext.current
 
@@ -77,6 +82,14 @@ fun LauncherApp(viewModel: LauncherViewModel) {
                 onClose = viewModel::backToHome
             )
 
+            Screen.VAULT_UNLOCK -> VaultUnlockScreen(
+                error = state.unlockError,
+                canUseBiometrics = canUseBiometrics(),
+                onBiometricRequest = onRequestBiometric,
+                onPinSubmit = viewModel::verifyPin,
+                onCancel = viewModel::backToHome
+            )
+
             Screen.HIDDEN_DRAWER -> HiddenDrawerScreen(
                 state = state,
                 onQueryChange = viewModel::onQueryChange,
@@ -89,6 +102,8 @@ fun LauncherApp(viewModel: LauncherViewModel) {
             Screen.HIDDEN_MANAGER -> HiddenManagerScreen(
                 state = state,
                 onToggleHidden = viewModel::toggleHidden,
+                onSetPin = viewModel::setVaultPin,
+                onDisableLock = viewModel::disableVaultLock,
                 onDone = viewModel::backToHiddenDrawer
             )
         }

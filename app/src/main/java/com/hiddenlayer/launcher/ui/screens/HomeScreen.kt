@@ -43,9 +43,11 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -102,6 +104,7 @@ fun HomeScreen(
     }
 
     val density = LocalDensity.current
+    val haptics = LocalHapticFeedback.current
     val topExclusionPx = remember(density) { with(density) { TOP_GESTURE_EXCLUSION.toPx() } }
     val pageMoveThresholdPx = remember(density) { with(density) { PAGE_MOVE_THRESHOLD.toPx() } }
     val tapVsDragThresholdPx = remember(density) { with(density) { TAP_VS_DRAG_THRESHOLD.toPx() } }
@@ -112,6 +115,9 @@ fun HomeScreen(
     var draggedApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOrigin by remember { mutableStateOf(Offset.Zero) }
     var dragCurrent by remember { mutableStateOf(Offset.Zero) }
+    // Only true once the finger has actually travelled: a stationary long press shouldn't
+    // make the icon dim and a copy of it jump under the finger, which read as a glitch.
+    var dragVisible by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -134,6 +140,9 @@ fun HomeScreen(
                                 dragOrigin = change.position
                             }
                             dragCurrent = change.position
+                            if (!dragVisible && (dragCurrent - dragOrigin).getDistance() > tapVsDragThresholdPx) {
+                                dragVisible = true
+                            }
                             change.consume()
                         }
                         if (!change.pressed) break
@@ -149,6 +158,7 @@ fun HomeScreen(
                             moved.x < -pageMoveThresholdPx -> onMoveAppToAdjacentPage(app, -1)
                         }
                         draggedApp = null
+                        dragVisible = false
                     }
                 }
             }
@@ -188,9 +198,12 @@ fun HomeScreen(
                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { pageIndex ->
                     HomePage(
                         apps = pages.getOrElse(pageIndex) { emptyList() },
-                        draggedApp = draggedApp,
+                        draggedApp = if (dragVisible) draggedApp else null,
                         onAppTap = onAppTap,
-                        onAppLongPress = { app -> draggedApp = app },
+                        onAppLongPress = { app ->
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            draggedApp = app
+                        },
                         onEmptyLongPress = onEmptyPageLongPress
                     )
                 }
@@ -224,7 +237,7 @@ fun HomeScreen(
             )
         }
 
-        draggedApp?.let { app ->
+        draggedApp?.takeIf { dragVisible }?.let { app ->
             Box(
                 modifier = Modifier.offset {
                     IntOffset(

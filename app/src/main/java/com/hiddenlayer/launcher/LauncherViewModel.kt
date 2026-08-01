@@ -56,6 +56,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 hiddenPackages = hidden,
                 homeComponents = home,
                 dockComponents = dock,
+                unlockRequired = hiddenAppsRepository.isUnlockRequired(),
                 loaded = true
             )
         }
@@ -203,16 +204,53 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         dismissContextMenu()
     }
 
-    /** Opens the incognito-style drawer that shows only hidden apps — this is the normal
-     * way to actually open one, not the toggle list. */
+    /** Opens the drawer that shows only hidden apps — this is the normal way to actually
+     * open one, not the toggle list. Goes through the unlock screen first if the user has
+     * switched the lock on. */
     fun openHiddenDrawer() {
-        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_DRAWER, query = "")
+        val locked = hiddenAppsRepository.isUnlockRequired() && hiddenAppsRepository.isPinSet()
+        _uiState.value = _uiState.value.copy(
+            screen = if (locked) Screen.VAULT_UNLOCK else Screen.HIDDEN_DRAWER,
+            query = "",
+            unlockError = false
+        )
+    }
+
+    fun onUnlockSucceeded() {
+        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_DRAWER, unlockError = false)
+    }
+
+    fun verifyPin(pin: String) {
+        if (hiddenAppsRepository.verifyPin(pin)) {
+            onUnlockSucceeded()
+        } else {
+            _uiState.value = _uiState.value.copy(unlockError = true)
+        }
+    }
+
+    /** Called when the launcher stops (app opened, screen off, task switched): the vault
+     * never stays open behind your back, so coming back always lands on the home screen. */
+    fun lockVault() {
+        val screen = _uiState.value.screen
+        if (screen == Screen.HIDDEN_DRAWER || screen == Screen.HIDDEN_MANAGER || screen == Screen.VAULT_UNLOCK) {
+            backToHome()
+        }
     }
 
     /** Opens the toggle list to choose which apps are hidden — reached from within the
      * hidden drawer (like a settings screen), not a direct way to launch anything. */
     fun openHiddenSettings() {
         _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_MANAGER)
+    }
+
+    fun setVaultPin(pin: String) {
+        hiddenAppsRepository.setPin(pin)
+        _uiState.value = _uiState.value.copy(unlockRequired = true)
+    }
+
+    fun disableVaultLock() {
+        hiddenAppsRepository.disableUnlock()
+        _uiState.value = _uiState.value.copy(unlockRequired = false)
     }
 
     fun toggleHidden(app: AppInfo) {
