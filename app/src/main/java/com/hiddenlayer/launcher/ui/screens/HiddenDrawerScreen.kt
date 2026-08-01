@@ -12,10 +12,8 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -26,36 +24,38 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
-import com.hiddenlayer.launcher.DrawerMode
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppGridTile
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
 
+/**
+ * The actual way to reach a hidden app: a drawer just like the regular one, scoped to
+ * only the apps you've hidden, over a darker "incognito" tint so it reads as a distinct
+ * space. Managing *which* apps are hidden lives one level deeper, behind the gear icon
+ * (HiddenManagerScreen) — this screen is for opening apps, not for toggling visibility.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DrawerScreen(
+fun HiddenDrawerScreen(
     state: LauncherUiState,
     onQueryChange: (String) -> Unit,
     onAppClick: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo) -> Unit,
-    onOpenHiddenDrawer: () -> Unit,
+    onOpenSettings: () -> Unit,
     onClose: () -> Unit
 ) {
     BackHandler(onBack = onClose)
     val closeOnPullDown = rememberCloseOnPullDown(onClose)
 
     Box(modifier = Modifier.fillMaxSize()) {
-        BlurredWallpaperBackground()
+        BlurredWallpaperBackground(scrimAlpha = 0.5f)
 
         Scaffold(
             containerColor = Color.Transparent,
@@ -67,8 +67,9 @@ fun DrawerScreen(
                             value = state.query,
                             onValueChange = onQueryChange,
                             singleLine = true,
-                            placeholder = {
-                                Text(if (state.drawerMode == DrawerMode.BROWSE) "Cerca app" else "Scegli un'app")
+                            placeholder = { Text("Cerca tra le app nascoste") },
+                            leadingIcon = {
+                                Icon(Icons.Default.VisibilityOff, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
                             },
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = Color.White,
@@ -86,38 +87,40 @@ fun DrawerScreen(
                         }
                     },
                     actions = {
-                        if (state.drawerMode == DrawerMode.BROWSE) {
-                            var menuExpanded by remember { mutableStateOf(false) }
-                            IconButton(onClick = { menuExpanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
-                            }
-                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("App nascoste") },
-                                    leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenHiddenDrawer()
-                                    }
-                                )
-                            }
+                        IconButton(onClick = onOpenSettings) {
+                            Icon(Icons.Default.Settings, contentDescription = "Gestisci app nascoste", tint = Color.White)
                         }
                     }
                 )
             }
         ) { padding ->
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                contentPadding = PaddingValues(16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .nestedScroll(closeOnPullDown)
-            ) {
-                items(state.visibleApps, key = { it.componentName.flattenToString() }) { app ->
-                    AppGridTile(app = app, onTap = { onAppClick(app) }, onLongPress = { onAppLongPress(app) })
+            if (state.hiddenApps.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Nessuna app nascosta. Tieni premuto su un'app (in home o nel cassetto) e scegli \"Nascondi app\", oppure usa l'icona impostazioni qui sopra.",
+                        modifier = Modifier.padding(32.dp),
+                        color = Color.White.copy(alpha = 0.8f)
+                    )
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
+                    contentPadding = PaddingValues(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .nestedScroll(closeOnPullDown)
+                ) {
+                    items(state.hiddenVisibleApps, key = { it.componentName.flattenToString() }) { app ->
+                        AppGridTile(app = app, onTap = { onAppClick(app) }, onLongPress = { onAppLongPress(app) })
+                    }
                 }
             }
         }

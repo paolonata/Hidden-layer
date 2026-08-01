@@ -1,7 +1,6 @@
 package com.hiddenlayer.launcher.ui.screens
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,11 +27,15 @@ import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
 
+/**
+ * Settings screen for choosing *which* apps are hidden — reached from a gear icon inside
+ * HiddenDrawerScreen. Purely a toggle list: this is not how you open a hidden app (that's
+ * the hidden drawer itself), so there is no tap-to-launch here on purpose.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HiddenManagerScreen(
     state: LauncherUiState,
-    onAppClick: (AppInfo) -> Unit,
     onToggleHidden: (AppInfo) -> Unit,
     onDone: () -> Unit
 ) {
@@ -50,7 +53,7 @@ fun HiddenManagerScreen(
                         containerColor = Color.Transparent,
                         titleContentColor = Color.White
                     ),
-                    title = { Text("App nascoste") },
+                    title = { Text("Gestisci app nascoste") },
                     navigationIcon = {
                         TextButton(onClick = onDone) { Text("Chiudi", color = Color.White) }
                     }
@@ -65,7 +68,7 @@ fun HiddenManagerScreen(
             ) {
                 item {
                     Text(
-                        "Tocca un'app nascosta per aprirla. Usa l'interruttore per nasconderla o mostrarla nel cassetto e nella home. Nascondere un'app è solo un modo per pulire la vista: non serve alcun PIN.",
+                        "Scegli quali app nascondere. Non serve alcun PIN: è solo un filtro per pulire la vista. Per aprire un'app già nascosta, chiudi questa schermata e usa il cassetto delle app nascoste.",
                         modifier = Modifier.padding(16.dp),
                         color = Color.White.copy(alpha = 0.85f)
                     )
@@ -78,8 +81,7 @@ fun HiddenManagerScreen(
                         trailingContent = {
                             Switch(checked = hidden, onCheckedChange = { onToggleHidden(app) })
                         },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                        modifier = Modifier.clickable(enabled = hidden) { onAppClick(app) }
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                 }

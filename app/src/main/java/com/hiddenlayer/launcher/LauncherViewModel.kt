@@ -115,6 +115,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
+    /** Back from the nested "manage hidden apps" settings screen to the hidden drawer
+     * it was opened from (rather than all the way home). */
+    fun backToHiddenDrawer() {
+        _uiState.value = _uiState.value.copy(
+            screen = Screen.HIDDEN_DRAWER,
+            query = "",
+            contextMenu = null
+        )
+    }
+
     private fun syncLayout() {
         _uiState.value = _uiState.value.copy(
             homeComponents = homeLayoutRepository.getHomeItems(),
@@ -184,7 +194,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         dismissContextMenu()
     }
 
-    fun openHiddenManager() {
+    /** Opens the incognito-style drawer that shows only hidden apps — this is the normal
+     * way to actually open one, not the toggle list. */
+    fun openHiddenDrawer() {
+        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_DRAWER, query = "")
+    }
+
+    /** Opens the toggle list to choose which apps are hidden — reached from within the
+     * hidden drawer (like a settings screen), not a direct way to launch anything. */
+    fun openHiddenSettings() {
         _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_MANAGER)
     }
 

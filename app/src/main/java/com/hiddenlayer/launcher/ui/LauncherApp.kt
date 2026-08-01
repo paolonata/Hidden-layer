@@ -23,8 +23,18 @@ import com.hiddenlayer.launcher.Screen
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.screens.DrawerScreen
+import com.hiddenlayer.launcher.ui.screens.HiddenDrawerScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenManagerScreen
 import com.hiddenlayer.launcher.ui.screens.HomeScreen
+
+/** Nesting depth of each screen, used purely to pick the slide direction: going to a
+ * shallower screen plays as "closing" (slides down), going deeper plays as "opening"
+ * (slides up) — e.g. HIDDEN_MANAGER is nested one level under HIDDEN_DRAWER. */
+private fun screenDepth(screen: Screen): Int = when (screen) {
+    Screen.HOME -> 0
+    Screen.DRAWER, Screen.HIDDEN_DRAWER -> 1
+    Screen.HIDDEN_MANAGER -> 2
+}
 
 @Composable
 fun LauncherApp(viewModel: LauncherViewModel) {
@@ -36,12 +46,10 @@ fun LauncherApp(viewModel: LauncherViewModel) {
     AnimatedContent(
         targetState = state.screen,
         transitionSpec = {
-            if (targetState == Screen.HOME) {
-                // Closing an overlay: it slides back down, home settles back in underneath.
+            if (screenDepth(targetState) < screenDepth(initialState)) {
                 (fadeIn() + slideInVertically { height -> -height / 6 }) togetherWith
                     (fadeOut() + slideOutVertically { height -> height })
             } else {
-                // Opening drawer/hidden-apps: it slides up over the home screen.
                 (fadeIn() + slideInVertically { height -> height }) togetherWith
                     (fadeOut() + slideOutVertically { height -> -height / 6 })
             }
@@ -63,15 +71,23 @@ fun LauncherApp(viewModel: LauncherViewModel) {
                 onQueryChange = viewModel::onQueryChange,
                 onAppClick = viewModel::onDrawerAppClick,
                 onAppLongPress = { app -> viewModel.showContextMenu(app, MenuOrigin.DRAWER) },
-                onOpenHiddenManager = viewModel::openHiddenManager,
+                onOpenHiddenDrawer = viewModel::openHiddenDrawer,
+                onClose = viewModel::backToHome
+            )
+
+            Screen.HIDDEN_DRAWER -> HiddenDrawerScreen(
+                state = state,
+                onQueryChange = viewModel::onQueryChange,
+                onAppClick = viewModel::launchApp,
+                onAppLongPress = { app -> viewModel.showContextMenu(app, MenuOrigin.HIDDEN_DRAWER) },
+                onOpenSettings = viewModel::openHiddenSettings,
                 onClose = viewModel::backToHome
             )
 
             Screen.HIDDEN_MANAGER -> HiddenManagerScreen(
                 state = state,
-                onAppClick = viewModel::launchApp,
                 onToggleHidden = viewModel::toggleHidden,
-                onDone = viewModel::backToHome
+                onDone = viewModel::backToHiddenDrawer
             )
         }
     }
@@ -100,7 +116,7 @@ fun LauncherApp(viewModel: LauncherViewModel) {
                 },
                 MenuAction("App nascoste") {
                     showEmptyPageMenu = false
-                    viewModel.openHiddenManager()
+                    viewModel.openHiddenDrawer()
                 }
             ),
             onDismiss = { showEmptyPageMenu = false }
@@ -139,6 +155,7 @@ private fun buildContextMenuActions(
                 actions += MenuAction("Sposta a pagina precedente") { viewModel.moveToAdjacentPage(app, -1) }
             }
             actions += MenuAction("Sposta a pagina successiva") { viewModel.moveToAdjacentPage(app, +1) }
+            actions += MenuAction("Nascondi app") { viewModel.hideApp(app) }
         }
         MenuOrigin.DOCK -> {
             actions += MenuAction("Rimuovi dal dock") { viewModel.removeFromHome(app) }
@@ -146,14 +163,18 @@ private fun buildContextMenuActions(
                 viewModel.dismissContextMenu()
                 viewModel.openDrawerForDockPick(menu.dockSlot)
             }
+            actions += MenuAction("Nascondi app") { viewModel.hideApp(app) }
         }
         MenuOrigin.DRAWER -> {
             actions += MenuAction("Aggiungi alla home") { viewModel.addToHome(app) }
+            actions += MenuAction("Nascondi app") { viewModel.hideApp(app) }
+        }
+        MenuOrigin.HIDDEN_DRAWER -> {
+            actions += MenuAction("Mostra app") { viewModel.toggleHidden(app) }
         }
     }
 
     actions += MenuAction("Info app") { viewModel.openAppInfo(app) }
-    actions += MenuAction("Nascondi app") { viewModel.hideApp(app) }
     actions += MenuAction("Disinstalla", destructive = true) { viewModel.requestUninstall(app) }
     return actions
 }

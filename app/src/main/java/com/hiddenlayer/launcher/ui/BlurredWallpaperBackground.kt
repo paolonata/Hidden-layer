@@ -27,7 +27,7 @@ import androidx.core.graphics.drawable.toBitmap
  * effect on API 31+; on 26-30 the wallpaper shows through sharp instead of blurred.
  */
 @Composable
-fun BlurredWallpaperBackground(modifier: Modifier = Modifier) {
+fun BlurredWallpaperBackground(modifier: Modifier = Modifier, scrimAlpha: Float = 0.28f) {
     val context = LocalContext.current
     val wallpaperBitmap = remember {
         runCatching { WallpaperManager.getInstance(context).drawable?.toBitmap() }.getOrNull()
@@ -47,7 +47,7 @@ fun BlurredWallpaperBackground(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.28f))
+                .background(Color.Black.copy(alpha = scrimAlpha))
         )
     }
 }

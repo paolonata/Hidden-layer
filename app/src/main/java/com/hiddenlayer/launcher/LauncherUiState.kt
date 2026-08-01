@@ -4,11 +4,11 @@ import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 
-enum class Screen { HOME, DRAWER, HIDDEN_MANAGER }
+enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
-enum class MenuOrigin { HOME, DOCK, DRAWER }
+enum class MenuOrigin { HOME, DOCK, DRAWER, HIDDEN_DRAWER }
 
 data class ContextMenuState(
     val app: AppInfo,
@@ -50,4 +50,9 @@ data class LauncherUiState(
 
     val hiddenApps: List<AppInfo>
         get() = allApps.filter { it.packageName in hiddenPackages }
+
+    /** What the incognito-style hidden drawer shows: hidden apps, filtered by the same
+     * search field the regular drawer uses (only one of the two is ever on screen). */
+    val hiddenVisibleApps: List<AppInfo>
+        get() = hiddenApps.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
 }
