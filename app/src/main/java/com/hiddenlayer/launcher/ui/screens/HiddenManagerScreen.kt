@@ -2,10 +2,12 @@ package com.hiddenlayer.launcher.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.ListItem
@@ -19,14 +21,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
-import com.hiddenlayer.launcher.ui.dragDownToClose
-import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
+import com.hiddenlayer.launcher.ui.DragHandle
+import com.hiddenlayer.launcher.ui.closeOnDragDown
 
 /**
  * Settings screen for choosing *which* apps are hidden — reached from a gear icon inside
@@ -41,32 +42,43 @@ fun HiddenManagerScreen(
     onDone: () -> Unit
 ) {
     BackHandler(onBack = onDone)
-    val closeOnPullDown = rememberCloseOnPullDown(onDone)
+    val listState = rememberLazyListState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .closeOnDragDown(
+                canClose = {
+                    listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+                },
+                onClose = onDone
+            )
+    ) {
         BlurredWallpaperBackground()
 
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    modifier = Modifier.dragDownToClose(onDone),
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = Color.Transparent,
-                        titleContentColor = Color.White
-                    ),
-                    title = { Text("Gestisci app nascoste") },
-                    navigationIcon = {
-                        TextButton(onClick = onDone) { Text("Chiudi", color = Color.White) }
-                    }
-                )
+                Column {
+                    DragHandle(onClose = onDone)
+                    TopAppBar(
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = Color.Transparent,
+                            titleContentColor = Color.White
+                        ),
+                        title = { Text("Gestisci app nascoste") },
+                        navigationIcon = {
+                            TextButton(onClick = onDone) { Text("Chiudi", color = Color.White) }
+                        }
+                    )
+                }
             }
         ) { padding ->
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize()
-                    .nestedScroll(closeOnPullDown)
             ) {
                 item {
                     Text(

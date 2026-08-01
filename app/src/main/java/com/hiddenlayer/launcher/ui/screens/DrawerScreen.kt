@@ -3,6 +3,7 @@ package com.hiddenlayer.launcher.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
@@ -32,15 +34,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.DrawerMode
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppGridTile
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
-import com.hiddenlayer.launcher.ui.dragDownToClose
-import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
+import com.hiddenlayer.launcher.ui.DragHandle
+import com.hiddenlayer.launcher.ui.closeOnDragDown
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,62 +54,74 @@ fun DrawerScreen(
     onClose: () -> Unit
 ) {
     BackHandler(onBack = onClose)
-    val closeOnPullDown = rememberCloseOnPullDown(onClose)
+    val gridState = rememberLazyGridState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .closeOnDragDown(
+                canClose = {
+                    gridState.firstVisibleItemIndex == 0 && gridState.firstVisibleItemScrollOffset == 0
+                },
+                onClose = onClose
+            )
+    ) {
         BlurredWallpaperBackground()
 
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                TopAppBar(
-                    modifier = Modifier.dragDownToClose(onClose),
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
-                    title = {
-                        OutlinedTextField(
-                            value = state.query,
-                            onValueChange = onQueryChange,
-                            singleLine = true,
-                            placeholder = {
-                                Text(if (state.drawerMode == DrawerMode.BROWSE) "Cerca app" else "Scegli un'app")
-                            },
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                                focusedBorderColor = Color.White.copy(alpha = 0.7f),
-                                unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
-                                cursorColor = Color.White
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = onClose) {
-                            Icon(Icons.Default.Close, contentDescription = "Chiudi", tint = Color.White)
-                        }
-                    },
-                    actions = {
-                        if (state.drawerMode == DrawerMode.BROWSE) {
-                            var menuExpanded by remember { mutableStateOf(false) }
-                            IconButton(onClick = { menuExpanded = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
+                Column {
+                    DragHandle(onClose = onClose)
+                    TopAppBar(
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                        title = {
+                            OutlinedTextField(
+                                value = state.query,
+                                onValueChange = onQueryChange,
+                                singleLine = true,
+                                placeholder = {
+                                    Text(if (state.drawerMode == DrawerMode.BROWSE) "Cerca app" else "Scegli un'app")
+                                },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = Color.White,
+                                    unfocusedTextColor = Color.White,
+                                    focusedBorderColor = Color.White.copy(alpha = 0.7f),
+                                    unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
+                                    cursorColor = Color.White
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = onClose) {
+                                Icon(Icons.Default.Close, contentDescription = "Chiudi", tint = Color.White)
                             }
-                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("App nascoste") },
-                                    leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
-                                    onClick = {
-                                        menuExpanded = false
-                                        onOpenHiddenDrawer()
-                                    }
-                                )
+                        },
+                        actions = {
+                            if (state.drawerMode == DrawerMode.BROWSE) {
+                                var menuExpanded by remember { mutableStateOf(false) }
+                                IconButton(onClick = { menuExpanded = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Menu", tint = Color.White)
+                                }
+                                DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text("App nascoste") },
+                                        leadingIcon = { Icon(Icons.Default.VisibilityOff, contentDescription = null) },
+                                        onClick = {
+                                            menuExpanded = false
+                                            onOpenHiddenDrawer()
+                                        }
+                                    )
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
         ) { padding ->
             LazyVerticalGrid(
+                state = gridState,
                 columns = GridCells.Fixed(4),
                 contentPadding = PaddingValues(16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -116,7 +129,6 @@ fun DrawerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .nestedScroll(closeOnPullDown)
             ) {
                 items(state.visibleApps, key = { it.componentName.flattenToString() }) { app ->
                     AppGridTile(app = app, onTap = { onAppClick(app) }, onLongPress = { onAppLongPress(app) })

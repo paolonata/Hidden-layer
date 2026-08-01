@@ -33,9 +33,9 @@ root richiesto.
 - Tieni premuto su un punto vuoto della home per aggiungere un'app, cambiare
   sfondo (apre il selettore di sfondo di sistema) o accedere alle app
   nascoste.
-- **Per chiudere** cassetto e app nascoste: trascina verso il basso dalla
-  barra di ricerca in alto (funziona sempre), oppure la X, oppure il tasto
-  indietro di sistema.
+- **Per chiudere** cassetto e app nascoste: trascina verso il basso da un
+  punto qualsiasi (quando la griglia è già in cima), oppure dalla
+  maniglietta in alto, oppure la X, oppure il tasto indietro di sistema.
 
 ## Dock: limite di 5 app
 
