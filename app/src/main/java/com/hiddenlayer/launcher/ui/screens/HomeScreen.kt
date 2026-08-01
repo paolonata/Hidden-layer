@@ -2,7 +2,6 @@ package com.hiddenlayer.launcher.ui.screens
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -28,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -48,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.MenuOrigin
 import com.hiddenlayer.launcher.data.AppInfo
+import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.AppIcon
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -62,7 +61,9 @@ fun HomeScreen(
 ) {
     val pages = state.homePages
     val pagerState = rememberPagerState(pageCount = { pages.size })
-    val dockSlots = remember(state.dockApps) { List(4) { i -> state.dockApps.getOrNull(i) } }
+    val dockSlots = remember(state.dockApps) {
+        List(HomeLayoutRepository.DOCK_SIZE) { i -> state.dockApps.getOrNull(i) }
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         HorizontalPager(
@@ -198,7 +199,24 @@ private fun Dock(
     onEmptySlotLongPress: (Int) -> Unit,
     onOpenDrawer: () -> Unit
 ) {
-    Surface(color = Color.Black.copy(alpha = 0.25f), modifier = Modifier.fillMaxWidth()) {
+    // All slots (including the bottom-right one) are real, assignable apps — the drawer
+    // only opens via the swipe-up gesture below, not a dedicated button.
+    var dragAccum by remember { mutableStateOf(0f) }
+    Surface(
+        color = Color.Black.copy(alpha = 0.25f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { dragAccum = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragAccum += dragAmount
+                        if (dragAccum < -40f) onOpenDrawer()
+                    }
+                )
+            }
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -225,17 +243,6 @@ private fun Dock(
                         Icon(Icons.Default.Add, contentDescription = "Aggiungi al dock", tint = Color.White.copy(alpha = 0.6f))
                     }
                 }
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(52.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.15f))
-                    .clickable(onClick = onOpenDrawer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Default.Apps, contentDescription = "Tutte le app", tint = Color.White)
             }
         }
     }

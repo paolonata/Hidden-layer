@@ -7,7 +7,6 @@ import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.AppRepository
 import com.hiddenlayer.launcher.data.HiddenAppsRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
-import com.hiddenlayer.launcher.data.PinRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +18,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private val appRepository = AppRepository(application)
     private val hiddenAppsRepository = HiddenAppsRepository(application)
-    private val pinRepository = PinRepository(application)
     private val homeLayoutRepository = HomeLayoutRepository(application)
 
     private val _uiState = MutableStateFlow(LauncherUiState())
@@ -113,7 +111,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             drawerMode = DrawerMode.BROWSE,
             pendingDockSlot = -1,
             query = "",
-            pinError = false,
             contextMenu = null
         )
     }
@@ -139,14 +136,29 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         dismissContextMenu()
     }
 
-    fun addToDock(app: AppInfo) {
-        homeLayoutRepository.addToDock(app.componentName)
+    /** Returns false when the dock is already full (see HomeLayoutRepository.DOCK_SIZE),
+     * so the caller can tell the user why nothing happened instead of failing silently. */
+    fun addToDock(app: AppInfo): Boolean {
+        val added = homeLayoutRepository.addToDock(app.componentName)
         syncLayout()
         dismissContextMenu()
+        return added
     }
 
     fun addToHome(app: AppInfo) {
         homeLayoutRepository.addToHome(app.componentName)
+        syncLayout()
+        dismissContextMenu()
+    }
+
+    /** Moves an app to the previous/next home page (direction -1/+1). Moving past the
+     * last page simply creates a new one. */
+    fun moveToAdjacentPage(app: AppInfo, direction: Int) {
+        val pages = _uiState.value.homePages
+        val currentPageIndex = pages.indexOfFirst { page -> page.any { it.componentName == app.componentName } }
+        if (currentPageIndex == -1) return
+        val targetPageIndex = (currentPageIndex + direction).coerceAtLeast(0)
+        homeLayoutRepository.moveToPage(app.componentName, targetPageIndex)
         syncLayout()
         dismissContextMenu()
     }
@@ -172,28 +184,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         dismissContextMenu()
     }
 
-    fun requestHiddenSection() {
-        _uiState.value = _uiState.value.copy(
-            screen = if (pinRepository.isPinSet()) Screen.PIN_PROMPT else Screen.PIN_SETUP,
-            pinError = false
-        )
-    }
-
-    fun setPin(pin: String) {
-        pinRepository.setPin(pin)
-        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_MANAGER, pinError = false)
-    }
-
-    fun verifyPin(pin: String) {
-        val ok = pinRepository.verifyPin(pin)
-        _uiState.value = _uiState.value.copy(
-            screen = if (ok) Screen.HIDDEN_MANAGER else Screen.PIN_PROMPT,
-            pinError = !ok
-        )
-    }
-
-    fun onBiometricSuccess() {
-        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_MANAGER, pinError = false)
+    fun openHiddenManager() {
+        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_MANAGER)
     }
 
     fun toggleHidden(app: AppInfo) {
@@ -206,6 +198,4 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             dockComponents = homeLayoutRepository.getDock()
         )
     }
-
-    fun isPinSet(): Boolean = pinRepository.isPinSet()
 }

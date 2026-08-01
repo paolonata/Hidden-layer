@@ -4,7 +4,7 @@ import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 
-enum class Screen { HOME, DRAWER, PIN_SETUP, PIN_PROMPT, HIDDEN_MANAGER }
+enum class Screen { HOME, DRAWER, HIDDEN_MANAGER }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
@@ -25,7 +25,6 @@ data class LauncherUiState(
     val drawerMode: DrawerMode = DrawerMode.BROWSE,
     val pendingDockSlot: Int = -1,
     val query: String = "",
-    val pinError: Boolean = false,
     val contextMenu: ContextMenuState? = null,
     val loaded: Boolean = false
 ) {

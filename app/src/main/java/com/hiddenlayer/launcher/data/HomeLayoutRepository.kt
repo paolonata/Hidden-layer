@@ -53,6 +53,19 @@ class HomeLayoutRepository(context: Context) {
         setDock(getDock().filterNot { it == component })
     }
 
+    /** Moves an app to the start of the given home page, shifting everything else along.
+     * Targeting a page past the current last one is fine: it simply lands at the end of
+     * the list, which overflows into a freshly created page. */
+    fun moveToPage(component: ComponentName, targetPageIndex: Int) {
+        val items = getHomeItems().toMutableList()
+        val currentIndex = items.indexOf(component)
+        if (currentIndex == -1) return
+        items.removeAt(currentIndex)
+        val insertIndex = (targetPageIndex * PAGE_SIZE).coerceIn(0, items.size)
+        items.add(insertIndex, component)
+        setHomeItems(items)
+    }
+
     fun removeInvalid(validComponents: Set<ComponentName>) {
         setHomeItems(getHomeItems().filter { it in validComponents })
         setDock(getDock().filter { it in validComponents })
@@ -70,7 +83,7 @@ class HomeLayoutRepository(context: Context) {
 
     companion object {
         const val PAGE_SIZE = 20
-        const val DOCK_SIZE = 4
+        const val DOCK_SIZE = 5
         private const val KEY_HOME = "home_items"
         private const val KEY_DOCK = "dock_items"
     }

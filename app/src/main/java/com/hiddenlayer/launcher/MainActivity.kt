@@ -2,14 +2,13 @@ package com.hiddenlayer.launcher
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
-import androidx.fragment.app.FragmentActivity
-import com.hiddenlayer.launcher.auth.BiometricHelper
 import com.hiddenlayer.launcher.ui.LauncherApp
 import com.hiddenlayer.launcher.ui.theme.HiddenLayerTheme
 
-class MainActivity : FragmentActivity() {
+class MainActivity : ComponentActivity() {
 
     private val viewModel: LauncherViewModel by viewModels()
 
@@ -19,17 +18,7 @@ class MainActivity : FragmentActivity() {
 
         setContent {
             HiddenLayerTheme {
-                LauncherApp(
-                    viewModel = viewModel,
-                    canUseBiometrics = { BiometricHelper.canUseBiometrics(this) },
-                    onRequestBiometric = {
-                        BiometricHelper.authenticate(
-                            activity = this,
-                            onSuccess = { viewModel.onBiometricSuccess() },
-                            onError = { /* the PIN field on screen stays available as fallback */ }
-                        )
-                    }
-                )
+                LauncherApp(viewModel = viewModel)
             }
         }
     }
