@@ -63,6 +63,25 @@ alternativa, il repository include un workflow GitHub Actions
 (`.github/workflows/build.yml`) che compila l'APK a ogni push e lo carica
 come artifact scaricabile dalla scheda Actions.
 
+### Firma: perché gli aggiornamenti si installano sopra
+
+Gli APK sono firmati con la chiave in `keystore/hiddenlayer.p12`, versionata
+nel repository apposta. Senza di essa ogni build su GitHub userebbe un debug
+keystore generato al momento sul runner (macchina effimera, chiave diversa
+ogni volta) e Android rifiuterebbe l'installazione sopra la versione già
+presente — costringendo a disinstallare e quindi a perdere app nascoste e
+disposizione delle icone a ogni prova.
+
+Il `versionCode` segue il numero della build di GitHub Actions, così ogni
+APK conta come aggiornamento e non come downgrade (il `versionName` mostra
+lo stesso numero, utile per capire quale build è installata).
+
+Nota: è una chiave usa e getta per installazioni locali, non un segreto di
+distribuzione — chiunque abbia il repository può firmare un APK con lo
+stesso identificativo. Per un'app personale sideloaded è un compromesso
+ragionevole; se preferisci non averla nel repository, si può spostare in un
+secret di GitHub Actions (base64) e ricrearla nel workflow al volo.
+
 > Nota: questo progetto è stato scritto in un ambiente sandbox senza Android
 > SDK né emulatore, quindi buona parte del codice non è stata testata su un
 > dispositivo reale. È stato scritto e rivisto con cura seguendo le API
@@ -74,6 +93,11 @@ come artifact scaricabile dalla scheda Actions.
 1. Abilita "Installa app sconosciute" per l'app che userai per installare
    l'APK (Impostazioni > App > Autorizzazioni speciali > Installa app
    sconosciute), poi installa l'APK.
+   > Se hai già installato una build precedente alla firma stabile
+   > (vedi sopra), quella volta lì serve **un'ultima disinstallazione**:
+   > la vecchia copia è firmata con una chiave casuale e non è
+   > aggiornabile. Da quella in poi gli APK si installano sopra e le tue
+   > impostazioni restano.
 2. Vai in **Impostazioni > App > App predefinite > Home app** (il nome
    esatto varia tra MIUI/HyperOS) e seleziona **Hidden Layer** come
    launcher predefinito.

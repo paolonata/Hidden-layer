@@ -4,6 +4,13 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Every CI runner is a fresh machine, so the auto-generated debug keystore is different on
+// every build — and Android refuses to install an update whose signature doesn't match the
+// installed app ("app not installed"), forcing an uninstall that wipes hidden apps and the
+// home layout. Signing with the checked-in keystore below keeps the signature stable across
+// builds, so new APKs install straight over the old one and keep their data.
+val buildNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toIntOrNull() ?: 1
+
 android {
     namespace = "com.hiddenlayer.launcher"
     compileSdk = 34
@@ -12,13 +19,27 @@ android {
         applicationId = "com.hiddenlayer.launcher"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        // Monotonic across CI builds so each APK counts as an update, not a downgrade.
+        versionCode = buildNumber
+        versionName = "1.0.$buildNumber"
+    }
+
+    signingConfigs {
+        create("shared") {
+            storeFile = file("../keystore/hiddenlayer.p12")
+            storePassword = "hiddenlayer"
+            keyAlias = "hiddenlayer"
+            keyPassword = "hiddenlayer"
+        }
     }
 
     buildTypes {
-        release {
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("shared")
+        }
+        getByName("release") {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
