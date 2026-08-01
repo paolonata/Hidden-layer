@@ -1,0 +1,211 @@
+package com.hiddenlayer.launcher
+
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.hiddenlayer.launcher.data.AppInfo
+import com.hiddenlayer.launcher.data.AppRepository
+import com.hiddenlayer.launcher.data.HiddenAppsRepository
+import com.hiddenlayer.launcher.data.HomeLayoutRepository
+import com.hiddenlayer.launcher.data.PinRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+class LauncherViewModel(application: Application) : AndroidViewModel(application) {
+
+    private val appRepository = AppRepository(application)
+    private val hiddenAppsRepository = HiddenAppsRepository(application)
+    private val pinRepository = PinRepository(application)
+    private val homeLayoutRepository = HomeLayoutRepository(application)
+
+    private val _uiState = MutableStateFlow(LauncherUiState())
+    val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
+
+    init {
+        refreshApps()
+    }
+
+    /** Re-reads installed apps, drops uninstalled/hidden components from the layout, and
+     * seeds a sensible default layout (dock + home, in alphabetical order) on first run. */
+    fun refreshApps() {
+        viewModelScope.launch {
+            val apps = withContext(Dispatchers.IO) { appRepository.loadLaunchableApps() }
+            val hidden = hiddenAppsRepository.getHiddenPackages()
+            val validComponents = apps
+                .filter { it.packageName !in hidden }
+                .map { it.componentName }
+                .toSet()
+
+            homeLayoutRepository.removeInvalid(validComponents)
+
+            var home = homeLayoutRepository.getHomeItems()
+            var dock = homeLayoutRepository.getDock()
+
+            if (home.isEmpty() && dock.isEmpty() && apps.isNotEmpty()) {
+                val visible = apps.filter { it.packageName !in hidden }
+                dock = visible.take(HomeLayoutRepository.DOCK_SIZE).map { it.componentName }
+                home = visible.drop(HomeLayoutRepository.DOCK_SIZE).map { it.componentName }
+                homeLayoutRepository.setDock(dock)
+                homeLayoutRepository.setHomeItems(home)
+            }
+
+            _uiState.value = _uiState.value.copy(
+                allApps = apps,
+                hiddenPackages = hidden,
+                homeComponents = home,
+                dockComponents = dock,
+                loaded = true
+            )
+        }
+    }
+
+    fun onQueryChange(query: String) {
+        _uiState.value = _uiState.value.copy(query = query)
+    }
+
+    fun launchApp(app: AppInfo) {
+        appRepository.launch(app.componentName)
+    }
+
+    fun openDrawer() {
+        _uiState.value = _uiState.value.copy(screen = Screen.DRAWER, drawerMode = DrawerMode.BROWSE, query = "")
+    }
+
+    fun openDrawerForHomePick() {
+        _uiState.value = _uiState.value.copy(screen = Screen.DRAWER, drawerMode = DrawerMode.PICK_FOR_HOME, query = "")
+    }
+
+    fun openDrawerForDockPick(slot: Int) {
+        _uiState.value = _uiState.value.copy(
+            screen = Screen.DRAWER,
+            drawerMode = DrawerMode.PICK_FOR_DOCK,
+            pendingDockSlot = slot,
+            query = ""
+        )
+    }
+
+    fun onDrawerAppClick(app: AppInfo) {
+        when (_uiState.value.drawerMode) {
+            DrawerMode.BROWSE -> {
+                launchApp(app)
+                backToHome()
+            }
+            DrawerMode.PICK_FOR_HOME -> {
+                homeLayoutRepository.addToHome(app.componentName)
+                syncLayout()
+                backToHome()
+            }
+            DrawerMode.PICK_FOR_DOCK -> {
+                homeLayoutRepository.setDockSlot(_uiState.value.pendingDockSlot, app.componentName)
+                syncLayout()
+                backToHome()
+            }
+        }
+    }
+
+    fun backToHome() {
+        _uiState.value = _uiState.value.copy(
+            screen = Screen.HOME,
+            drawerMode = DrawerMode.BROWSE,
+            pendingDockSlot = -1,
+            query = "",
+            pinError = false,
+            contextMenu = null
+        )
+    }
+
+    private fun syncLayout() {
+        _uiState.value = _uiState.value.copy(
+            homeComponents = homeLayoutRepository.getHomeItems(),
+            dockComponents = homeLayoutRepository.getDock()
+        )
+    }
+
+    fun showContextMenu(app: AppInfo, origin: MenuOrigin, dockSlot: Int = -1) {
+        _uiState.value = _uiState.value.copy(contextMenu = ContextMenuState(app, origin, dockSlot))
+    }
+
+    fun dismissContextMenu() {
+        _uiState.value = _uiState.value.copy(contextMenu = null)
+    }
+
+    fun removeFromHome(app: AppInfo) {
+        homeLayoutRepository.removeFromHome(app.componentName)
+        syncLayout()
+        dismissContextMenu()
+    }
+
+    fun addToDock(app: AppInfo) {
+        homeLayoutRepository.addToDock(app.componentName)
+        syncLayout()
+        dismissContextMenu()
+    }
+
+    fun addToHome(app: AppInfo) {
+        homeLayoutRepository.addToHome(app.componentName)
+        syncLayout()
+        dismissContextMenu()
+    }
+
+    fun hideApp(app: AppInfo) {
+        hiddenAppsRepository.setHidden(app.packageName, true)
+        homeLayoutRepository.removeFromHome(app.componentName)
+        _uiState.value = _uiState.value.copy(
+            hiddenPackages = hiddenAppsRepository.getHiddenPackages(),
+            homeComponents = homeLayoutRepository.getHomeItems(),
+            dockComponents = homeLayoutRepository.getDock()
+        )
+        dismissContextMenu()
+    }
+
+    fun openAppInfo(app: AppInfo) {
+        appRepository.openAppInfo(app.packageName)
+        dismissContextMenu()
+    }
+
+    fun requestUninstall(app: AppInfo) {
+        appRepository.requestUninstall(app.packageName)
+        dismissContextMenu()
+    }
+
+    fun requestHiddenSection() {
+        _uiState.value = _uiState.value.copy(
+            screen = if (pinRepository.isPinSet()) Screen.PIN_PROMPT else Screen.PIN_SETUP,
+            pinError = false
+        )
+    }
+
+    fun setPin(pin: String) {
+        pinRepository.setPin(pin)
+        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_MANAGER, pinError = false)
+    }
+
+    fun verifyPin(pin: String) {
+        val ok = pinRepository.verifyPin(pin)
+        _uiState.value = _uiState.value.copy(
+            screen = if (ok) Screen.HIDDEN_MANAGER else Screen.PIN_PROMPT,
+            pinError = !ok
+        )
+    }
+
+    fun onBiometricSuccess() {
+        _uiState.value = _uiState.value.copy(screen = Screen.HIDDEN_MANAGER, pinError = false)
+    }
+
+    fun toggleHidden(app: AppInfo) {
+        val nowHidden = app.packageName !in _uiState.value.hiddenPackages
+        hiddenAppsRepository.setHidden(app.packageName, nowHidden)
+        if (nowHidden) homeLayoutRepository.removeFromHome(app.componentName)
+        _uiState.value = _uiState.value.copy(
+            hiddenPackages = hiddenAppsRepository.getHiddenPackages(),
+            homeComponents = homeLayoutRepository.getHomeItems(),
+            dockComponents = homeLayoutRepository.getDock()
+        )
+    }
+
+    fun isPinSet(): Boolean = pinRepository.isPinSet()
+}
