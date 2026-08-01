@@ -65,7 +65,11 @@ fun HomeScreen(
     val dockSlots = remember(state.dockApps) { List(4) { i -> state.dockApps.getOrNull(i) } }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { pageIndex ->
+        HorizontalPager(
+            state = pagerState,
+            beyondViewportPageCount = 1,
+            modifier = Modifier.weight(1f)
+        ) { pageIndex ->
             HomePage(
                 apps = pages.getOrElse(pageIndex) { emptyList() },
                 onAppTap = onAppTap,
