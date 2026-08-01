@@ -65,6 +65,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(query = query)
     }
 
+    /** Reported by HomeScreen once it has measured how many icon rows actually fit on the
+     * screen, so a page holds as many as it physically can instead of a fixed guess. */
+    fun setPageSize(pageSize: Int) {
+        if (pageSize > 0 && pageSize != _uiState.value.pageSize) {
+            _uiState.value = _uiState.value.copy(pageSize = pageSize)
+        }
+    }
+
     fun launchApp(app: AppInfo) {
         appRepository.launch(app.componentName)
     }
@@ -164,11 +172,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Moves an app to the previous/next home page (direction -1/+1). Moving past the
      * last page simply creates a new one. */
     fun moveToAdjacentPage(app: AppInfo, direction: Int) {
-        val pages = _uiState.value.homePages
+        val currentState = _uiState.value
+        val pages = currentState.homePages
         val currentPageIndex = pages.indexOfFirst { page -> page.any { it.componentName == app.componentName } }
         if (currentPageIndex == -1) return
         val targetPageIndex = (currentPageIndex + direction).coerceAtLeast(0)
-        homeLayoutRepository.moveToPage(app.componentName, targetPageIndex)
+        homeLayoutRepository.moveToPage(app.componentName, targetPageIndex, currentState.pageSize)
         syncLayout()
         dismissContextMenu()
     }

@@ -26,6 +26,9 @@ data class LauncherUiState(
     val pendingDockSlot: Int = -1,
     val query: String = "",
     val contextMenu: ContextMenuState? = null,
+    /** How many icons fit on one home page, measured from the real screen height by
+     * HomeScreen (rows that fit x columns) rather than hardcoded. */
+    val pageSize: Int = HomeLayoutRepository.DEFAULT_PAGE_SIZE,
     val loaded: Boolean = false
 ) {
     val homeApps: List<AppInfo>
@@ -41,7 +44,7 @@ data class LauncherUiState(
         }
 
     val homePages: List<List<AppInfo>>
-        get() = homeApps.chunked(HomeLayoutRepository.PAGE_SIZE).ifEmpty { listOf(emptyList()) }
+        get() = homeApps.chunked(pageSize.coerceAtLeast(1)).ifEmpty { listOf(emptyList()) }
 
     val visibleApps: List<AppInfo>
         get() = allApps

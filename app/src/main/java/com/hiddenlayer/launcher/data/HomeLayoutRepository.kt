@@ -54,14 +54,16 @@ class HomeLayoutRepository(context: Context) {
     }
 
     /** Moves an app to the start of the given home page, shifting everything else along.
+     * [pageSize] is however many icons currently fit on one page (measured by the UI, see
+     * LauncherUiState.pageSize), so this lands on the same page the user actually sees.
      * Targeting a page past the current last one is fine: it simply lands at the end of
      * the list, which overflows into a freshly created page. */
-    fun moveToPage(component: ComponentName, targetPageIndex: Int) {
+    fun moveToPage(component: ComponentName, targetPageIndex: Int, pageSize: Int) {
         val items = getHomeItems().toMutableList()
         val currentIndex = items.indexOf(component)
         if (currentIndex == -1) return
         items.removeAt(currentIndex)
-        val insertIndex = (targetPageIndex * PAGE_SIZE).coerceIn(0, items.size)
+        val insertIndex = (targetPageIndex * pageSize).coerceIn(0, items.size)
         items.add(insertIndex, component)
         setHomeItems(items)
     }
@@ -82,7 +84,9 @@ class HomeLayoutRepository(context: Context) {
     }
 
     companion object {
-        const val PAGE_SIZE = 20
+        /** Only a fallback for the first frame: the real page size is measured from the
+         * actual screen height so a page holds as many rows as physically fit. */
+        const val DEFAULT_PAGE_SIZE = 20
         const val DOCK_SIZE = 5
         private const val KEY_HOME = "home_items"
         private const val KEY_DOCK = "dock_items"

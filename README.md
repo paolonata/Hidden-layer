@@ -11,7 +11,9 @@ root richiesto.
 
 - **Home**: pagine scorrevoli con le icone che hai scelto di mettere lì,
   più un dock in basso a 5 posizioni, tutte assegnabili liberamente (icona
-  in basso a destra compresa).
+  in basso a destra compresa). Ogni pagina si riempie con quante righe di
+  icone ci stanno davvero sullo schermo (calcolate sull'altezza reale del
+  tuo display), non con un numero fisso.
 - **Cassetto**: si apre **solo con lo swipe verso l'alto** — trascina dal
   dock verso l'alto (o dalla maniglietta sopra di esso). Non c'è un pulsante
   dedicato: tutte e 5 le posizioni del dock restano libere per app vere.

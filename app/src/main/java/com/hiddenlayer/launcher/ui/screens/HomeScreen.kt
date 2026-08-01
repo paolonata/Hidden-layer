@@ -3,11 +3,13 @@ package com.hiddenlayer.launcher.ui.screens
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +32,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,9 +43,8 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -55,10 +57,13 @@ import com.hiddenlayer.launcher.ui.AppIcon
 import kotlin.math.roundToInt
 
 private const val HOME_COLUMNS = 4
+private val HOME_TILE_HEIGHT = 76.dp
+private val PAGE_PADDING = 12.dp
+private val ROW_SPACING = 12.dp
 private val TOP_GESTURE_EXCLUSION = 56.dp
 private const val SWIPE_OPEN_THRESHOLD_PX = 40f
-private val PAGE_MOVE_THRESHOLD = 96.dp
-private val TAP_VS_DRAG_THRESHOLD = 12.dp
+private val PAGE_MOVE_THRESHOLD = 72.dp
+private val TAP_VS_DRAG_THRESHOLD = 16.dp
 private val DRAG_ICON_SIZE = 56.dp
 
 /**
@@ -67,6 +72,16 @@ private val DRAG_ICON_SIZE = 56.dp
  * every touch frame. A drag that starts within TOP_GESTURE_EXCLUSION of the top edge is
  * ignored, leaving that strip free for the system's notification-shade / quick-settings
  * swipe-down gesture.
+ *
+ * Dragging an icon between pages is tracked here rather than on the icon itself. Putting a
+ * second gesture detector on the tile (a drag-after-long-press alongside the tap handler)
+ * made the two cancel each other out: the tap detector consumes the down, which aborts the
+ * long-press detector, so the drag never started AND the failed long press fell through to
+ * the empty-area handler behind it — which is why long-pressing an icon sometimes produced
+ * the wallpaper/"Home" menu with no "Nascondi app" in it. So the tile keeps one plain
+ * combinedClickable (tap + long-click, the combination that always worked), long-click just
+ * flags which app is being moved, and the drag itself is followed here on the *Initial*
+ * pointer pass, which reaches this parent before any child can consume it.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -77,7 +92,8 @@ fun HomeScreen(
     onDockSlotLongPress: (Int) -> Unit,
     onEmptyPageLongPress: () -> Unit,
     onOpenDrawer: () -> Unit,
-    onMoveAppToAdjacentPage: (AppInfo, Int) -> Unit
+    onMoveAppToAdjacentPage: (AppInfo, Int) -> Unit,
+    onPageSizeChanged: (Int) -> Unit
 ) {
     val pages = state.homePages
     val pagerState = rememberPagerState(pageCount = { pages.size })
@@ -90,29 +106,68 @@ fun HomeScreen(
     val pageMoveThresholdPx = remember(density) { with(density) { PAGE_MOVE_THRESHOLD.toPx() } }
     val tapVsDragThresholdPx = remember(density) { with(density) { TAP_VS_DRAG_THRESHOLD.toPx() } }
 
-    var dragAccum by remember { mutableStateOf(0f) }
-    var dragArmed by remember { mutableStateOf(false) }
+    var swipeAccum by remember { mutableStateOf(0f) }
+    var swipeArmed by remember { mutableStateOf(false) }
 
     var draggedApp by remember { mutableStateOf<AppInfo?>(null) }
-    var dragStartPosition by remember { mutableStateOf(Offset.Zero) }
-    var dragOffset by remember { mutableStateOf(Offset.Zero) }
+    var dragOrigin by remember { mutableStateOf(Offset.Zero) }
+    var dragCurrent by remember { mutableStateOf(Offset.Zero) }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var origin: Offset? = null
+
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+
+                        if (draggedApp != null) {
+                            // Long-click just flagged an app as being moved: anchor the drag
+                            // at wherever the finger is now, and swallow the events so the
+                            // pager doesn't also start flinging between pages underneath.
+                            if (origin == null) {
+                                origin = change.position
+                                dragOrigin = change.position
+                            }
+                            dragCurrent = change.position
+                            change.consume()
+                        }
+                        if (!change.pressed) break
+                    }
+
+                    val app = draggedApp
+                    if (app != null) {
+                        val moved = dragCurrent - dragOrigin
+                        when {
+                            moved.getDistance() < tapVsDragThresholdPx ->
+                                onAppLongPress(app, MenuOrigin.HOME, -1)
+                            moved.x > pageMoveThresholdPx -> onMoveAppToAdjacentPage(app, +1)
+                            moved.x < -pageMoveThresholdPx -> onMoveAppToAdjacentPage(app, -1)
+                        }
+                        draggedApp = null
+                    }
+                }
+            }
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragStart = { offset ->
-                            dragAccum = 0f
-                            dragArmed = offset.y > topExclusionPx
+                            swipeAccum = 0f
+                            swipeArmed = offset.y > topExclusionPx
                         },
                         onVerticalDrag = { change, dragAmount ->
-                            if (dragArmed) {
+                            if (swipeArmed && draggedApp == null) {
                                 change.consume()
-                                dragAccum += dragAmount
-                                if (dragAccum < -SWIPE_OPEN_THRESHOLD_PX) {
-                                    dragArmed = false
+                                swipeAccum += dragAmount
+                                if (swipeAccum < -SWIPE_OPEN_THRESHOLD_PX) {
+                                    swipeArmed = false
                                     onOpenDrawer()
                                 }
                             }
@@ -120,34 +175,25 @@ fun HomeScreen(
                     )
                 }
         ) {
-            HorizontalPager(state = pagerState, modifier = Modifier.weight(1f)) { pageIndex ->
-                HomePage(
-                    apps = pages.getOrElse(pageIndex) { emptyList() },
-                    draggedApp = draggedApp,
-                    onAppTap = onAppTap,
-                    onEmptyLongPress = onEmptyPageLongPress,
-                    onIconDragStart = { app, globalPosition ->
-                        draggedApp = app
-                        dragStartPosition = globalPosition
-                        dragOffset = Offset.Zero
-                    },
-                    onIconDrag = { delta -> dragOffset += delta },
-                    onIconDragEnd = {
-                        val app = draggedApp
-                        if (app != null) {
-                            when {
-                                dragOffset.getDistance() < tapVsDragThresholdPx ->
-                                    onAppLongPress(app, MenuOrigin.HOME, -1)
-                                dragOffset.x > pageMoveThresholdPx ->
-                                    onMoveAppToAdjacentPage(app, +1)
-                                dragOffset.x < -pageMoveThresholdPx ->
-                                    onMoveAppToAdjacentPage(app, -1)
-                            }
-                        }
-                        draggedApp = null
-                        dragOffset = Offset.Zero
-                    }
-                )
+            BoxWithConstraints(modifier = Modifier.weight(1f)) {
+                // As many rows as physically fit the screen, so a page fills up instead of
+                // stopping at a hardcoded row count.
+                val rowsPerPage = remember(maxHeight) {
+                    ((maxHeight - PAGE_PADDING * 2 + ROW_SPACING) / (HOME_TILE_HEIGHT + ROW_SPACING))
+                        .toInt()
+                        .coerceAtLeast(1)
+                }
+                LaunchedEffect(rowsPerPage) { onPageSizeChanged(rowsPerPage * HOME_COLUMNS) }
+
+                HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { pageIndex ->
+                    HomePage(
+                        apps = pages.getOrElse(pageIndex) { emptyList() },
+                        draggedApp = draggedApp,
+                        onAppTap = onAppTap,
+                        onAppLongPress = { app -> draggedApp = app },
+                        onEmptyLongPress = onEmptyPageLongPress
+                    )
+                }
             }
 
             if (pages.size > 1) {
@@ -179,12 +225,11 @@ fun HomeScreen(
         }
 
         draggedApp?.let { app ->
-            val position = dragStartPosition + dragOffset
             Box(
                 modifier = Modifier.offset {
                     IntOffset(
-                        (position.x - DRAG_ICON_SIZE.toPx() / 2).roundToInt(),
-                        (position.y - DRAG_ICON_SIZE.toPx() / 2).roundToInt()
+                        (dragCurrent.x - DRAG_ICON_SIZE.toPx() / 2).roundToInt(),
+                        (dragCurrent.y - DRAG_ICON_SIZE.toPx() / 2).roundToInt()
                     )
                 }
             ) {
@@ -202,10 +247,8 @@ private fun HomePage(
     apps: List<AppInfo>,
     draggedApp: AppInfo?,
     onAppTap: (AppInfo) -> Unit,
-    onEmptyLongPress: () -> Unit,
-    onIconDragStart: (AppInfo, Offset) -> Unit,
-    onIconDrag: (Offset) -> Unit,
-    onIconDragEnd: () -> Unit
+    onAppLongPress: (AppInfo) -> Unit,
+    onEmptyLongPress: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -217,8 +260,8 @@ private fun HomePage(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp, vertical = PAGE_PADDING),
+            verticalArrangement = Arrangement.spacedBy(ROW_SPACING)
         ) {
             apps.chunked(HOME_COLUMNS).forEach { rowApps ->
                 Row(
@@ -231,9 +274,7 @@ private fun HomePage(
                                 app = app,
                                 isBeingDragged = draggedApp?.componentName == app.componentName,
                                 onTap = { onAppTap(app) },
-                                onDragStart = { globalPosition -> onIconDragStart(app, globalPosition) },
-                                onDrag = onIconDrag,
-                                onDragEnd = onIconDragEnd
+                                onLongPress = { onAppLongPress(app) }
                             )
                         }
                     }
@@ -246,42 +287,24 @@ private fun HomePage(
     }
 }
 
-/** Tap launches the app. A long-press starts tracking a drag immediately (the icon dims
- * to show it's "lifted"); the parent (HomeScreen) decides at release whether that turned
- * out to be a real drag (moved past TAP_VS_DRAG_THRESHOLD — moves the app to the previous/
- * next page if past PAGE_MOVE_THRESHOLD horizontally) or was just a long-press that never
- * really moved (shows the context menu, same as before). */
+/** One plain combinedClickable — no second competing gesture detector on the same tile.
+ * Long-click hands the app off to HomeScreen, which decides on release whether it was a
+ * drag between pages or a stationary long press that should open the context menu. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun HomeIconTile(
     app: AppInfo,
     isBeingDragged: Boolean,
     onTap: () -> Unit,
-    onDragStart: (globalPosition: Offset) -> Unit,
-    onDrag: (delta: Offset) -> Unit,
-    onDragEnd: () -> Unit
+    onLongPress: () -> Unit
 ) {
-    var globalTopLeft by remember { mutableStateOf(Offset.Zero) }
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .onGloballyPositioned { globalTopLeft = it.positionInRoot() }
+            .height(HOME_TILE_HEIGHT)
             .alpha(if (isBeingDragged) 0.3f else 1f)
-            .pointerInput(Unit) {
-                detectTapGestures(onTap = { onTap() })
-            }
-            .pointerInput(Unit) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { localOffset -> onDragStart(globalTopLeft + localOffset) },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onDrag(dragAmount)
-                    },
-                    onDragEnd = { onDragEnd() },
-                    onDragCancel = { onDragEnd() }
-                )
-            }
+            .combinedClickable(onClick = onTap, onLongClick = onLongPress)
             .padding(4.dp)
     ) {
         AppIcon(app = app, size = 48.dp)
@@ -296,8 +319,7 @@ private fun HomeIconTile(
     }
 }
 
-/** Purely decorative now — the actual gesture is handled once, on the whole screen, in
- * HomeScreen above. */
+/** Purely decorative — the actual gesture is handled once, on the whole screen, above. */
 @Composable
 private fun SwipeUpHint() {
     Box(
