@@ -39,6 +39,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.DrawerMode
@@ -46,6 +47,7 @@ import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
+import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +60,7 @@ fun DrawerScreen(
     onClose: () -> Unit
 ) {
     BackHandler(onBack = onClose)
+    val closeOnPullDown = rememberCloseOnPullDown(onClose)
 
     Box(modifier = Modifier.fillMaxSize()) {
         BlurredWallpaperBackground()
@@ -119,6 +122,7 @@ fun DrawerScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(padding)
+                    .nestedScroll(closeOnPullDown)
             ) {
                 items(state.visibleApps, key = { it.componentName.flattenToString() }) { app ->
                     DrawerIconTile(app = app, onTap = { onAppClick(app) }, onLongPress = { onAppLongPress(app) })

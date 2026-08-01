@@ -20,11 +20,13 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
+import com.hiddenlayer.launcher.ui.rememberCloseOnPullDown
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +37,7 @@ fun HiddenManagerScreen(
     onDone: () -> Unit
 ) {
     BackHandler(onBack = onDone)
+    val closeOnPullDown = rememberCloseOnPullDown(onDone)
 
     Box(modifier = Modifier.fillMaxSize()) {
         BlurredWallpaperBackground()
@@ -54,7 +57,12 @@ fun HiddenManagerScreen(
                 )
             }
         ) { padding ->
-            LazyColumn(modifier = Modifier.padding(padding).fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+                    .nestedScroll(closeOnPullDown)
+            ) {
                 item {
                     Text(
                         "Tocca un'app nascosta per aprirla. Usa l'interruttore per nasconderla o mostrarla nel cassetto e nella home. Nascondere un'app è solo un modo per pulire la vista: non serve alcun PIN.",
