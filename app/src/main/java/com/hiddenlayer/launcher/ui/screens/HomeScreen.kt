@@ -165,11 +165,21 @@ fun HomeScreen(
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
                     var origin: Offset? = null
 
+                    // Con le file a scomparsa del dock aperte, il primo gesto che parte fuori
+                    // dal dock serve solo a richiuderle — tocco o trascinamento che sia, come
+                    // ci si aspetta da un pannello aperto. Sta qui e non su un velo a parte
+                    // proprio per non aggiungere un secondo detector che si contenda i tocchi
+                    // con le icone: siamo sul pass Initial, che arriva a questo genitore prima
+                    // che una tile possa consumare il tocco e lanciare l'app che hai sfiorato.
+                    val dismissingDock = dockExpanded && down.position.y < dockZoneTop
+
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
-                        if (draggedApp != null) {
+                        if (dismissingDock) {
+                            change.consume()
+                        } else if (draggedApp != null) {
                             // Long-click just flagged an app as being moved: anchor the drag
                             // at wherever the finger is now, and swallow the events so the
                             // pager doesn't also start flinging between pages underneath.
@@ -184,6 +194,11 @@ fun HomeScreen(
                             change.consume()
                         }
                         if (!change.pressed) break
+                    }
+
+                    if (dismissingDock) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        dockExpanded = false
                     }
 
                     val app = draggedApp

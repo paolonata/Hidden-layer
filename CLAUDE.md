@@ -184,6 +184,10 @@ gesture di questo progetto venivano da lì.
     (tendina notifiche);
   - sopra `dockZoneTop` → swipe su apre il **cassetto**;
   - sul dock → swipe su apre le **file nascoste del dock**.
+- **File del dock aperte**: il primo gesto che parte fuori dal dock le
+  richiude e basta (consumato sul pass `Initial` nel tracker di `HomeScreen`,
+  variabile `dismissingDock`). Non è un velo cliccabile a parte apposta: un
+  secondo detector sopra la griglia si contenderebbe i tocchi con le tile.
 
 ---
 

@@ -135,10 +135,15 @@ Spazio** di sistema.
 
 Il dock è composto da **tre righe da 5 posizioni** (15 in totale). La riga in
 basso è sempre visibile; le due sopra restano ripiegate e si aprono insieme
-con uno **swipe verso l'alto sulla zona del dock** (swipe verso il basso per
-richiuderle). Il gesto non va in conflitto con quello che apre il cassetto:
-sopra il dock lo swipe verso l'alto apre il cassetto, sul dock apre le file
-nascoste.
+con uno **swipe verso l'alto sulla zona del dock**. Il gesto non va in
+conflitto con quello che apre il cassetto: sopra il dock lo swipe verso
+l'alto apre il cassetto, sul dock apre le file nascoste.
+
+Per **richiuderle**: swipe verso il basso sul dock, oppure un tocco o uno
+swipe verso il basso in un punto qualsiasi dello schermo fuori dal dock. Con
+le file aperte, il primo gesto fuori dal dock serve solo a richiuderle — non
+apre l'app che hai toccato né cambia pagina, come da qualunque pannello
+aperto: prima lo chiudi, poi la home torna a comportarsi normalmente.
 
 Righe e colonne sono due costanti (`DOCK_ROWS` e `DOCK_COLUMNS` in
 `HomeLayoutRepository`): il layout e il calcolo di dove atterra un'app
