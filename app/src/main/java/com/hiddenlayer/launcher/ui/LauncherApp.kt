@@ -77,6 +77,7 @@ fun LauncherApp(
                         ).show()
                     }
                 },
+                onDropOnHome = viewModel::addToHome,
                 onPageSizeChanged = viewModel::setPageSize
             )
 

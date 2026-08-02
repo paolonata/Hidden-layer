@@ -41,14 +41,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             homeLayoutRepository.removeInvalid(validComponents)
 
             var home = homeLayoutRepository.getHomeItems()
-            var dock = homeLayoutRepository.getDock()
+            var dock = homeLayoutRepository.getDockSlots()
 
-            if (home.isEmpty() && dock.isEmpty() && apps.isNotEmpty()) {
-                // Seed only the always-visible dock row; the hidden second row starts empty.
+            if (home.isEmpty() && dock.all { it == null } && apps.isNotEmpty()) {
+                // Seed only the always-visible dock row; the fold-out row starts empty.
                 val visible = apps.filter { it.packageName !in hidden }
-                dock = visible.take(HomeLayoutRepository.DOCK_COLUMNS).map { it.componentName }
+                dock = List(HomeLayoutRepository.DOCK_SIZE) { index ->
+                    if (index < HomeLayoutRepository.DOCK_COLUMNS) {
+                        visible.getOrNull(index)?.componentName
+                    } else {
+                        null
+                    }
+                }
                 home = visible.drop(HomeLayoutRepository.DOCK_COLUMNS).map { it.componentName }
-                homeLayoutRepository.setDock(dock)
+                homeLayoutRepository.setDockSlots(dock)
                 homeLayoutRepository.setHomeItems(home)
             }
 
@@ -145,7 +151,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private fun syncLayout() {
         _uiState.value = _uiState.value.copy(
             homeComponents = homeLayoutRepository.getHomeItems(),
-            dockComponents = homeLayoutRepository.getDock()
+            dockComponents = homeLayoutRepository.getDockSlots()
         )
     }
 
@@ -175,7 +181,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Dropping a dragged home icon onto the dock. Returns false when the dock is full so
      * the caller can say so instead of the drop silently doing nothing. */
     fun dropOnDock(app: AppInfo, slot: Int): Boolean {
-        val placed = homeLayoutRepository.insertIntoDock(app.componentName, slot)
+        val placed = homeLayoutRepository.placeInDock(app.componentName, slot)
         syncLayout()
         return placed
     }
@@ -205,7 +211,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(
             hiddenPackages = hiddenAppsRepository.getHiddenPackages(),
             homeComponents = homeLayoutRepository.getHomeItems(),
-            dockComponents = homeLayoutRepository.getDock()
+            dockComponents = homeLayoutRepository.getDockSlots()
         )
         dismissContextMenu()
     }
@@ -267,7 +273,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(
             hiddenPackages = hiddenAppsRepository.getHiddenPackages(),
             homeComponents = homeLayoutRepository.getHomeItems(),
-            dockComponents = homeLayoutRepository.getDock()
+            dockComponents = homeLayoutRepository.getDockSlots()
         )
     }
 }

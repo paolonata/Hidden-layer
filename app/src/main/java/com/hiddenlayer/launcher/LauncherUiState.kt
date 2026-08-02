@@ -22,7 +22,9 @@ data class LauncherUiState(
     val allApps: List<AppInfo> = emptyList(),
     val hiddenPackages: Set<String> = emptySet(),
     val homeComponents: List<ComponentName> = emptyList(),
-    val dockComponents: List<ComponentName> = emptyList(),
+    /** Fixed-size dock grid: null where a slot is empty, so the second row can hold an
+     * app while the first row still has gaps. */
+    val dockComponents: List<ComponentName?> = emptyList(),
     val screen: Screen = Screen.HOME,
     val drawerMode: DrawerMode = DrawerMode.BROWSE,
     val pendingDockSlot: Int = -1,
@@ -46,10 +48,12 @@ data class LauncherUiState(
             return homeComponents.mapNotNull { byComponent[it] }
         }
 
-    val dockApps: List<AppInfo>
+    val dockSlots: List<AppInfo?>
         get() {
             val byComponent = allApps.associateBy { it.componentName }
-            return dockComponents.mapNotNull { byComponent[it] }
+            return List(HomeLayoutRepository.DOCK_SIZE) { index ->
+                dockComponents.getOrNull(index)?.let { byComponent[it] }
+            }
         }
 
     val homePages: List<List<AppInfo>>

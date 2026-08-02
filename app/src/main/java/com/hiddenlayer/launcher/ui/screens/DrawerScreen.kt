@@ -1,6 +1,7 @@
 package com.hiddenlayer.launcher.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,6 +63,10 @@ import com.hiddenlayer.launcher.ui.closeOnDragDown
 private const val PAGE_ALL_APPS = 0
 private const val PAGE_HIDDEN = 1
 
+/** Chrome's incognito grey: flat, cold and deliberately not "your wallpaper, but darker". */
+private val IncognitoSurface = Color(0xFF202124)
+private val IncognitoAccent = Color(0xFFBDC1C6)
+
 /**
  * The drawer is two pages side by side: all apps, and — one swipe to the left — the hidden
  * ones. Making them pages of a pager rather than separate screens is what lets the
@@ -113,14 +118,19 @@ fun DrawerScreen(
         }
     }
 
-    // The backdrop darkens as you travel towards the hidden page, so the change of space is
-    // felt during the swipe rather than announced after it.
+    // Travelling towards the hidden page fades the wallpaper out behind a flat, near-black
+    // incognito surface, so by the time you arrive the wallpaper is gone entirely and the
+    // page reads as a separate place rather than a darker shade of the same one.
     val progress = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
         .coerceIn(PAGE_ALL_APPS.toFloat(), PAGE_HIDDEN.toFloat())
-    val scrimAlpha = 0.28f + (0.55f - 0.28f) * progress
 
     Box(modifier = Modifier.fillMaxSize()) {
-        BlurredWallpaperBackground(scrimAlpha = scrimAlpha)
+        BlurredWallpaperBackground(scrimAlpha = 0.28f)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(IncognitoSurface.copy(alpha = progress))
+        )
 
         HorizontalPager(
             state = pagerState,
@@ -236,6 +246,14 @@ private fun HiddenAppsPage(
                                 onValueChange = onQueryChange,
                                 placeholder = "Cerca tra le nascoste",
                                 leadingIcon = Icons.Default.VisibilityOff
+                            )
+                        },
+                        navigationIcon = {
+                            Icon(
+                                Icons.Default.VisibilityOff,
+                                contentDescription = null,
+                                tint = IncognitoAccent,
+                                modifier = Modifier.padding(start = 12.dp)
                             )
                         },
                         actions = {

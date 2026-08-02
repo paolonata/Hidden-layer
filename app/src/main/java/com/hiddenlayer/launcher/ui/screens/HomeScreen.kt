@@ -79,6 +79,7 @@ private val PAGE_MOVE_THRESHOLD = 72.dp
 private val TAP_VS_DRAG_THRESHOLD = 16.dp
 private val DRAG_ICON_SIZE = 56.dp
 private val DOCK_TOGGLE_THRESHOLD = 28.dp
+private val DOCK_FALLBACK_HEIGHT = 132.dp
 
 /**
  * Swipe-up-to-open-drawer is a single gesture detector on the whole screen (not one per
@@ -108,13 +109,12 @@ fun HomeScreen(
     onOpenDrawer: () -> Unit,
     onMoveAppToAdjacentPage: (AppInfo, Int) -> Unit,
     onDropOnDock: (AppInfo, Int) -> Unit,
+    onDropOnHome: (AppInfo) -> Unit,
     onPageSizeChanged: (Int) -> Unit
 ) {
     val pages = state.homePages
     val pagerState = rememberPagerState(pageCount = { pages.size })
-    val dockSlots = remember(state.dockApps) {
-        List(HomeLayoutRepository.DOCK_SIZE) { i -> state.dockApps.getOrNull(i) }
-    }
+    val dockSlots = state.dockSlots
 
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
@@ -132,6 +132,11 @@ fun HomeScreen(
     var dockZoneTop by remember { mutableStateOf(Float.MAX_VALUE) }
     var dockBottomRowTop by remember { mutableStateOf(Float.MAX_VALUE) }
     var rootWidthPx by remember { mutableStateOf(0f) }
+    var rootHeightPx by remember { mutableStateOf(0f) }
+    // Dock icons can be dragged too, so the release handler has to know where the icon came
+    // from: back onto the grid means "take it out of the dock", not "move it a page along".
+    var draggedFromDock by remember { mutableStateOf(false) }
+    var draggedDockSlot by remember { mutableStateOf(-1) }
 
     var draggedApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOrigin by remember { mutableStateOf(Offset.Zero) }
@@ -143,7 +148,10 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onGloballyPositioned { rootWidthPx = it.size.width.toFloat() }
+            .onGloballyPositioned {
+                rootWidthPx = it.size.width.toFloat()
+                rootHeightPx = it.size.height.toFloat()
+            }
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -173,14 +181,26 @@ fun HomeScreen(
                     val app = draggedApp
                     if (app != null) {
                         val moved = dragCurrent - dragOrigin
+                        // Belt and braces: if the dock never reported its position, fall
+                        // back to treating the bottom slice of the screen as the dock.
+                        val dockTop = if (dockZoneTop == Float.MAX_VALUE) {
+                            rootHeightPx - with(density) { DOCK_FALLBACK_HEIGHT.toPx() }
+                        } else {
+                            dockZoneTop
+                        }
+                        val overDock = rootHeightPx > 0f && dragCurrent.y > dockTop
+
                         when {
-                            moved.getDistance() < tapVsDragThresholdPx ->
-                                onAppLongPress(app, MenuOrigin.HOME, -1)
+                            moved.getDistance() < tapVsDragThresholdPx -> onAppLongPress(
+                                app,
+                                if (draggedFromDock) MenuOrigin.DOCK else MenuOrigin.HOME,
+                                draggedDockSlot
+                            )
 
                             // Released over the dock: work out which slot it landed on from
                             // the drop position — column from x, and which of the two rows
                             // from y when the fold-out row is open.
-                            dragCurrent.y > dockZoneTop && rootWidthPx > 0f -> {
+                            overDock && rootWidthPx > 0f -> {
                                 val columns = HomeLayoutRepository.DOCK_COLUMNS
                                 val column = ((dragCurrent.x / rootWidthPx) * columns)
                                     .toInt()
@@ -189,11 +209,16 @@ fun HomeScreen(
                                 onDropOnDock(app, row * columns + column)
                             }
 
+                            // Dragged out of the dock and dropped on the grid.
+                            draggedFromDock -> onDropOnHome(app)
+
                             moved.x > pageMoveThresholdPx -> onMoveAppToAdjacentPage(app, +1)
                             moved.x < -pageMoveThresholdPx -> onMoveAppToAdjacentPage(app, -1)
                         }
                         draggedApp = null
                         dragVisible = false
+                        draggedFromDock = false
+                        draggedDockSlot = -1
                     }
                 }
             }
@@ -239,6 +264,8 @@ fun HomeScreen(
                         onAppLongPress = { app ->
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             draggedApp = app
+                            draggedFromDock = false
+                            draggedDockSlot = -1
                         },
                         onEmptyLongPress = onEmptyPageLongPress
                     )
@@ -275,7 +302,13 @@ fun HomeScreen(
                 onZonePositioned = { top -> dockZoneTop = top },
                 onBottomRowPositioned = { top -> dockBottomRowTop = top },
                 onAppTap = onAppTap,
-                onAppLongPress = { app, slot -> onAppLongPress(app, MenuOrigin.DOCK, slot) },
+                draggedApp = if (dragVisible) draggedApp else null,
+                onAppLongPress = { app, slot ->
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    draggedApp = app
+                    draggedFromDock = true
+                    draggedDockSlot = slot
+                },
                 onEmptySlotLongPress = onDockSlotLongPress
             )
         }
@@ -379,6 +412,7 @@ private fun HomeIconTile(
 @Composable
 private fun Dock(
     dockSlots: List<AppInfo?>,
+    draggedApp: AppInfo?,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onZonePositioned: (Float) -> Unit,
@@ -424,6 +458,7 @@ private fun Dock(
                 DockRow(
                     slots = dockSlots.drop(HomeLayoutRepository.DOCK_COLUMNS),
                     slotOffset = HomeLayoutRepository.DOCK_COLUMNS,
+                    draggedApp = draggedApp,
                     onAppTap = onAppTap,
                     onAppLongPress = onAppLongPress,
                     onEmptySlotLongPress = onEmptySlotLongPress
@@ -433,6 +468,7 @@ private fun Dock(
             DockRow(
                 slots = dockSlots.take(HomeLayoutRepository.DOCK_COLUMNS),
                 slotOffset = 0,
+                draggedApp = draggedApp,
                 onAppTap = onAppTap,
                 onAppLongPress = onAppLongPress,
                 onEmptySlotLongPress = onEmptySlotLongPress,
@@ -469,6 +505,7 @@ private fun DockHandle(expanded: Boolean) {
 private fun DockRow(
     slots: List<AppInfo?>,
     slotOffset: Int,
+    draggedApp: AppInfo?,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
     onEmptySlotLongPress: (Int) -> Unit,
@@ -495,7 +532,13 @@ private fun DockRow(
                 contentAlignment = Alignment.Center
             ) {
                 if (app != null) {
-                    AppIcon(app = app, size = 44.dp)
+                    AppIcon(
+                        app = app,
+                        size = 44.dp,
+                        modifier = Modifier.alpha(
+                            if (draggedApp?.componentName == app.componentName) 0.3f else 1f
+                        )
+                    )
                 } else {
                     Icon(
                         Icons.Default.Add,
