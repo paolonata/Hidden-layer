@@ -1,7 +1,7 @@
 # Hidden Layer Launcher
 
 Launcher Android sostitutivo, pensato per MIUI/HyperOS: home a pagine + dock
-personalizzabile (5 posizioni) + cassetto delle app, esattamente come il
+personalizzabile + cassetto delle app, esattamente come il
 layout "Home + cassetto applicazioni" che MIUI offre di serie — con in più
 un'area riservata per le app che non vuoi far vedere. Nessun root richiesto.
 
@@ -16,18 +16,18 @@ usare lo strumento della riservatezza per fare le pulizie:
    home. È dove cerchi ciò che usi di rado. Nessun blocco, nessuna cerimonia.
 3. **App nascoste** — le poche app davvero private. Non compaiono in home,
    **non compaiono nel cassetto e non escono nella ricerca**: esistono solo
-   dentro la loro area.
+   nella seconda pagina del cassetto, raggiungibile con uno swipe a
+   sinistra e senza alcun indizio nell'interfaccia.
 
 ## Come funziona
 
 - **Home**: pagine scorrevoli con le icone che hai scelto di mettere lì,
-  più un dock in basso a 5 posizioni, tutte assegnabili liberamente (icona
-  in basso a destra compresa). Ogni pagina si riempie con quante righe di
+  più il dock in basso (vedi sotto). Ogni pagina si riempie con quante righe di
   icone ci stanno davvero sullo schermo (calcolate sull'altezza reale del
   tuo display), non con un numero fisso.
 - **Cassetto**: si apre **solo con lo swipe verso l'alto** — trascina dal
-  dock verso l'alto (o dalla maniglietta sopra di esso). Non c'è un pulsante
-  dedicato: tutte e 5 le posizioni del dock restano libere per app vere.
+  dock verso l'alto, partendo sopra la zona del dock. Non c'è un pulsante
+  dedicato: tutte le posizioni del dock restano libere per app vere.
   Il cassetto contiene tutte le app installate (tranne quelle nascoste), con
   ricerca, su uno sfondo sfocato che riprende il tuo sfondo reale.
 - **Tieni premuto** su un'icona per aprire un menu con le azioni disponibili
@@ -39,14 +39,14 @@ usare lo strumento della riservatezza per fare le pulizie:
   superata una certa distanza va alla pagina precedente/successiva. Se la
   tieni premuta senza spostarla (o la sposti pochissimo) si apre invece il
   menu contestuale di cui sopra, come prima.
-- **App nascoste**: raggiungibili dal menu del cassetto ("⋮ → App
-  nascoste") o tenendo premuto su un punto vuoto della home. Si apre un
-  cassetto a parte, con sfondo più scuro, che contiene solo le app nascoste:
-  ricerca e tocco per aprirle. L'icona ingranaggio lì dentro porta alle
+- **App nascoste**: sono la **seconda pagina del cassetto**, a sinistra —
+  apri il cassetto e scorri verso sinistra. La transizione segue il dito e
+  lo sfondo si scurisce man mano che ci arrivi. Nell'interfaccia non c'è
+  alcuna voce di menu né pulsante che ne riveli l'esistenza: se non sai che
+  c'è, non la trovi. L'icona ingranaggio su quella pagina porta alle
   impostazioni, dove scegli quali app nascondere e se richiedere lo sblocco.
-- Tieni premuto su un punto vuoto della home per aggiungere un'app, cambiare
-  sfondo (apre il selettore di sfondo di sistema) o accedere alle app
-  nascoste.
+- Tieni premuto su un punto vuoto della home per aggiungere un'app o
+  cambiare sfondo (apre il selettore di sfondo di sistema).
 - **Per chiudere** cassetto e app nascoste: trascina verso il basso da un
   punto qualsiasi (quando la griglia è già in cima), oppure dalla
   maniglietta in alto, oppure la X, oppure il tasto indietro di sistema.
@@ -54,12 +54,15 @@ usare lo strumento della riservatezza per fare le pulizie:
 ## Riservatezza: cosa fa e cosa non può fare
 
 **Cosa fa.** Le app nascoste spariscono da home, cassetto e ricerca del
-launcher. L'elenco è cifrato a riposo (AES-256-GCM, chiave nel Keystore
-hardware), quindi non è leggibile da altre app senza root. In più:
+launcher, e nulla nell'interfaccia rivela che esistono. L'elenco è cifrato a
+riposo (AES-256-GCM, chiave nel Keystore hardware), quindi non è leggibile
+da altre app senza root. In più:
 
 - **Sblocco facoltativo** (interruttore nelle impostazioni): impronta con
   PIN di riserva. Attivarlo obbliga a impostare un PIN, perché la biometria
   può smettere di funzionare e non devi restare fuori dalle tue app.
+  Consigliato proprio perché l'accesso è uno swipe: con lo sblocco attivo
+  una scorsa accidentale finisce sulla richiesta del PIN, mai sulle app.
 - **Niente anteprime né screenshot** mentre sei nell'area riservata
   (`FLAG_SECURE`): non compare nella schermata delle app recenti.
 - **Richiusura automatica**: appena esci dal launcher — apri un'app, spegni

@@ -4,7 +4,9 @@ import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 
-enum class Screen { HOME, DRAWER, VAULT_UNLOCK, HIDDEN_DRAWER, HIDDEN_MANAGER }
+/** The hidden apps are no longer a screen of their own: they're the second page of the
+ * drawer, reached by swiping left, so the transition follows the finger. */
+enum class Screen { HOME, DRAWER, HIDDEN_MANAGER }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
@@ -29,9 +31,13 @@ data class LauncherUiState(
     /** How many icons fit on one home page, measured from the real screen height by
      * HomeScreen (rows that fit x columns) rather than hardcoded. */
     val pageSize: Int = HomeLayoutRepository.DEFAULT_PAGE_SIZE,
-    /** Whether opening the vault asks for biometrics/PIN first (off until switched on). */
+    /** Whether reaching the hidden page asks for biometrics/PIN first (off until switched on). */
     val unlockRequired: Boolean = false,
     val unlockError: Boolean = false,
+    /** Cleared every time the launcher is left, so the hidden page re-locks itself. */
+    val vaultUnlocked: Boolean = false,
+    /** Which drawer page to open on: 1 when coming back from the hidden-apps settings. */
+    val drawerStartPage: Int = 0,
     val loaded: Boolean = false
 ) {
     val homeApps: List<AppInfo>

@@ -23,17 +23,15 @@ import com.hiddenlayer.launcher.Screen
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.screens.DrawerScreen
-import com.hiddenlayer.launcher.ui.screens.HiddenDrawerScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenManagerScreen
 import com.hiddenlayer.launcher.ui.screens.HomeScreen
-import com.hiddenlayer.launcher.ui.screens.VaultUnlockScreen
 
 /** Nesting depth of each screen, used purely to pick the slide direction: going to a
  * shallower screen plays as "closing" (slides down), going deeper plays as "opening"
- * (slides up) — e.g. HIDDEN_MANAGER is nested one level under HIDDEN_DRAWER. */
+ * (slides up) — e.g. HIDDEN_MANAGER is nested one level under the drawer. */
 private fun screenDepth(screen: Screen): Int = when (screen) {
     Screen.HOME -> 0
-    Screen.DRAWER, Screen.VAULT_UNLOCK, Screen.HIDDEN_DRAWER -> 1
+    Screen.DRAWER -> 1
     Screen.HIDDEN_MANAGER -> 2
 }
 
@@ -84,26 +82,14 @@ fun LauncherApp(
 
             Screen.DRAWER -> DrawerScreen(
                 state = state,
+                canUseBiometrics = canUseBiometrics,
+                onRequestBiometric = onRequestBiometric,
                 onQueryChange = viewModel::onQueryChange,
                 onAppClick = viewModel::onDrawerAppClick,
                 onAppLongPress = { app -> viewModel.showContextMenu(app, MenuOrigin.DRAWER) },
-                onOpenHiddenDrawer = viewModel::openHiddenDrawer,
-                onClose = viewModel::backToHome
-            )
-
-            Screen.VAULT_UNLOCK -> VaultUnlockScreen(
-                error = state.unlockError,
-                canUseBiometrics = canUseBiometrics(),
-                onBiometricRequest = onRequestBiometric,
+                onHiddenAppClick = viewModel::launchApp,
+                onHiddenAppLongPress = { app -> viewModel.showContextMenu(app, MenuOrigin.HIDDEN_DRAWER) },
                 onPinSubmit = viewModel::verifyPin,
-                onCancel = viewModel::backToHome
-            )
-
-            Screen.HIDDEN_DRAWER -> HiddenDrawerScreen(
-                state = state,
-                onQueryChange = viewModel::onQueryChange,
-                onAppClick = viewModel::launchApp,
-                onAppLongPress = { app -> viewModel.showContextMenu(app, MenuOrigin.HIDDEN_DRAWER) },
                 onOpenSettings = viewModel::openHiddenSettings,
                 onClose = viewModel::backToHome
             )
@@ -139,10 +125,6 @@ fun LauncherApp(
                 MenuAction("Cambia sfondo") {
                     showEmptyPageMenu = false
                     context.startActivity(Intent(Intent.ACTION_SET_WALLPAPER))
-                },
-                MenuAction("App nascoste") {
-                    showEmptyPageMenu = false
-                    viewModel.openHiddenDrawer()
                 }
             ),
             onDismiss = { showEmptyPageMenu = false }
