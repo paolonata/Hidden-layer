@@ -2,6 +2,7 @@ package com.hiddenlayer.launcher
 
 import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
+import com.hiddenlayer.launcher.data.FocusBreak
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 
@@ -56,6 +57,15 @@ data class LauncherUiState(
     val focusToastVisible: Boolean = false,
     /** The app whose launch is being second-guessed by the "are you sure?" prompt. */
     val frictionApp: AppInfo? = null,
+    /** Da quanto stavi resistendo quando è comparsa quella richiesta di conferma. È una
+     * fotografia presa all'apertura del popup, non un contatore che scorre: il popup dura
+     * pochi secondi e un campo che ticchetta qui dentro ricomporrebbe tutta l'app. */
+    val frictionStreakSeconds: Int = 0,
+    // --- Storico della Concentrazione (cambia solo quando cedi o quando una sessione
+    // inizia o finisce, quindi può stare qui senza costare niente) ---
+    val focusRecordSeconds: Int = 0,
+    val focusBreaks: List<FocusBreak> = emptyList(),
+    val focusSessionCount: Int = 0,
     val loaded: Boolean = false
 ) {
     /** True for an app that is muted by the running session: greyed out everywhere, and

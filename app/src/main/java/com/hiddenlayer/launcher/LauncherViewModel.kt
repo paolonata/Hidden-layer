@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.AppRepository
 import com.hiddenlayer.launcher.data.FocusRepository
+import com.hiddenlayer.launcher.data.FocusStatsRepository
 import com.hiddenlayer.launcher.data.HiddenAppsRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +27,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val hiddenAppsRepository = HiddenAppsRepository(application)
     private val homeLayoutRepository = HomeLayoutRepository(application)
     private val focusRepository = FocusRepository(application)
+    private val focusStatsRepository = FocusStatsRepository(application)
 
     private val _uiState = MutableStateFlow(LauncherUiState())
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
@@ -89,6 +91,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 unlockRequired = hiddenAppsRepository.isUnlockRequired(),
                 focusPackages = focusRepository.getDistractingPackages(),
                 focusDurationMinutes = focusRepository.getDurationMinutes(),
+                focusRecordSeconds = focusStatsRepository.getRecordSeconds(),
+                focusBreaks = focusStatsRepository.getBreaks(),
+                focusSessionCount = focusStatsRepository.getSessionCount(),
                 loaded = true
             )
         }
@@ -110,7 +115,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * tapped from — home, dock or drawer — rather than only in one of them. */
     fun launchApp(app: AppInfo) {
         if (_uiState.value.isMuted(app)) {
-            _uiState.value = _uiState.value.copy(frictionApp = app)
+            _uiState.value = _uiState.value.copy(
+                frictionApp = app,
+                // Fotografata adesso: il popup poi resta fermo su questo numero.
+                frictionStreakSeconds = focusStatsRepository.currentStreakSeconds(System.currentTimeMillis())
+            )
         } else {
             appRepository.launch(app.componentName)
         }
@@ -118,8 +127,28 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     /** Chosen deliberately from the confirmation prompt: bypasses the check. */
     fun launchAnyway(app: AppInfo) {
+        // Il cedimento chiude il tratto di resistenza e fa ripartire il conto. Le app
+        // nascoste restano fuori: il loro nome comparirebbe nella classifica dentro le
+        // impostazioni della Concentrazione, che non sono protette.
+        if (app.packageName !in _uiState.value.hiddenPackages) {
+            focusStatsRepository.onBreak(app.packageName, System.currentTimeMillis())
+        }
         _uiState.value = _uiState.value.copy(frictionApp = null)
+        syncFocusStats()
         appRepository.launch(app.componentName)
+    }
+
+    private fun syncFocusStats() {
+        _uiState.value = _uiState.value.copy(
+            focusRecordSeconds = focusStatsRepository.getRecordSeconds(),
+            focusBreaks = focusStatsRepository.getBreaks(),
+            focusSessionCount = focusStatsRepository.getSessionCount()
+        )
+    }
+
+    fun resetFocusStats() {
+        focusStatsRepository.reset()
+        syncFocusStats()
     }
 
     fun dismissFriction() {
@@ -184,8 +213,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun startFocus() {
         val endsAt = System.currentTimeMillis() + _uiState.value.focusDurationMinutes * 60_000L
         focusRepository.setSessionEndsAt(endsAt)
+        focusStatsRepository.onSessionStarted(System.currentTimeMillis())
         startTicker(endsAt)
         showFocusToast()
+        syncFocusStats()
     }
 
     fun stopFocus() {
@@ -195,7 +226,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /** Chiusura di una sessione, per scadenza o per scelta: un solo aggiornamento di stato. */
-    private fun endSession() {
+    private fun endSession(endedAtMillis: Long = System.currentTimeMillis()) {
+        focusStatsRepository.onSessionEnded(endedAtMillis)
         focusTicker = null
         focusToastJob?.cancel()
         focusToastJob = null
@@ -203,7 +235,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(
             focusActive = false,
             focusToastVisible = false,
-            frictionApp = null
+            frictionApp = null,
+            focusRecordSeconds = focusStatsRepository.getRecordSeconds(),
+            focusBreaks = focusStatsRepository.getBreaks(),
+            focusSessionCount = focusStatsRepository.getSessionCount()
         )
     }
 
@@ -222,7 +257,15 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * being cancelled by the launcher being killed. */
     private fun restoreFocusSession() {
         val endsAt = focusRepository.getSessionEndsAt()
-        if (endsAt > System.currentTimeMillis()) startTicker(endsAt) else focusRepository.setSessionEndsAt(0L)
+        if (endsAt > System.currentTimeMillis()) {
+            startTicker(endsAt)
+        } else {
+            // Scaduta mentre il launcher era chiuso: va chiusa comunque, col suo orario di
+            // fine. Altrimenti proprio le sessioni portate a termine senza mai cedere — le
+            // migliori — non arriverebbero mai al record.
+            if (endsAt > 0L) focusStatsRepository.onSessionEnded(endsAt)
+            focusRepository.setSessionEndsAt(0L)
+        }
     }
 
     private fun startTicker(endsAt: Long) {

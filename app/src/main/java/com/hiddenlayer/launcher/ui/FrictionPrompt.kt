@@ -47,7 +47,13 @@ private val PILL_SHAPE = RoundedCornerShape(percent = 50)
  * squared-off Material surface on top of everything and break that.
  */
 @Composable
-fun FrictionPrompt(app: AppInfo, onOpenAnyway: () -> Unit, onDismiss: () -> Unit) {
+fun FrictionPrompt(
+    app: AppInfo,
+    streakSeconds: Int,
+    recordSeconds: Int,
+    onOpenAnyway: () -> Unit,
+    onDismiss: () -> Unit
+) {
     var secondsLeft by remember(app.componentName) { mutableIntStateOf(HOLD_SECONDS) }
 
     LaunchedEffect(app.componentName) {
@@ -96,6 +102,24 @@ fun FrictionPrompt(app: AppInfo, onOpenAnyway: () -> Unit, onDismiss: () -> Unit
             Text(
                 text = "Sei in una sessione di concentrazione.",
                 color = Color.White.copy(alpha = 0.6f),
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(Modifier.height(10.dp))
+
+            // Il record è detto sempre in avanti — quanto manca a batterlo — mai come
+            // distanza da colmare: qui serve una spinta, non un rimprovero.
+            Text(
+                text = when {
+                    recordSeconds <= 0 -> "Stai resistendo da ${formatFocusDuration(streakSeconds)}."
+                    streakSeconds >= recordSeconds ->
+                        "Stai resistendo da ${formatFocusDuration(streakSeconds)}: è il tuo record."
+                    else -> "Stai resistendo da ${formatFocusDuration(streakSeconds)} — " +
+                        "ne mancano ${formatFocusDuration(recordSeconds - streakSeconds)} " +
+                        "per battere il tuo record di ${formatFocusDuration(recordSeconds)}."
+                },
+                color = Color.White.copy(alpha = 0.85f),
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )

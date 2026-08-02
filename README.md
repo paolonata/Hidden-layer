@@ -93,10 +93,38 @@ distraggono e avvii. Durante la sessione quelle app:
 - **chiedono conferma** prima di aprirsi, con qualche secondo di attesa prima
   che il pulsante "Apri comunque" si attivi.
 
+Il popup dice anche **da quanto stai resistendo** e quanto manca per battere
+il tuo record — mai quanto sei lontano, sempre quanto manca: lì serve una
+spinta, non un rimprovero.
+
 Il punto non è vietare: raggiungere quell'app è un automatismo, l'attesa no,
 e quando il pulsante si accende di solito la spinta è già passata. La
 sessione ha una scadenza reale (un orario, non un conto alla rovescia in
 memoria), quindi continua anche se MIUI chiude il launcher in background.
+
+### Lo storico
+
+In fondo alla schermata Concentrazione, sopra l'elenco delle app, c'è quello
+che è successo davvero — di sempre, non dell'ultima sessione:
+
+- il **record di resistenza**: il tratto più lungo passato sotto blocco senza
+  aprire niente. Si azzera a ogni cedimento e non a ogni sessione, perché
+  misura quanto riesci a resistere *di fila*, che è la cosa che si può
+  battere. Una sessione finita senza cedimenti vale per intero — anche se
+  scade mentre il launcher è chiuso;
+- quante **sessioni** hai avviato, quante **aperture forzate** in tutto e la
+  media per sessione;
+- la **classifica delle app che apri comunque**, con quante volte e quando è
+  successo l'ultima volta. È lì che si vede la tendenza: non cosa è successo
+  martedì, ma quali app cedono sistematicamente.
+
+Non c'è un registro delle singole sessioni di proposito, e c'è un "Azzera
+statistiche" per ripartire da zero.
+
+**Le app nascoste non entrano mai nello storico.** Il loro nome finirebbe
+nella classifica dentro le impostazioni della Concentrazione, che non sono
+protette dallo sblocco: sarebbe una falla nel senso stesso dell'area
+riservata.
 
 **Limite dichiarato**: un launcher non può impedire l'apertura di un'app. Le
 app restano raggiungibili da notifiche, schermate recenti e ricerca di

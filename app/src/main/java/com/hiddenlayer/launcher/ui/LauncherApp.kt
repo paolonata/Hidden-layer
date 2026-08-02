@@ -107,6 +107,7 @@ fun LauncherApp(
                 onToggleApp = viewModel::toggleFocusApp,
                 onStart = viewModel::startFocus,
                 onStop = viewModel::stopFocus,
+                onResetStats = viewModel::resetFocusStats,
                 onDone = viewModel::backToHome
             )
 
@@ -132,6 +133,8 @@ fun LauncherApp(
     state.frictionApp?.let { app ->
         FrictionPrompt(
             app = app,
+            streakSeconds = state.frictionStreakSeconds,
+            recordSeconds = state.focusRecordSeconds,
             onOpenAnyway = { viewModel.launchAnyway(app) },
             onDismiss = viewModel::dismissFriction
         )

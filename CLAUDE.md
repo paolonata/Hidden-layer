@@ -126,7 +126,11 @@ Questa è l'area più fragile del progetto e l'utente ci è tornato più volte.
   separato, raccolto **dentro** `FocusPill` e `RunningSession` con
   `collectAsState()`. In `uiState` resta solo `focusActive: Boolean`, che
   cambia due volte per sessione.
-  **Regola generale: niente che ticchetti dentro `uiState`.**
+  **Regola generale: niente che ticchetti dentro `uiState`.** Lo storico della
+  Concentrazione (`focusBreaks`, `focusRecordSeconds`, `frictionStreakSeconds`)
+  sta invece dentro `uiState` senza problemi: cambia solo quando cedi o quando
+  una sessione inizia o finisce. Il "stai resistendo da X" del popup è una
+  fotografia presa all'apertura, non un contatore.
 
 ### Cose provate che NON hanno risolto (build 21–23, poi rimosse)
 
@@ -214,7 +218,18 @@ misura l'altezza reale e riporta `pageSize` al ViewModel. Cambiare
 
 ---
 
-## 7. Limiti dichiarati (non riproporli come soluzioni)
+## 7. Privacy: la regola che si dimentica
+
+Le app nascoste non devono comparire in **nessuna** schermata non protetta.
+Vale anche per funzioni che sembrano non c'entrare: lo storico della
+Concentrazione le esclude sia in scrittura (`launchAnyway`) sia in lettura
+(`FocusHistory`), perché altrimenti il nome di un'app nascosta finirebbe in
+chiaro nella classifica dentro le impostazioni. Prima di aggiungere qualunque
+cosa che elenchi app per nome, chiediti da dove si raggiunge.
+
+---
+
+## 8. Limiti dichiarati (non riproporli come soluzioni)
 
 Un launcher senza root **non può**: importare il layout di un altro launcher;
 nascondere le app da Impostazioni, ricerca globale MIUI, Play Store, notifiche
@@ -228,7 +243,7 @@ riordino drag & drop **dentro** la stessa pagina, cartelle, badge di notifica
 
 ---
 
-## 8. Convenzioni
+## 9. Convenzioni
 
 - **Lingua**: interfaccia e `README.md` in italiano; commenti nel codice in
   italiano per le parti nuove, inglese dove già c'era — non riscrivere i

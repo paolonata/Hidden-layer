@@ -73,11 +73,3 @@ fun FocusPill(remaining: StateFlow<Int>, onClick: () -> Unit) {
         )
     }
 }
-
-/** mm:ss, condiviso con la schermata Concentrazione perché il tempo che leggi nei due posti
- * sia scritto nello stesso modo. */
-fun formatFocusRemaining(totalSeconds: Int): String {
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
-}

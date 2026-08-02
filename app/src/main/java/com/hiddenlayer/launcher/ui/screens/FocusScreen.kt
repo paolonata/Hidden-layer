@@ -55,6 +55,8 @@ import com.hiddenlayer.launcher.ui.AppSearchField
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
 import com.hiddenlayer.launcher.ui.closeOnDragDown
+import com.hiddenlayer.launcher.ui.formatFocusDuration
+import com.hiddenlayer.launcher.ui.formatTimeAgo
 import com.hiddenlayer.launcher.ui.formatFocusRemaining
 import kotlinx.coroutines.flow.StateFlow
 
@@ -75,6 +77,7 @@ fun FocusScreen(
     onToggleApp: (AppInfo) -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
+    onResetStats: () -> Unit,
     onDone: () -> Unit
 ) {
     BackHandler(onBack = onDone)
@@ -133,6 +136,13 @@ fun FocusScreen(
                             onStart = onStart
                         )
                     }
+                }
+
+                item {
+                    FocusHistory(
+                        state = state,
+                        onResetStats = onResetStats
+                    )
                 }
 
                 item {
@@ -261,6 +271,136 @@ private fun RunningSession(remaining: StateFlow<Int>, onStop: () -> Unit) {
         )
         Spacer(Modifier.height(20.dp))
         PrimaryPill(label = "Termina ora", onClick = onStop, prominent = false)
+    }
+}
+
+/**
+ * Lo storico di sempre: il record di resistenza e la classifica delle app che apri comunque.
+ *
+ * Non c'è un elenco delle singole sessioni di proposito — quello che serve non è cos'è
+ * successo martedì, ma quali app cedono sistematicamente, e quello si vede solo sommando.
+ *
+ * Le app nascoste sono già escluse in scrittura; qui c'è comunque il filtro, perché un'app
+ * può essere nascosta dopo aver accumulato aperture e il suo nome finirebbe in chiaro in una
+ * schermata non protetta.
+ */
+@Composable
+private fun FocusHistory(state: LauncherUiState, onResetStats: () -> Unit) {
+    val now = remember(state.focusBreaks) { System.currentTimeMillis() }
+    val byPackage = remember(state.allApps) { state.allApps.associateBy { it.packageName } }
+    val breaks = remember(state.focusBreaks, state.hiddenPackages) {
+        state.focusBreaks.filter { it.packageName !in state.hiddenPackages }
+    }
+    val totalBreaks = remember(breaks) { breaks.sumOf { it.count } }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+        HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
+        Spacer(Modifier.height(16.dp))
+
+        Text(
+            text = "Record di resistenza",
+            color = Color.White.copy(alpha = 0.6f),
+            fontSize = 13.sp
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = if (state.focusRecordSeconds > 0) {
+                formatFocusDuration(state.focusRecordSeconds)
+            } else {
+                "nessuno ancora"
+            },
+            color = Color.White,
+            fontSize = 30.sp,
+            fontWeight = FontWeight.Light
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = "il tratto più lungo sotto blocco senza aprire niente",
+            color = Color.White.copy(alpha = 0.5f),
+            fontSize = 12.sp
+        )
+
+        if (state.focusSessionCount > 0) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = buildString {
+                    append(if (state.focusSessionCount == 1) "1 sessione" else "${state.focusSessionCount} sessioni")
+                    append(" · ")
+                    append(if (totalBreaks == 1) "1 apertura forzata" else "$totalBreaks aperture forzate")
+                    if (totalBreaks > 0) {
+                        append(" · ")
+                        append("%.1f a sessione".format(totalBreaks.toFloat() / state.focusSessionCount))
+                    }
+                },
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 13.sp
+            )
+        }
+
+        Spacer(Modifier.height(18.dp))
+
+        Text(
+            text = "Aperte comunque, nonostante il blocco",
+            color = Color.White.copy(alpha = 0.9f),
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Medium
+        )
+        Spacer(Modifier.height(8.dp))
+
+        if (breaks.isEmpty()) {
+            Text(
+                text = "Ancora nessuna. Quando aprirai un'app durante una sessione la troverai qui.",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp
+            )
+        } else {
+            breaks.forEach { entry ->
+                val app = byPackage[entry.packageName]
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp)
+                ) {
+                    if (app != null) {
+                        AppIcon(app = app, size = 30.dp)
+                    } else {
+                        Spacer(Modifier.size(30.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = app?.label ?: entry.packageName,
+                            color = Color.White,
+                            fontSize = 15.sp
+                        )
+                        Text(
+                            text = "ultima volta ${formatTimeAgo(entry.lastAtMillis, now)}",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 12.sp
+                        )
+                    }
+                    Text(
+                        text = "${entry.count}",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Azzera statistiche",
+                color = Color.White.copy(alpha = 0.5f),
+                fontSize = 13.sp,
+                modifier = Modifier
+                    .clip(PILL_SHAPE)
+                    .clickable(onClick = onResetStats)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            )
+        }
+
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
     }
 }
 
