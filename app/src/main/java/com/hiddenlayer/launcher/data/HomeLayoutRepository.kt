@@ -9,10 +9,10 @@ import android.content.Context
  * Home items are a plain ordered list that overflows onto further pages once a page is full
  * (see LauncherUiState.homePages), so they're always packed left-to-right with no gaps.
  *
- * The dock is different: it's a fixed grid of [DOCK_SIZE] slots, stored as exactly that many
- * positions with empty ones written as blanks. It has to be able to hold a gap — otherwise
- * dropping an app onto the second row while the first row is half empty would silently slide
- * it back up into the first row, which is precisely what it used to do.
+ * The dock is different: it's a fixed grid of [DOCK_ROWS] x [DOCK_COLUMNS] slots, stored as
+ * exactly that many positions with empty ones written as blanks. It has to be able to hold a
+ * gap — otherwise dropping an app onto an upper row while the bottom row is half empty would
+ * silently slide it back down into the bottom row, which is precisely what it used to do.
  */
 class HomeLayoutRepository(context: Context) {
 
@@ -166,10 +166,11 @@ class HomeLayoutRepository(context: Context) {
          * actual screen height so a page holds as many rows as physically fit. */
         const val DEFAULT_PAGE_SIZE = 20
 
-        /** The dock is two rows of five: the bottom one is always on screen, the one above
-         * it stays tucked away until you swipe up on the dock itself. */
+        /** The dock is three rows of five: the bottom one is always on screen, the two
+         * above it stay tucked away until you swipe up on the dock itself. Both numbers are
+         * free to change — the layout and the drop targeting are derived from them. */
         const val DOCK_COLUMNS = 5
-        const val DOCK_ROWS = 2
+        const val DOCK_ROWS = 3
         const val DOCK_SIZE = DOCK_COLUMNS * DOCK_ROWS
         private const val KEY_HOME = "home_items"
         private const val KEY_DOCK = "dock_items"

@@ -43,6 +43,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -130,7 +131,12 @@ fun HomeScreen(
     // that opens the drawer: above this line opens the drawer, below it unfolds the dock.
     var dockExpanded by remember { mutableStateOf(false) }
     var dockZoneTop by remember { mutableStateOf(Float.MAX_VALUE) }
-    var dockBottomRowTop by remember { mutableStateOf(Float.MAX_VALUE) }
+    // Top edge of each dock row, index 0 = the always-visible bottom one. Measured rather
+    // than assumed, so a drop lands on the row the finger is actually over whatever the
+    // row count happens to be.
+    val dockRowTops = remember {
+        mutableStateListOf<Float>().apply { repeat(HomeLayoutRepository.DOCK_ROWS) { add(Float.MAX_VALUE) } }
+    }
     var rootWidthPx by remember { mutableStateOf(0f) }
     var rootHeightPx by remember { mutableStateOf(0f) }
     // Dock icons can be dragged too, so the release handler has to know where the icon came
@@ -205,7 +211,14 @@ fun HomeScreen(
                                 val column = ((dragCurrent.x / rootWidthPx) * columns)
                                     .toInt()
                                     .coerceIn(0, columns - 1)
-                                val row = if (dockExpanded && dragCurrent.y < dockBottomRowTop) 1 else 0
+                                val row = if (!dockExpanded) {
+                                    0
+                                } else {
+                                    dockRowTops.indices
+                                        .filter { dockRowTops[it] <= dragCurrent.y }
+                                        .maxByOrNull { dockRowTops[it] }
+                                        ?: 0
+                                }
                                 onDropOnDock(app, row * columns + column)
                             }
 
@@ -301,7 +314,7 @@ fun HomeScreen(
                     }
                 },
                 onZonePositioned = { top -> dockZoneTop = top },
-                onBottomRowPositioned = { top -> dockBottomRowTop = top },
+                onRowPositioned = { rowIndex, top -> dockRowTops[rowIndex] = top },
                 onAppTap = onAppTap,
                 draggedApp = if (dragVisible) draggedApp else null,
                 isMuted = state::isMuted,
@@ -422,7 +435,7 @@ private fun Dock(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onZonePositioned: (Float) -> Unit,
-    onBottomRowPositioned: (Float) -> Unit,
+    onRowPositioned: (Int, Float) -> Unit,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
     onEmptySlotLongPress: (Int) -> Unit
@@ -461,19 +474,27 @@ private fun Dock(
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
-                DockRow(
-                    slots = dockSlots.drop(HomeLayoutRepository.DOCK_COLUMNS),
-                    slotOffset = HomeLayoutRepository.DOCK_COLUMNS,
-                    draggedApp = draggedApp,
-                    isMuted = isMuted,
-                    onAppTap = onAppTap,
-                    onAppLongPress = onAppLongPress,
-                    onEmptySlotLongPress = onEmptySlotLongPress
-                )
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    // Topmost row first: row 0 is the one nearest the bottom of the screen.
+                    for (rowIndex in HomeLayoutRepository.DOCK_ROWS - 1 downTo 1) {
+                        DockRow(
+                            slots = dockSlots.rowSlots(rowIndex),
+                            slotOffset = rowIndex * HomeLayoutRepository.DOCK_COLUMNS,
+                            draggedApp = draggedApp,
+                            isMuted = isMuted,
+                            onAppTap = onAppTap,
+                            onAppLongPress = onAppLongPress,
+                            onEmptySlotLongPress = onEmptySlotLongPress,
+                            modifier = Modifier.onGloballyPositioned {
+                                onRowPositioned(rowIndex, it.positionInRoot().y)
+                            }
+                        )
+                    }
+                }
             }
 
             DockRow(
-                slots = dockSlots.take(HomeLayoutRepository.DOCK_COLUMNS),
+                slots = dockSlots.rowSlots(0),
                 slotOffset = 0,
                 draggedApp = draggedApp,
                 isMuted = isMuted,
@@ -482,10 +503,15 @@ private fun Dock(
                 onEmptySlotLongPress = onEmptySlotLongPress,
                 modifier = Modifier
                     .navigationBarsPadding()
-                    .onGloballyPositioned { onBottomRowPositioned(it.positionInRoot().y) }
+                    .onGloballyPositioned { onRowPositioned(0, it.positionInRoot().y) }
             )
         }
     }
+}
+
+private fun List<AppInfo?>.rowSlots(rowIndex: Int): List<AppInfo?> {
+    val columns = HomeLayoutRepository.DOCK_COLUMNS
+    return List(columns) { getOrNull(rowIndex * columns + it) }
 }
 
 /** Doubles as the affordance for the fold-out row: nothing sits on top of it to steal the
