@@ -25,7 +25,12 @@ class HomeLayoutRepository(context: Context) {
         prefs.edit().putString(KEY_DOCK, encode(items.take(DOCK_SIZE))).apply()
     }
 
+    // An app lives in exactly one place: the dock or the home pages, never both. The dock
+    // is already visible from every page, so leaving a copy on the grid as well is just a
+    // duplicate taking up a slot.
+
     fun addToHome(component: ComponentName) {
+        setDock(getDock().filterNot { it == component })
         val items = getHomeItems()
         if (component !in items) setHomeItems(items + component)
     }
@@ -35,6 +40,7 @@ class HomeLayoutRepository(context: Context) {
         if (component in dock) return true
         if (dock.size >= DOCK_SIZE) return false
         setDock(dock + component)
+        setHomeItems(getHomeItems().filterNot { it == component })
         return true
     }
 
@@ -46,6 +52,7 @@ class HomeLayoutRepository(context: Context) {
             dock.add(component)
         }
         setDock(dock.distinct())
+        setHomeItems(getHomeItems().filterNot { it == component })
     }
 
     fun removeFromHome(component: ComponentName) {
@@ -68,9 +75,13 @@ class HomeLayoutRepository(context: Context) {
         setHomeItems(items)
     }
 
+    /** Drops uninstalled/hidden apps from the layout on every refresh — and, since the dock
+     * wins over the grid, also repairs layouts saved before that rule existed by clearing
+     * any leftover home copy of an app that sits in the dock. */
     fun removeInvalid(validComponents: Set<ComponentName>) {
-        setHomeItems(getHomeItems().filter { it in validComponents })
-        setDock(getDock().filter { it in validComponents })
+        val dock = getDock().filter { it in validComponents }
+        setDock(dock)
+        setHomeItems(getHomeItems().filter { it in validComponents && it !in dock })
     }
 
     private fun encode(items: List<ComponentName>): String =
@@ -87,7 +98,12 @@ class HomeLayoutRepository(context: Context) {
         /** Only a fallback for the first frame: the real page size is measured from the
          * actual screen height so a page holds as many rows as physically fit. */
         const val DEFAULT_PAGE_SIZE = 20
-        const val DOCK_SIZE = 5
+
+        /** The dock is two rows of five: the bottom one is always on screen, the one above
+         * it stays tucked away until you swipe up on the dock itself. */
+        const val DOCK_COLUMNS = 5
+        const val DOCK_ROWS = 2
+        const val DOCK_SIZE = DOCK_COLUMNS * DOCK_ROWS
         private const val KEY_HOME = "home_items"
         private const val KEY_DOCK = "dock_items"
     }

@@ -21,8 +21,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -39,6 +37,7 @@ import com.hiddenlayer.launcher.DrawerMode
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppGridTile
+import com.hiddenlayer.launcher.ui.AppSearchField
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
 import com.hiddenlayer.launcher.ui.closeOnDragDown
@@ -76,21 +75,14 @@ fun DrawerScreen(
                     TopAppBar(
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                         title = {
-                            OutlinedTextField(
+                            AppSearchField(
                                 value = state.query,
                                 onValueChange = onQueryChange,
-                                singleLine = true,
-                                placeholder = {
-                                    Text(if (state.drawerMode == DrawerMode.BROWSE) "Cerca app" else "Scegli un'app")
-                                },
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedTextColor = Color.White,
-                                    unfocusedTextColor = Color.White,
-                                    focusedBorderColor = Color.White.copy(alpha = 0.7f),
-                                    unfocusedBorderColor = Color.White.copy(alpha = 0.4f),
-                                    cursorColor = Color.White
-                                ),
-                                modifier = Modifier.fillMaxWidth()
+                                placeholder = if (state.drawerMode == DrawerMode.BROWSE) {
+                                    "Cerca app"
+                                } else {
+                                    "Scegli un'app"
+                                }
                             )
                         },
                         navigationIcon = {

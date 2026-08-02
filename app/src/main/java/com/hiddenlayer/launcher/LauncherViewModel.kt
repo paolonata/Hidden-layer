@@ -44,9 +44,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             var dock = homeLayoutRepository.getDock()
 
             if (home.isEmpty() && dock.isEmpty() && apps.isNotEmpty()) {
+                // Seed only the always-visible dock row; the hidden second row starts empty.
                 val visible = apps.filter { it.packageName !in hidden }
-                dock = visible.take(HomeLayoutRepository.DOCK_SIZE).map { it.componentName }
-                home = visible.drop(HomeLayoutRepository.DOCK_SIZE).map { it.componentName }
+                dock = visible.take(HomeLayoutRepository.DOCK_COLUMNS).map { it.componentName }
+                home = visible.drop(HomeLayoutRepository.DOCK_COLUMNS).map { it.componentName }
                 homeLayoutRepository.setDock(dock)
                 homeLayoutRepository.setHomeItems(home)
             }

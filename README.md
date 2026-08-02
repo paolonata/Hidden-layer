@@ -76,15 +76,24 @@ Detto in breve: protegge da chi dà un'occhiata al tuo telefono, non da chi
 lo esamina. Se serve di più, su MIUI l'unica strada seria è il **Secondo
 Spazio** di sistema.
 
-## Dock: limite di 5 app
+## Dock: due file da 5, la seconda a scomparsa
 
-Il dock ha esattamente 5 posizioni (tante quante le icone mostrate in
-basso) — è un limite fisso, non un bug. Al primo avvio viene riempito
-automaticamente con le prime 5 app in ordine alfabetico insieme al resto
-della home; se provi ad "Aggiungere al dock" un'altra app mentre è pieno,
-ora te lo dice esplicitamente invece di non fare nulla (prima versione:
-falliva silenziosamente). Per liberare un posto: tieni premuto su un'icona
-del dock → "Rimuovi dal dock" o "Sostituisci".
+Il dock è composto da **due righe da 5 posizioni** (10 in totale). La riga in
+basso è sempre visibile; quella sopra resta ripiegata e si apre con uno
+**swipe verso l'alto sulla zona del dock** (swipe verso il basso per
+richiuderla). Il gesto non va in conflitto con quello che apre il cassetto:
+sopra il dock lo swipe verso l'alto apre il cassetto, sul dock apre la
+seconda fila.
+
+Un'app sta **o nel dock o nella home, mai in entrambi**: il dock è visibile
+da tutte le pagine, quindi lasciarne una copia anche sulla griglia sarebbe
+solo un doppione che occupa spazio. Mettendo un'app nel dock sparisce dalla
+home, e viceversa. I layout salvati prima di questa regola vengono ripuliti
+in automatico al primo avvio.
+
+Se provi ad "Aggiungere al dock" con tutte e 10 le posizioni occupate, te lo
+dice esplicitamente. Per liberare un posto: tieni premuto su un'icona del
+dock → "Rimuovi dal dock" o "Sostituisci".
 
 ## Build
 

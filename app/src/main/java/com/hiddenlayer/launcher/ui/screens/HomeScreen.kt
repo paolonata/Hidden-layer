@@ -1,5 +1,10 @@
 package com.hiddenlayer.launcher.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -46,6 +51,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,6 +74,7 @@ private const val SWIPE_OPEN_THRESHOLD_PX = 40f
 private val PAGE_MOVE_THRESHOLD = 72.dp
 private val TAP_VS_DRAG_THRESHOLD = 16.dp
 private val DRAG_ICON_SIZE = 56.dp
+private val DOCK_TOGGLE_THRESHOLD = 28.dp
 
 /**
  * Swipe-up-to-open-drawer is a single gesture detector on the whole screen (not one per
@@ -111,6 +119,12 @@ fun HomeScreen(
 
     var swipeAccum by remember { mutableStateOf(0f) }
     var swipeArmed by remember { mutableStateOf(false) }
+
+    // The second dock row is folded away until you swipe up on the dock itself. Knowing
+    // where the dock starts is what keeps that gesture from colliding with the swipe-up
+    // that opens the drawer: above this line opens the drawer, below it unfolds the dock.
+    var dockExpanded by remember { mutableStateOf(false) }
+    var dockZoneTop by remember { mutableStateOf(Float.MAX_VALUE) }
 
     var draggedApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOrigin by remember { mutableStateOf(Offset.Zero) }
@@ -170,7 +184,8 @@ fun HomeScreen(
                     detectVerticalDragGestures(
                         onDragStart = { offset ->
                             swipeAccum = 0f
-                            swipeArmed = offset.y > topExclusionPx
+                            // Below the dock the swipe belongs to the dock's second row.
+                            swipeArmed = offset.y > topExclusionPx && offset.y < dockZoneTop
                         },
                         onVerticalDrag = { change, dragAmount ->
                             if (swipeArmed && draggedApp == null) {
@@ -227,10 +242,16 @@ fun HomeScreen(
                 }
             }
 
-            SwipeUpHint()
-
             Dock(
                 dockSlots = dockSlots,
+                expanded = dockExpanded,
+                onExpandedChange = { expanded ->
+                    if (expanded != dockExpanded) {
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                        dockExpanded = expanded
+                    }
+                },
+                onZonePositioned = { top -> dockZoneTop = top },
                 onAppTap = onAppTap,
                 onAppLongPress = { app, slot -> onAppLongPress(app, MenuOrigin.DOCK, slot) },
                 onEmptySlotLongPress = onDockSlotLongPress
@@ -332,18 +353,91 @@ private fun HomeIconTile(
     }
 }
 
-/** Purely decorative — the actual gesture is handled once, on the whole screen, above. */
+/**
+ * Two rows of five. The bottom row is always on screen; the row above it stays folded away
+ * until you swipe up on the dock, and folds back on a swipe down. The gesture lives on this
+ * surface only, and HomeScreen is told where the surface starts (onZonePositioned) so its
+ * own swipe-up — the one that opens the drawer — stands down for anything starting here.
+ */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SwipeUpHint() {
+private fun Dock(
+    dockSlots: List<AppInfo?>,
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onZonePositioned: (Float) -> Unit,
+    onAppTap: (AppInfo) -> Unit,
+    onAppLongPress: (AppInfo, Int) -> Unit,
+    onEmptySlotLongPress: (Int) -> Unit
+) {
+    val density = LocalDensity.current
+    val toggleThresholdPx = remember(density) { with(density) { DOCK_TOGGLE_THRESHOLD.toPx() } }
+    var dragAccum by remember { mutableStateOf(0f) }
+
+    Surface(
+        color = Color.Black.copy(alpha = 0.25f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .onGloballyPositioned { onZonePositioned(it.positionInRoot().y) }
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragStart = { dragAccum = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        dragAccum += dragAmount
+                        if (dragAccum < -toggleThresholdPx) {
+                            dragAccum = 0f
+                            onExpandedChange(true)
+                        } else if (dragAccum > toggleThresholdPx) {
+                            dragAccum = 0f
+                            onExpandedChange(false)
+                        }
+                    }
+                )
+            }
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            DockHandle(expanded = expanded)
+
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                DockRow(
+                    slots = dockSlots.drop(HomeLayoutRepository.DOCK_COLUMNS),
+                    slotOffset = HomeLayoutRepository.DOCK_COLUMNS,
+                    onAppTap = onAppTap,
+                    onAppLongPress = onAppLongPress,
+                    onEmptySlotLongPress = onEmptySlotLongPress
+                )
+            }
+
+            DockRow(
+                slots = dockSlots.take(HomeLayoutRepository.DOCK_COLUMNS),
+                slotOffset = 0,
+                onAppTap = onAppTap,
+                onAppLongPress = onAppLongPress,
+                onEmptySlotLongPress = onEmptySlotLongPress,
+                modifier = Modifier.navigationBarsPadding()
+            )
+        }
+    }
+}
+
+/** Doubles as the affordance for the fold-out row: nothing sits on top of it to steal the
+ * touch, and it widens slightly when the second row is out. */
+@Composable
+private fun DockHandle(expanded: Boolean) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(20.dp),
+            .height(18.dp),
         contentAlignment = Alignment.Center
     ) {
         Box(
             modifier = Modifier
-                .width(36.dp)
+                .width(if (expanded) 22.dp else 36.dp)
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp))
                 .background(Color.White.copy(alpha = 0.6f))
@@ -353,40 +447,42 @@ private fun SwipeUpHint() {
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun Dock(
-    dockSlots: List<AppInfo?>,
+private fun DockRow(
+    slots: List<AppInfo?>,
+    slotOffset: Int,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
-    onEmptySlotLongPress: (Int) -> Unit
+    onEmptySlotLongPress: (Int) -> Unit,
+    modifier: Modifier = Modifier
 ) {
-    // All 5 slots (including the bottom-right one) are real, assignable apps — the
-    // drawer only opens via the whole-screen swipe-up gesture, not a dedicated button.
-    Surface(color = Color.Black.copy(alpha = 0.25f), modifier = Modifier.fillMaxWidth()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            dockSlots.forEachIndexed { index, app ->
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .combinedClickable(
-                            onClick = { app?.let(onAppTap) },
-                            onLongClick = {
-                                if (app != null) onAppLongPress(app, index) else onEmptySlotLongPress(index)
-                            }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (app != null) {
-                        AppIcon(app = app, size = 44.dp)
-                    } else {
-                        Icon(Icons.Default.Add, contentDescription = "Aggiungi al dock", tint = Color.White.copy(alpha = 0.6f))
-                    }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        slots.forEachIndexed { index, app ->
+            val slot = slotOffset + index
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .combinedClickable(
+                        onClick = { app?.let(onAppTap) },
+                        onLongClick = {
+                            if (app != null) onAppLongPress(app, slot) else onEmptySlotLongPress(slot)
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                if (app != null) {
+                    AppIcon(app = app, size = 44.dp)
+                } else {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Aggiungi al dock",
+                        tint = Color.White.copy(alpha = 0.6f)
+                    )
                 }
             }
         }
