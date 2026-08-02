@@ -34,6 +34,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +50,7 @@ import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.ui.AppIcon
+import com.hiddenlayer.launcher.ui.AppSearchField
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
 import com.hiddenlayer.launcher.ui.closeOnDragDown
@@ -70,6 +75,13 @@ fun FocusScreen(
 ) {
     BackHandler(onBack = onDone)
     val listState = rememberLazyListState()
+    var query by remember { mutableStateOf("") }
+
+    // Deliberately not re-sorted with the selected ones on top: the list would reshuffle
+    // under your finger every time you flick a switch.
+    val apps = remember(state.allApps, query) {
+        state.allApps.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
+    }
 
     Box(
         modifier = Modifier
@@ -131,7 +143,32 @@ fun FocusScreen(
                     )
                 }
 
-                items(state.allApps, key = { it.componentName.flattenToString() }) { app ->
+                item {
+                    // The choice is saved as you make it and reused by every future session,
+                    // so this is a one-off setup rather than something to redo each time.
+                    Text(
+                        text = when (val selected = state.focusPackages.size) {
+                            0 -> "Nessuna app selezionata"
+                            1 -> "1 app selezionata · scelta permanente"
+                            else -> "$selected app selezionate · scelta permanente"
+                        },
+                        modifier = Modifier.padding(horizontal = 20.dp),
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                item {
+                    AppSearchField(
+                        value = query,
+                        onValueChange = { query = it },
+                        placeholder = "Cerca app",
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                    )
+                }
+
+                items(apps, key = { it.componentName.flattenToString() }) { app ->
                     val muted = app.packageName in state.focusPackages
                     ListItem(
                         headlineContent = { Text(app.label, color = Color.White) },

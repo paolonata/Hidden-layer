@@ -104,7 +104,7 @@ fun FrictionPrompt(app: AppInfo, onOpenAnyway: () -> Unit, onDismiss: () -> Unit
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 PromptButton(
-                    label = "Torna al lavoro",
+                    label = "Resta sul pezzo",
                     prominent = true,
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f)
