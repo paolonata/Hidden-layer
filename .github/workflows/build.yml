@@ -10,10 +10,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      # v5 of these actions runs on Node.js 24; the v4 line still targets the
+      # deprecated Node.js 20 and only works because runners force it onto 24.
+      - uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -25,7 +27,7 @@ jobs:
         run: ./gradlew assembleDebug --no-daemon
 
       - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: hidden-layer-launcher-debug
           path: app/build/outputs/apk/debug/app-debug.apk
