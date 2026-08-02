@@ -31,14 +31,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
 
     /**
-     * I secondi che mancano alla fine della sessione, tenuti fuori da uiState di proposito.
-     *
-     * Dentro uiState il countdown emetteva un nuovo stato al secondo, e siccome LauncherApp
-     * lo raccoglie alla radice ogni tick ricomponeva tutta l'app: nel cassetto voleva dire
-     * rifiltrare l'elenco completo delle app installate e rieseguire la griglia, una volta al
-     * secondo, per tutta la durata della sessione. Qui lo raccoglie solo chi lo mostra
-     * davvero — la pill e la schermata Concentrazione — quindi ricompone qualche nodo.
-     */
+      * I secondi che mancano alla fine della sessione, tenuti fuori da uiState di proposito.
+      *
+      * Dentro uiState il countdown emetterebbe un nuovo stato al secondo, e siccome
+      * LauncherApp lo raccoglie alla radice ogni tick ricomporrebbe tutta l'app: nel cassetto
+      * vorrebbe dire rifiltrare l'elenco completo delle app installate e rieseguire la
+      * griglia, una volta al secondo, per tutta la sessione. Qui lo raccoglie solo chi lo
+      * mostra davvero — la pill e la schermata Concentrazione.
+      */
     private val _focusRemainingSeconds = MutableStateFlow(0)
     val focusRemainingSeconds: StateFlow<Int> = _focusRemainingSeconds.asStateFlow()
 
@@ -54,8 +54,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * seeds a sensible default layout (dock + home, in alphabetical order) on first run. */
     fun refreshApps() {
         viewModelScope.launch {
-            val known = _uiState.value.allApps
-            val apps = withContext(Dispatchers.IO) { appRepository.loadLaunchableApps(known) }
+            val apps = withContext(Dispatchers.IO) { appRepository.loadLaunchableApps() }
             val hidden = hiddenAppsRepository.getHiddenPackages()
             val validComponents = apps
                 .filter { it.packageName !in hidden }
@@ -151,9 +150,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * bisogno che hai meno voglia di cercarla.
      *
      * Non è un interruttore: a sessione in corso porta alla schermata Concentrazione invece
-     * di terminarla, così un doppio tap involontario non può buttare via il lavoro fatto —
-     * fermarsi resta una scelta esplicita. Stessa cosa se non hai ancora scelto nessuna app
-     * da mettere in grigio, perché una sessione a mani vuote non farebbe nulla.
+     * di terminarla, così un doppio tap involontario non può buttare via il lavoro fatto.
+     * Stessa cosa se non hai ancora scelto nessuna app da mettere in grigio, perché una
+     * sessione a mani vuote non farebbe nulla.
      */
     fun focusShortcut() {
         val current = _uiState.value
@@ -164,8 +163,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    /** Una delle tre durate del doppio tap. Viene anche salvata come durata corrente, così
-     * la schermata Concentrazione resta allineata a quello che hai appena scelto. */
+    /** Una delle tre durate del doppio tap. Viene anche salvata come durata corrente, così la
+     * schermata Concentrazione resta allineata a quello che hai appena scelto. */
     fun pickFocusDuration(minutes: Int) {
         _uiState.value = _uiState.value.copy(focusPickerVisible = false)
         setFocusDuration(minutes)
@@ -176,8 +175,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(focusPickerVisible = false)
     }
 
-    /** "Altra durata…" dal popup: le tre scorciatoie coprono i casi normali, tutto il resto
-     * si regola dove ci sono i minuti al dettaglio. */
+    /** "Altra durata…" dal popup: le tre scorciatoie coprono i casi normali, il resto si
+     * regola dove ci sono i minuti al dettaglio. */
     fun openFocusFromPicker() {
         _uiState.value = _uiState.value.copy(focusPickerVisible = false, screen = Screen.FOCUS)
     }
@@ -195,8 +194,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         endSession()
     }
 
-    /** Chiusura di una sessione, per scadenza o per scelta: un solo aggiornamento di stato,
-     * non uno per campo. */
+    /** Chiusura di una sessione, per scadenza o per scelta: un solo aggiornamento di stato. */
     private fun endSession() {
         focusTicker = null
         focusToastJob?.cancel()
@@ -209,8 +207,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
-    /** La pill col countdown appare all'avvio e si spegne da sola: serve a confermare che la
-     * sessione è partita e per quanto, non a stare fissa in home. */
+    /** La pill col countdown appare all'avvio e si spegne da sola: conferma che la sessione è
+     * partita e per quanto, non sta fissa in home. */
     private fun showFocusToast() {
         focusToastJob?.cancel()
         _uiState.value = _uiState.value.copy(focusToastVisible = true)
@@ -229,7 +227,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private fun startTicker(endsAt: Long) {
         focusTicker?.cancel()
-        // Subito, non al primo tick: la pill di conferma compare nello stesso frame.
+        // Subito, non al primo tick: la pill di conferma nasce già col tempo giusto.
         _focusRemainingSeconds.value = ((endsAt - System.currentTimeMillis()) / 1000L)
             .toInt()
             .coerceAtLeast(0)

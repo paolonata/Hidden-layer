@@ -5,7 +5,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -81,8 +80,6 @@ private val TAP_VS_DRAG_THRESHOLD = 16.dp
 private val DRAG_ICON_SIZE = 56.dp
 private val DOCK_TOGGLE_THRESHOLD = 28.dp
 private val DOCK_FALLBACK_HEIGHT = 132.dp
-/** Quanto sopra il bordo del dock galleggia la pill di conferma: la sua altezza più aria. */
-private val FOCUS_PILL_GAP = 42.dp
 
 /**
  * Swipe-up-to-open-drawer is a single gesture detector on the whole screen (not one per
@@ -118,26 +115,15 @@ fun HomeScreen(
     onDropOnHome: (AppInfo) -> Unit,
     onPageSizeChanged: (Int) -> Unit
 ) {
-    // homePages e dockSlots sono proprietà calcolate: senza memo rifanno una mappa di tutte
-    // le app installate a ogni ricomposizione, e la lambda isMuted ricreata ogni volta
-    // renderebbe HomePage e Dock non skippabili, cioè ricomporrebbe l'intera griglia a ogni
-    // aggiornamento di stato, qualunque campo sia cambiato.
-    val pages = remember(state.homeComponents, state.allApps, state.pageSize) { state.homePages }
-    val dockSlots = remember(state.dockComponents, state.allApps) { state.dockSlots }
-    val focusActive = state.focusActive
-    val focusPackages = state.focusPackages
-    val isMuted: (AppInfo) -> Boolean = remember(focusActive, focusPackages) {
-        { app -> focusActive && app.packageName in focusPackages }
-    }
-
+    val pages = state.homePages
     val pagerState = rememberPagerState(pageCount = { pages.size })
+    val dockSlots = state.dockSlots
 
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
     val topExclusionPx = remember(density) { with(density) { TOP_GESTURE_EXCLUSION.toPx() } }
     val pageMoveThresholdPx = remember(density) { with(density) { PAGE_MOVE_THRESHOLD.toPx() } }
     val tapVsDragThresholdPx = remember(density) { with(density) { TAP_VS_DRAG_THRESHOLD.toPx() } }
-    val focusPillGapPx = remember(density) { with(density) { FOCUS_PILL_GAP.toPx() } }
 
     var swipeAccum by remember { mutableStateOf(0f) }
     var swipeArmed by remember { mutableStateOf(false) }
@@ -301,7 +287,7 @@ fun HomeScreen(
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                             onFocusShortcut()
                         },
-                        isMuted = isMuted
+                        isMuted = state::isMuted
                     )
                 }
             }
@@ -324,6 +310,20 @@ fun HomeScreen(
                 }
             }
 
+            // Conferma di avvio, non un elemento fisso: resta qualche secondo e sparisce.
+            AnimatedVisibility(
+                visible = state.focusToastVisible,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    FocusPill(remaining = focusRemaining, onClick = onOpenFocus)
+                }
+            }
+
             Dock(
                 dockSlots = dockSlots,
                 expanded = dockExpanded,
@@ -337,7 +337,7 @@ fun HomeScreen(
                 onRowPositioned = { rowIndex, top -> dockRowTops[rowIndex] = top },
                 onAppTap = onAppTap,
                 draggedApp = if (dragVisible) draggedApp else null,
-                isMuted = isMuted,
+                isMuted = state::isMuted,
                 onAppLongPress = { app, slot ->
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     draggedApp = app
@@ -346,23 +346,6 @@ fun HomeScreen(
                 },
                 onEmptySlotLongPress = onDockSlotLongPress
             )
-        }
-
-        // Conferma di avvio, non un elemento della home: fluttua appena sopra il dock per
-        // qualche secondo e poi sparisce. Sta nel Box di root e non nella colonna apposta —
-        // posizionandola con un offset sul dock misurato non fa scorrere nulla quando
-        // compare e quando se ne va.
-        AnimatedVisibility(
-            visible = state.focusToastVisible && dockZoneTop != Float.MAX_VALUE,
-            enter = fadeIn() + slideInVertically { it / 2 },
-            exit = fadeOut(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset { IntOffset(0, (dockZoneTop - focusPillGapPx).roundToInt()) }
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                FocusPill(remaining = focusRemaining, onClick = onOpenFocus)
-            }
         }
 
         draggedApp?.takeIf { dragVisible }?.let { app ->

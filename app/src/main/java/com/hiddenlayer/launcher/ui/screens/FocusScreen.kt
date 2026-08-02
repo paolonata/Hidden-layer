@@ -54,9 +54,9 @@ import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.AppSearchField
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
+import com.hiddenlayer.launcher.ui.closeOnDragDown
 import com.hiddenlayer.launcher.ui.formatFocusRemaining
 import kotlinx.coroutines.flow.StateFlow
-import com.hiddenlayer.launcher.ui.closeOnDragDown
 
 private val PILL_SHAPE = RoundedCornerShape(percent = 50)
 

@@ -41,8 +41,8 @@ class FocusRepository(context: Context) {
         const val MIN_MINUTES = 5
         const val MAX_MINUTES = 180
         const val STEP_MINUTES = 5
-        /** Include tutte e tre le durate del doppio tap, così quella che hai scelto al volo
-         * resta a un tocco anche dalla schermata Concentrazione. */
+        /** Include tutte e tre le durate del doppio tap, così quella scelta al volo resta
+         * a un tocco anche da qui. */
         val PRESET_MINUTES = listOf(15, 30, 45, 60, 120)
 
         /** Le tre durate del doppio tap. Poche e nette apposta: la scelta deve durare meno

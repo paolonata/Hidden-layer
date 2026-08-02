@@ -44,15 +44,15 @@ data class LauncherUiState(
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,
-    /** Se una sessione è in corso. I secondi che mancano NON stanno qui: vivono in un flow a
-     * parte (LauncherViewModel.focusRemainingSeconds), perché un campo che cambia ogni
-     * secondo dentro questo stato farebbe ricomporre l'intera app a ogni tick. Questo invece
-     * cambia due volte per sessione. */
+    /** Se una sessione è in corso. I secondi che mancano NON stanno qui: vivono in un flow
+     * a parte (LauncherViewModel.focusRemainingSeconds), perché un campo che cambia ogni
+     * secondo dentro questo stato farebbe ricomporre l'intera app a ogni tick — cassetto
+     * compreso. Questo invece cambia due volte per sessione. */
     val focusActive: Boolean = false,
     /** Il doppio tap sulla home ha chiesto per quanto tempo. */
     val focusPickerVisible: Boolean = false,
-    /** La pill col countdown è una conferma, non un elemento fisso della home: resta
-     * accesa qualche secondo dopo l'avvio e poi si spegne da sola. */
+    /** La pill col countdown è una conferma, non un elemento fisso della home: resta accesa
+     * qualche secondo dopo l'avvio e poi si spegne da sola. */
     val focusToastVisible: Boolean = false,
     /** The app whose launch is being second-guessed by the "are you sure?" prompt. */
     val frictionApp: AppInfo? = null,
