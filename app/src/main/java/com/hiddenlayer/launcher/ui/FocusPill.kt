@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -21,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.flow.StateFlow
 
 private val PILL_SHAPE = RoundedCornerShape(percent = 50)
 private val PILL_HEIGHT = 30.dp
@@ -37,7 +40,11 @@ private val PILL_HEIGHT = 30.dp
  * Stessa pill smerigliata del campo di ricerca del cassetto, in piccolo.
  */
 @Composable
-fun FocusPill(remainingSeconds: Int, onClick: () -> Unit) {
+fun FocusPill(remaining: StateFlow<Int>, onClick: () -> Unit) {
+    // Il countdown viene raccolto qui dentro e non passato dall'alto: così il tick di ogni
+    // secondo invalida solo questa pill, non la schermata che la contiene.
+    val remainingSeconds by remaining.collectAsState()
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier

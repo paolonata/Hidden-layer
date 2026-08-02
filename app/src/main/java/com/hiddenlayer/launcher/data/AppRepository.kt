@@ -10,22 +10,36 @@ import androidx.core.graphics.drawable.toBitmap
 
 class AppRepository(private val context: Context) {
 
-    /** Called from a background dispatcher (see LauncherViewModel.refreshApps): decoding every
-     * icon to a Bitmap here means paging/scrolling in the UI never has to do that conversion. */
-    fun loadLaunchableApps(): List<AppInfo> {
+    /**
+     * Called from a background dispatcher (see LauncherViewModel.refreshApps): decoding every
+     * icon to a Bitmap here means paging/scrolling in the UI never has to do that conversion.
+     *
+     * `previous` è l'elenco già in memoria, e le app che ci sono ancora vengono riusate
+     * pari pari. Serve perché questo metodo gira a ogni onResume, cioè ogni volta che torni
+     * al launcher: ridecodificare da capo significherebbe qualche megabyte di bitmap nuovi da
+     * allocare (e altrettanti da raccogliere) a ogni chiusura di un'app, e un elenco nuovo di
+     * zecca che invalida ogni memo della UI. Riusando gli oggetti, quando non è cambiato
+     * niente il nuovo stato risulta uguale al precedente e non viene nemmeno emesso.
+     *
+     * Il compromesso: l'icona o il nome cambiati da un aggiornamento dell'app si vedono al
+     * riavvio del launcher, non subito.
+     */
+    fun loadLaunchableApps(previous: List<AppInfo> = emptyList()): List<AppInfo> {
         val packageManager = context.packageManager
         val intent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_LAUNCHER)
         }
         val resolved = packageManager.queryIntentActivities(intent, PackageManager.MATCH_ALL)
+        val known = previous.associateBy { it.componentName }
 
         return resolved
             .filter { it.activityInfo.packageName != context.packageName }
             .map { resolveInfo ->
                 val activityInfo = resolveInfo.activityInfo
-                AppInfo(
+                val component = ComponentName(activityInfo.packageName, activityInfo.name)
+                known[component] ?: AppInfo(
                     packageName = activityInfo.packageName,
-                    componentName = ComponentName(activityInfo.packageName, activityInfo.name),
+                    componentName = component,
                     label = resolveInfo.loadLabel(packageManager).toString(),
                     icon = resolveInfo.loadIcon(packageManager).toBitmap(width = ICON_SIZE_PX, height = ICON_SIZE_PX)
                 )

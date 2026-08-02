@@ -66,6 +66,7 @@ import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.FocusPill
+import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
 private const val HOME_COLUMNS = 4
@@ -110,16 +111,17 @@ fun HomeScreen(
     onEmptyPageLongPress: () -> Unit,
     onFocusShortcut: () -> Unit,
     onOpenFocus: () -> Unit,
+    focusRemaining: StateFlow<Int>,
     onOpenDrawer: () -> Unit,
     onMoveAppToAdjacentPage: (AppInfo, Int) -> Unit,
     onDropOnDock: (AppInfo, Int) -> Unit,
     onDropOnHome: (AppInfo) -> Unit,
     onPageSizeChanged: (Int) -> Unit
 ) {
-    // Mentre una sessione è in corso lo stato cambia una volta al secondo (il countdown).
-    // Ricalcolare pagine, dock e la lambda isMuted a ogni tick renderebbe HomePage e Dock
-    // non skippabili, cioè ricomporrebbe l'intera griglia ogni secondo: queste tre memo
-    // fanno sì che il ticker tocchi solo la pill.
+    // homePages e dockSlots sono proprietà calcolate: senza memo rifanno una mappa di tutte
+    // le app installate a ogni ricomposizione, e la lambda isMuted ricreata ogni volta
+    // renderebbe HomePage e Dock non skippabili, cioè ricomporrebbe l'intera griglia a ogni
+    // aggiornamento di stato, qualunque campo sia cambiato.
     val pages = remember(state.homeComponents, state.allApps, state.pageSize) { state.homePages }
     val dockSlots = remember(state.dockComponents, state.allApps) { state.dockSlots }
     val focusActive = state.focusActive
@@ -359,7 +361,7 @@ fun HomeScreen(
                 .offset { IntOffset(0, (dockZoneTop - focusPillGapPx).roundToInt()) }
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-                FocusPill(remainingSeconds = state.focusRemainingSeconds, onClick = onOpenFocus)
+                FocusPill(remaining = focusRemaining, onClick = onOpenFocus)
             }
         }
 

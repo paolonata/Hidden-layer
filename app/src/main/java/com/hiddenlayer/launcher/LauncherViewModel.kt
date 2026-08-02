@@ -30,6 +30,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val _uiState = MutableStateFlow(LauncherUiState())
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
 
+    /**
+     * I secondi che mancano alla fine della sessione, tenuti fuori da uiState di proposito.
+     *
+     * Dentro uiState il countdown emetteva un nuovo stato al secondo, e siccome LauncherApp
+     * lo raccoglie alla radice ogni tick ricomponeva tutta l'app: nel cassetto voleva dire
+     * rifiltrare l'elenco completo delle app installate e rieseguire la griglia, una volta al
+     * secondo, per tutta la durata della sessione. Qui lo raccoglie solo chi lo mostra
+     * davvero — la pill e la schermata Concentrazione — quindi ricompone qualche nodo.
+     */
+    private val _focusRemainingSeconds = MutableStateFlow(0)
+    val focusRemainingSeconds: StateFlow<Int> = _focusRemainingSeconds.asStateFlow()
+
     private var focusTicker: Job? = null
     private var focusToastJob: Job? = null
 
@@ -42,7 +54,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * seeds a sensible default layout (dock + home, in alphabetical order) on first run. */
     fun refreshApps() {
         viewModelScope.launch {
-            val apps = withContext(Dispatchers.IO) { appRepository.loadLaunchableApps() }
+            val known = _uiState.value.allApps
+            val apps = withContext(Dispatchers.IO) { appRepository.loadLaunchableApps(known) }
             val hidden = hiddenAppsRepository.getHiddenPackages()
             val validComponents = apps
                 .filter { it.packageName !in hidden }
@@ -179,9 +192,21 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun stopFocus() {
         focusRepository.setSessionEndsAt(0L)
         focusTicker?.cancel()
+        endSession()
+    }
+
+    /** Chiusura di una sessione, per scadenza o per scelta: un solo aggiornamento di stato,
+     * non uno per campo. */
+    private fun endSession() {
         focusTicker = null
-        hideFocusToast()
-        _uiState.value = _uiState.value.copy(focusRemainingSeconds = 0, frictionApp = null)
+        focusToastJob?.cancel()
+        focusToastJob = null
+        _focusRemainingSeconds.value = 0
+        _uiState.value = _uiState.value.copy(
+            focusActive = false,
+            focusToastVisible = false,
+            frictionApp = null
+        )
     }
 
     /** La pill col countdown appare all'avvio e si spegne da sola: serve a confermare che la
@@ -195,14 +220,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    private fun hideFocusToast() {
-        focusToastJob?.cancel()
-        focusToastJob = null
-        if (_uiState.value.focusToastVisible) {
-            _uiState.value = _uiState.value.copy(focusToastVisible = false)
-        }
-    }
-
     /** A session is a wall-clock deadline, so it keeps running across restarts instead of
      * being cancelled by the launcher being killed. */
     private fun restoreFocusSession() {
@@ -212,16 +229,22 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private fun startTicker(endsAt: Long) {
         focusTicker?.cancel()
+        // Subito, non al primo tick: la pill di conferma compare nello stesso frame.
+        _focusRemainingSeconds.value = ((endsAt - System.currentTimeMillis()) / 1000L)
+            .toInt()
+            .coerceAtLeast(0)
+        _uiState.value = _uiState.value.copy(focusActive = true)
+
         focusTicker = viewModelScope.launch {
             while (true) {
                 val remaining = ((endsAt - System.currentTimeMillis()) / 1000L).toInt()
                 if (remaining <= 0) {
                     focusRepository.setSessionEndsAt(0L)
-                    hideFocusToast()
-                    _uiState.value = _uiState.value.copy(focusRemainingSeconds = 0, frictionApp = null)
+                    endSession()
                     break
                 }
-                _uiState.value = _uiState.value.copy(focusRemainingSeconds = remaining)
+                // Solo questo flow: uiState resta fermo per tutta la sessione.
+                _focusRemainingSeconds.value = remaining
                 delay(1000L)
             }
         }

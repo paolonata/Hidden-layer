@@ -34,6 +34,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,7 @@ import com.hiddenlayer.launcher.ui.AppSearchField
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
 import com.hiddenlayer.launcher.ui.formatFocusRemaining
+import kotlinx.coroutines.flow.StateFlow
 import com.hiddenlayer.launcher.ui.closeOnDragDown
 
 private val PILL_SHAPE = RoundedCornerShape(percent = 50)
@@ -68,6 +70,7 @@ private val PILL_SHAPE = RoundedCornerShape(percent = 50)
 @Composable
 fun FocusScreen(
     state: LauncherUiState,
+    focusRemaining: StateFlow<Int>,
     onSetDuration: (Int) -> Unit,
     onToggleApp: (AppInfo) -> Unit,
     onStart: () -> Unit,
@@ -122,10 +125,7 @@ fun FocusScreen(
             ) {
                 item {
                     if (state.focusActive) {
-                        RunningSession(
-                            remainingSeconds = state.focusRemainingSeconds,
-                            onStop = onStop
-                        )
+                        RunningSession(remaining = focusRemaining, onStop = onStop)
                     } else {
                         DurationPicker(
                             minutes = state.focusDurationMinutes,
@@ -238,7 +238,11 @@ private fun DurationPicker(minutes: Int, onSetDuration: (Int) -> Unit, onStart: 
 }
 
 @Composable
-private fun RunningSession(remainingSeconds: Int, onStop: () -> Unit) {
+private fun RunningSession(remaining: StateFlow<Int>, onStop: () -> Unit) {
+    // Raccolto qui, non nel corpo di FocusScreen: il tick al secondo non deve ricomporre
+    // l'elenco delle app con i loro interruttori.
+    val remainingSeconds by remaining.collectAsState()
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth().padding(20.dp)

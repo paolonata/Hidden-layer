@@ -180,6 +180,9 @@ private fun AllAppsPage(
     onClose: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
+    // visibleApps filtra ogni app installata a ogni lettura: senza memo lo rifarebbe a
+    // qualunque ricomposizione, non solo quando cambia davvero l'elenco o la ricerca.
+    val apps = remember(state.allApps, state.hiddenPackages, state.query) { state.visibleApps }
 
     Box(modifier = Modifier.fillMaxSize().closeOnPull(gridState, onClose)) {
         Scaffold(
@@ -210,7 +213,7 @@ private fun AllAppsPage(
             }
         ) { padding ->
             AppGrid(
-                apps = state.visibleApps,
+                apps = apps,
                 gridState = gridState,
                 padding = padding,
                 isMuted = state::isMuted,
@@ -232,6 +235,8 @@ private fun HiddenAppsPage(
     onClose: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
+    val hidden = remember(state.allApps, state.hiddenPackages) { state.hiddenApps }
+    val apps = remember(hidden, state.query) { state.hiddenVisibleApps }
 
     Box(modifier = Modifier.fillMaxSize().closeOnPull(gridState, onClose)) {
         Scaffold(
@@ -270,7 +275,7 @@ private fun HiddenAppsPage(
                 }
             }
         ) { padding ->
-            if (state.hiddenApps.isEmpty()) {
+            if (hidden.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize().padding(padding),
                     contentAlignment = Alignment.Center
@@ -283,7 +288,7 @@ private fun HiddenAppsPage(
                 }
             } else {
                 AppGrid(
-                    apps = state.hiddenVisibleApps,
+                    apps = apps,
                     gridState = gridState,
                     padding = padding,
                     isMuted = state::isMuted,

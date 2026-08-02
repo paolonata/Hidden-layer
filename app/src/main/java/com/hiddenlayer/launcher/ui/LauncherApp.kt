@@ -70,6 +70,7 @@ fun LauncherApp(
                 onEmptyPageLongPress = { showEmptyPageMenu = true },
                 onFocusShortcut = viewModel::focusShortcut,
                 onOpenFocus = viewModel::openFocus,
+                focusRemaining = viewModel.focusRemainingSeconds,
                 onOpenDrawer = viewModel::openDrawer,
                 onMoveAppToAdjacentPage = viewModel::moveToAdjacentPage,
                 onDropOnDock = { app, slot ->
@@ -101,6 +102,7 @@ fun LauncherApp(
 
             Screen.FOCUS -> FocusScreen(
                 state = state,
+                focusRemaining = viewModel.focusRemainingSeconds,
                 onSetDuration = viewModel::setFocusDuration,
                 onToggleApp = viewModel::toggleFocusApp,
                 onStart = viewModel::startFocus,
