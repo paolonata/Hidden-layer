@@ -29,7 +29,15 @@ usare lo strumento della riservatezza per fare le pulizie:
   dock verso l'alto, partendo sopra la zona del dock. Non c'è un pulsante
   dedicato: tutte le posizioni del dock restano libere per app vere.
   Il cassetto contiene tutte le app installate (tranne quelle nascoste), con
-  ricerca, su uno sfondo sfocato che riprende il tuo sfondo reale.
+  ricerca, su uno sfondo sfocato che riprende il tuo sfondo reale. La griglia
+  è a **5 icone per fila**, come il dock, sia nel cassetto normale sia in
+  quello delle app nascoste.
+- **Solo icone, niente nomi**: sotto le icone non c'è l'etichetta, né in home
+  né nel cassetto — l'icona è già il nome. I nomi restano dove servono
+  davvero a identificare un'app: nel menu che si apre tenendo premuto, nella
+  richiesta di conferma della Concentrazione e negli elenchi con interruttore
+  delle impostazioni (app nascoste e app da mettere in grigio), dove sono
+  l'unico modo per capire su cosa stai agendo.
 - **Tieni premuto** su un'icona per aprire un menu con le azioni disponibili
   a seconda di dove ti trovi: aggiungere/rimuovere dalla home o dal dock,
   spostare un'app alla pagina home precedente/successiva, vedere le info

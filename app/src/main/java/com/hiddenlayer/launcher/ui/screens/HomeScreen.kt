@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
@@ -37,9 +36,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -60,7 +57,6 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.LauncherUiState
@@ -71,7 +67,8 @@ import com.hiddenlayer.launcher.ui.AppIcon
 import kotlin.math.roundToInt
 
 private const val HOME_COLUMNS = 4
-private val HOME_TILE_HEIGHT = 76.dp
+// Solo l'icona, senza etichetta sotto: 76dp servivano a far stare anche il nome.
+private val HOME_TILE_HEIGHT = 60.dp
 private val PAGE_PADDING = 12.dp
 private val ROW_SPACING = 12.dp
 private val TOP_GESTURE_EXCLUSION = 56.dp
@@ -399,8 +396,8 @@ private fun HomeIconTile(
     grayscale: Boolean = false,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
             .fillMaxWidth()
             .height(HOME_TILE_HEIGHT)
@@ -409,14 +406,6 @@ private fun HomeIconTile(
             .padding(4.dp)
     ) {
         AppIcon(app = app, size = 48.dp, grayscale = grayscale)
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = app.label,
-            style = MaterialTheme.typography.labelSmall,
-            color = if (grayscale) Color.White.copy(alpha = 0.55f) else Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 

@@ -361,10 +361,12 @@ private fun AppGrid(
 ) {
     LazyVerticalGrid(
         state = gridState,
-        columns = GridCells.Fixed(4),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        // Five per row, come il dock: senza etichette sotto le icone la riga da quattro
+        // lasciava troppo vuoto ai lati.
+        columns = GridCells.Fixed(5),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize().padding(padding)
     ) {
         items(apps, key = { it.componentName.flattenToString() }) { app ->
