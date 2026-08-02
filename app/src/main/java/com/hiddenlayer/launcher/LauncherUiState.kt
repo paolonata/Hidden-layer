@@ -2,11 +2,12 @@ package com.hiddenlayer.launcher
 
 import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
+import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 
 /** The hidden apps are no longer a screen of their own: they're the second page of the
  * drawer, reached by swiping left, so the transition follows the finger. */
-enum class Screen { HOME, DRAWER, HIDDEN_MANAGER }
+enum class Screen { HOME, DRAWER, HIDDEN_MANAGER, FOCUS }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
@@ -40,8 +41,21 @@ data class LauncherUiState(
     val vaultUnlocked: Boolean = false,
     /** Which drawer page to open on: 1 when coming back from the hidden-apps settings. */
     val drawerStartPage: Int = 0,
+    // --- Focus sessions ---
+    val focusPackages: Set<String> = emptySet(),
+    val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,
+    /** Seconds left in the running session; 0 when none is running. */
+    val focusRemainingSeconds: Int = 0,
+    /** The app whose launch is being second-guessed by the "are you sure?" prompt. */
+    val frictionApp: AppInfo? = null,
     val loaded: Boolean = false
 ) {
+    val focusActive: Boolean get() = focusRemainingSeconds > 0
+
+    /** True for an app that is muted by the running session: greyed out everywhere, and
+     * asks for confirmation before it will open. */
+    fun isMuted(app: AppInfo): Boolean = focusActive && app.packageName in focusPackages
+
     val homeApps: List<AppInfo>
         get() {
             val byComponent = allApps.associateBy { it.componentName }

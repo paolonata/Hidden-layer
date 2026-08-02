@@ -5,9 +5,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.AppRepository
+import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HiddenAppsRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,12 +22,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val appRepository = AppRepository(application)
     private val hiddenAppsRepository = HiddenAppsRepository(application)
     private val homeLayoutRepository = HomeLayoutRepository(application)
+    private val focusRepository = FocusRepository(application)
 
     private val _uiState = MutableStateFlow(LauncherUiState())
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
 
+    private var focusTicker: Job? = null
+
     init {
         refreshApps()
+        restoreFocusSession()
     }
 
     /** Re-reads installed apps, drops uninstalled/hidden components from the layout, and
@@ -64,6 +71,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 homeComponents = home,
                 dockComponents = dock,
                 unlockRequired = hiddenAppsRepository.isUnlockRequired(),
+                focusPackages = focusRepository.getDistractingPackages(),
+                focusDurationMinutes = focusRepository.getDurationMinutes(),
                 loaded = true
             )
         }
@@ -81,8 +90,78 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    /** Every launch goes through here, so a muted app can be intercepted wherever it is
+     * tapped from — home, dock or drawer — rather than only in one of them. */
     fun launchApp(app: AppInfo) {
+        if (_uiState.value.isMuted(app)) {
+            _uiState.value = _uiState.value.copy(frictionApp = app)
+        } else {
+            appRepository.launch(app.componentName)
+        }
+    }
+
+    /** Chosen deliberately from the confirmation prompt: bypasses the check. */
+    fun launchAnyway(app: AppInfo) {
+        _uiState.value = _uiState.value.copy(frictionApp = null)
         appRepository.launch(app.componentName)
+    }
+
+    fun dismissFriction() {
+        _uiState.value = _uiState.value.copy(frictionApp = null)
+    }
+
+    // --- Focus sessions -----------------------------------------------------------------
+
+    fun openFocus() {
+        _uiState.value = _uiState.value.copy(screen = Screen.FOCUS)
+    }
+
+    fun setFocusDuration(minutes: Int) {
+        val clamped = minutes.coerceIn(FocusRepository.MIN_MINUTES, FocusRepository.MAX_MINUTES)
+        focusRepository.setDurationMinutes(clamped)
+        _uiState.value = _uiState.value.copy(focusDurationMinutes = clamped)
+    }
+
+    fun toggleFocusApp(app: AppInfo) {
+        val muted = app.packageName !in _uiState.value.focusPackages
+        focusRepository.setDistracting(app.packageName, muted)
+        _uiState.value = _uiState.value.copy(focusPackages = focusRepository.getDistractingPackages())
+    }
+
+    fun startFocus() {
+        val endsAt = System.currentTimeMillis() + _uiState.value.focusDurationMinutes * 60_000L
+        focusRepository.setSessionEndsAt(endsAt)
+        startTicker(endsAt)
+    }
+
+    fun stopFocus() {
+        focusRepository.setSessionEndsAt(0L)
+        focusTicker?.cancel()
+        focusTicker = null
+        _uiState.value = _uiState.value.copy(focusRemainingSeconds = 0, frictionApp = null)
+    }
+
+    /** A session is a wall-clock deadline, so it keeps running across restarts instead of
+     * being cancelled by the launcher being killed. */
+    private fun restoreFocusSession() {
+        val endsAt = focusRepository.getSessionEndsAt()
+        if (endsAt > System.currentTimeMillis()) startTicker(endsAt) else focusRepository.setSessionEndsAt(0L)
+    }
+
+    private fun startTicker(endsAt: Long) {
+        focusTicker?.cancel()
+        focusTicker = viewModelScope.launch {
+            while (true) {
+                val remaining = ((endsAt - System.currentTimeMillis()) / 1000L).toInt()
+                if (remaining <= 0) {
+                    focusRepository.setSessionEndsAt(0L)
+                    _uiState.value = _uiState.value.copy(focusRemainingSeconds = 0, frictionApp = null)
+                    break
+                }
+                _uiState.value = _uiState.value.copy(focusRemainingSeconds = remaining)
+                delay(1000L)
+            }
+        }
     }
 
     fun openDrawer() {

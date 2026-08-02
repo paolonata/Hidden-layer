@@ -51,6 +51,30 @@ usare lo strumento della riservatezza per fare le pulizie:
   punto qualsiasi (quando la griglia è già in cima), oppure dalla
   maniglietta in alto, oppure la X, oppure il tasto indietro di sistema.
 
+## Concentrazione
+
+Pensata per il momento in cui prendi il telefono senza motivo mentre lavori.
+Si apre tenendo premuto su un punto vuoto della home → "Concentrazione".
+
+Scegli la durata con un tocco (15/25/45/60/90 min, più i pulsanti ± per
+regolare di 5 in 5), selezioni le app che ti distraggono e avvii. Durante la
+sessione quelle app:
+
+- **perdono il colore** ovunque — home, dock e cassetto. Il colore è metà del
+  richiamo visivo di un'icona;
+- **chiedono conferma** prima di aprirsi, con qualche secondo di attesa prima
+  che il pulsante "Apri comunque" si attivi.
+
+Il punto non è vietare: raggiungere quell'app è un automatismo, l'attesa no,
+e quando il pulsante si accende di solito la spinta è già passata. La
+sessione ha una scadenza reale (un orario, non un conto alla rovescia in
+memoria), quindi continua anche se MIUI chiude il launcher in background.
+
+**Limite dichiarato**: un launcher non può impedire l'apertura di un'app. Le
+app restano raggiungibili da notifiche, schermate recenti e ricerca di
+sistema. Per un blocco vero serve la Modalità concentrazione di MIUI, che
+agisce a livello di sistema.
+
 ## Riservatezza: cosa fa e cosa non può fare
 
 **Cosa fa.** Le app nascoste spariscono da home, cassetto e ricerca del

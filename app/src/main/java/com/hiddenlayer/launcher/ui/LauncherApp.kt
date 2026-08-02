@@ -23,6 +23,7 @@ import com.hiddenlayer.launcher.Screen
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.screens.DrawerScreen
+import com.hiddenlayer.launcher.ui.screens.FocusScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenManagerScreen
 import com.hiddenlayer.launcher.ui.screens.HomeScreen
 
@@ -31,7 +32,7 @@ import com.hiddenlayer.launcher.ui.screens.HomeScreen
  * (slides up) — e.g. HIDDEN_MANAGER is nested one level under the drawer. */
 private fun screenDepth(screen: Screen): Int = when (screen) {
     Screen.HOME -> 0
-    Screen.DRAWER -> 1
+    Screen.DRAWER, Screen.FOCUS -> 1
     Screen.HIDDEN_MANAGER -> 2
 }
 
@@ -95,6 +96,15 @@ fun LauncherApp(
                 onClose = viewModel::backToHome
             )
 
+            Screen.FOCUS -> FocusScreen(
+                state = state,
+                onSetDuration = viewModel::setFocusDuration,
+                onToggleApp = viewModel::toggleFocusApp,
+                onStart = viewModel::startFocus,
+                onStop = viewModel::stopFocus,
+                onDone = viewModel::backToHome
+            )
+
             Screen.HIDDEN_MANAGER -> HiddenManagerScreen(
                 state = state,
                 onToggleHidden = viewModel::toggleHidden,
@@ -103,6 +113,14 @@ fun LauncherApp(
                 onDone = viewModel::backToHiddenDrawer
             )
         }
+    }
+
+    state.frictionApp?.let { app ->
+        FrictionPrompt(
+            app = app,
+            onOpenAnyway = { viewModel.launchAnyway(app) },
+            onDismiss = viewModel::dismissFriction
+        )
     }
 
     state.contextMenu?.let { menu ->
@@ -126,6 +144,12 @@ fun LauncherApp(
                 MenuAction("Cambia sfondo") {
                     showEmptyPageMenu = false
                     context.startActivity(Intent(Intent.ACTION_SET_WALLPAPER))
+                },
+                MenuAction(
+                    if (state.focusActive) "Concentrazione (in corso)" else "Concentrazione"
+                ) {
+                    showEmptyPageMenu = false
+                    viewModel.openFocus()
                 }
             ),
             onDismiss = { showEmptyPageMenu = false }

@@ -21,7 +21,7 @@ import com.hiddenlayer.launcher.data.AppInfo
  * drawer) over the blurred/transparent background — white text for legibility. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AppGridTile(app: AppInfo, onTap: () -> Unit, onLongPress: () -> Unit) {
+fun AppGridTile(app: AppInfo, onTap: () -> Unit, onLongPress: () -> Unit, grayscale: Boolean = false) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
@@ -29,12 +29,12 @@ fun AppGridTile(app: AppInfo, onTap: () -> Unit, onLongPress: () -> Unit) {
             .combinedClickable(onClick = onTap, onLongClick = onLongPress)
             .padding(4.dp)
     ) {
-        AppIcon(app = app, size = 48.dp)
+        AppIcon(app = app, size = 48.dp, grayscale = grayscale)
         Spacer(Modifier.height(4.dp))
         Text(
             text = app.label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
+            color = if (grayscale) Color.White.copy(alpha = 0.55f) else Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

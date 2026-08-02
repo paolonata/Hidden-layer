@@ -267,7 +267,8 @@ fun HomeScreen(
                             draggedFromDock = false
                             draggedDockSlot = -1
                         },
-                        onEmptyLongPress = onEmptyPageLongPress
+                        onEmptyLongPress = onEmptyPageLongPress,
+                        isMuted = state::isMuted
                     )
                 }
             }
@@ -303,6 +304,7 @@ fun HomeScreen(
                 onBottomRowPositioned = { top -> dockBottomRowTop = top },
                 onAppTap = onAppTap,
                 draggedApp = if (dragVisible) draggedApp else null,
+                isMuted = state::isMuted,
                 onAppLongPress = { app, slot ->
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     draggedApp = app
@@ -335,6 +337,7 @@ fun HomeScreen(
 private fun HomePage(
     apps: List<AppInfo>,
     draggedApp: AppInfo?,
+    isMuted: (AppInfo) -> Boolean,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo) -> Unit,
     onEmptyLongPress: () -> Unit
@@ -360,6 +363,7 @@ private fun HomePage(
                     isBeingDragged = draggedApp?.componentName == app.componentName,
                     onTap = { onAppTap(app) },
                     onLongPress = { onAppLongPress(app) },
+                    grayscale = isMuted(app),
                     // Icons slide to their new spot when one leaves or joins the page,
                     // instead of snapping there in a single frame.
                     modifier = Modifier.animateItem()
@@ -379,6 +383,7 @@ private fun HomeIconTile(
     isBeingDragged: Boolean,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
+    grayscale: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -390,12 +395,12 @@ private fun HomeIconTile(
             .combinedClickable(onClick = onTap, onLongClick = onLongPress)
             .padding(4.dp)
     ) {
-        AppIcon(app = app, size = 48.dp)
+        AppIcon(app = app, size = 48.dp, grayscale = grayscale)
         Spacer(Modifier.height(4.dp))
         Text(
             text = app.label,
             style = MaterialTheme.typography.labelSmall,
-            color = Color.White,
+            color = if (grayscale) Color.White.copy(alpha = 0.55f) else Color.White,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
@@ -413,6 +418,7 @@ private fun HomeIconTile(
 private fun Dock(
     dockSlots: List<AppInfo?>,
     draggedApp: AppInfo?,
+    isMuted: (AppInfo) -> Boolean,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onZonePositioned: (Float) -> Unit,
@@ -459,6 +465,7 @@ private fun Dock(
                     slots = dockSlots.drop(HomeLayoutRepository.DOCK_COLUMNS),
                     slotOffset = HomeLayoutRepository.DOCK_COLUMNS,
                     draggedApp = draggedApp,
+                    isMuted = isMuted,
                     onAppTap = onAppTap,
                     onAppLongPress = onAppLongPress,
                     onEmptySlotLongPress = onEmptySlotLongPress
@@ -469,6 +476,7 @@ private fun Dock(
                 slots = dockSlots.take(HomeLayoutRepository.DOCK_COLUMNS),
                 slotOffset = 0,
                 draggedApp = draggedApp,
+                isMuted = isMuted,
                 onAppTap = onAppTap,
                 onAppLongPress = onAppLongPress,
                 onEmptySlotLongPress = onEmptySlotLongPress,
@@ -506,6 +514,7 @@ private fun DockRow(
     slots: List<AppInfo?>,
     slotOffset: Int,
     draggedApp: AppInfo?,
+    isMuted: (AppInfo) -> Boolean,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
     onEmptySlotLongPress: (Int) -> Unit,
@@ -535,6 +544,7 @@ private fun DockRow(
                     AppIcon(
                         app = app,
                         size = 44.dp,
+                        grayscale = isMuted(app),
                         modifier = Modifier.alpha(
                             if (draggedApp?.componentName == app.componentName) 0.3f else 1f
                         )

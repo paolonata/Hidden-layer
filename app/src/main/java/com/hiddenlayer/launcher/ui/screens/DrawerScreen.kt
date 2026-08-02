@@ -213,6 +213,7 @@ private fun AllAppsPage(
                 apps = state.visibleApps,
                 gridState = gridState,
                 padding = padding,
+                isMuted = state::isMuted,
                 onAppClick = onAppClick,
                 onAppLongPress = onAppLongPress
             )
@@ -285,6 +286,7 @@ private fun HiddenAppsPage(
                     apps = state.hiddenVisibleApps,
                     gridState = gridState,
                     padding = padding,
+                    isMuted = state::isMuted,
                     onAppClick = onAppClick,
                     onAppLongPress = onAppLongPress
                 )
@@ -353,6 +355,7 @@ private fun AppGrid(
     apps: List<AppInfo>,
     gridState: LazyGridState,
     padding: PaddingValues,
+    isMuted: (AppInfo) -> Boolean,
     onAppClick: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo) -> Unit
 ) {
@@ -368,7 +371,8 @@ private fun AppGrid(
             AppGridTile(
                 app = app,
                 onTap = { onAppClick(app) },
-                onLongPress = { onAppLongPress(app) }
+                onLongPress = { onAppLongPress(app) },
+                grayscale = isMuted(app)
             )
         }
     }
