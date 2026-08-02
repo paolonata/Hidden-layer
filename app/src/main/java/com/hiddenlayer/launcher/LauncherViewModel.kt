@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+/** Quanto resta accesa la pill di conferma dopo l'avvio di una sessione. */
+private const val FOCUS_TOAST_MILLIS = 5_000L
+
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
     private val appRepository = AppRepository(application)
@@ -28,6 +31,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
 
     private var focusTicker: Job? = null
+    private var focusToastJob: Job? = null
 
     init {
         refreshApps()
@@ -129,8 +133,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     /**
-     * Il doppio tap sulla home. Avviare una sessione deve costare un gesto, non quattro
-     * passaggi di menu: è proprio quando ne hai bisogno che hai meno voglia di cercarla.
+     * Il doppio tap sulla home: chiede solo per quanto, poi parte. Avviare una sessione deve
+     * costare un gesto e una scelta, non quattro passaggi di menu — è proprio quando ne hai
+     * bisogno che hai meno voglia di cercarla.
      *
      * Non è un interruttore: a sessione in corso porta alla schermata Concentrazione invece
      * di terminarla, così un doppio tap involontario non può buttare via il lavoro fatto —
@@ -142,21 +147,60 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         if (current.focusActive || current.focusPackages.isEmpty()) {
             openFocus()
         } else {
-            startFocus()
+            _uiState.value = current.copy(focusPickerVisible = true)
         }
+    }
+
+    /** Una delle tre durate del doppio tap. Viene anche salvata come durata corrente, così
+     * la schermata Concentrazione resta allineata a quello che hai appena scelto. */
+    fun pickFocusDuration(minutes: Int) {
+        _uiState.value = _uiState.value.copy(focusPickerVisible = false)
+        setFocusDuration(minutes)
+        startFocus()
+    }
+
+    fun dismissFocusPicker() {
+        _uiState.value = _uiState.value.copy(focusPickerVisible = false)
+    }
+
+    /** "Altra durata…" dal popup: le tre scorciatoie coprono i casi normali, tutto il resto
+     * si regola dove ci sono i minuti al dettaglio. */
+    fun openFocusFromPicker() {
+        _uiState.value = _uiState.value.copy(focusPickerVisible = false, screen = Screen.FOCUS)
     }
 
     fun startFocus() {
         val endsAt = System.currentTimeMillis() + _uiState.value.focusDurationMinutes * 60_000L
         focusRepository.setSessionEndsAt(endsAt)
         startTicker(endsAt)
+        showFocusToast()
     }
 
     fun stopFocus() {
         focusRepository.setSessionEndsAt(0L)
         focusTicker?.cancel()
         focusTicker = null
+        hideFocusToast()
         _uiState.value = _uiState.value.copy(focusRemainingSeconds = 0, frictionApp = null)
+    }
+
+    /** La pill col countdown appare all'avvio e si spegne da sola: serve a confermare che la
+     * sessione è partita e per quanto, non a stare fissa in home. */
+    private fun showFocusToast() {
+        focusToastJob?.cancel()
+        _uiState.value = _uiState.value.copy(focusToastVisible = true)
+        focusToastJob = viewModelScope.launch {
+            delay(FOCUS_TOAST_MILLIS)
+            _uiState.value = _uiState.value.copy(focusToastVisible = false)
+        }
+    }
+
+    private fun hideFocusToast() {
+        focusToastJob?.cancel()
+        focusToastJob = null
+        if (_uiState.value.focusToastVisible) {
+            _uiState.value = _uiState.value.copy(focusToastVisible = false)
+        }
     }
 
     /** A session is a wall-clock deadline, so it keeps running across restarts instead of
@@ -173,6 +217,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 val remaining = ((endsAt - System.currentTimeMillis()) / 1000L).toInt()
                 if (remaining <= 0) {
                     focusRepository.setSessionEndsAt(0L)
+                    hideFocusToast()
                     _uiState.value = _uiState.value.copy(focusRemainingSeconds = 0, frictionApp = null)
                     break
                 }

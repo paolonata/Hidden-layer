@@ -63,23 +63,30 @@ usare lo strumento della riservatezza per fare le pulizie:
 
 Pensata per il momento in cui prendi il telefono senza motivo mentre lavori.
 
-**Si avvia con un doppio tap su un punto vuoto della home**, con l'ultima
-durata che hai scelto: iniziare deve costare un gesto, non quattro passaggi
-di menu, perché è proprio quando ti servirebbe che hai meno voglia di
-cercarla. Il doppio tap su un'icona resta due aperture dell'app, non avvia
-niente. Se una sessione è già in corso — o se non hai ancora scelto le app
-da mettere in grigio, perché allora non farebbe nulla — il doppio tap apre
-la schermata Concentrazione invece di agire: un doppio tap involontario non
-può buttare via il lavoro fatto.
+**Si avvia con un doppio tap su un punto vuoto della home**: compare un
+popup con tre durate — **30 min, 1 ora, 2 ore** — e toccandone una la
+sessione parte. Iniziare deve costare un gesto e una scelta, non quattro
+passaggi di menu, perché è proprio quando ti servirebbe che hai meno voglia
+di cercarla; tre opzioni e basta perché la scelta duri meno di un secondo.
+Il doppio tap su un'icona resta due aperture dell'app, non avvia niente.
 
-**Mentre la sessione è attiva, sopra il dock compare una pill con il tempo
-rimasto.** Le icone grigie dicono che qualcosa è cambiato ma non quanto
-manca, e una sessione di cui ti dimentichi non ti tiene. Toccandola si apre
-Concentrazione, dove c'è "Termina ora": fermarsi costa un tocco in più che
-iniziare, di proposito.
+Se una sessione è già in corso — o se non hai ancora scelto le app da
+mettere in grigio, perché allora non farebbe nulla — il doppio tap apre la
+schermata Concentrazione invece di agire: un doppio tap involontario non può
+buttare via il lavoro fatto.
 
-La schermata completa resta raggiungibile tenendo premuto su un punto vuoto
-della home → "Concentrazione".
+**Per una durata diversa dalle tre**: "Altra durata…" nel popup porta alla
+schermata Concentrazione, dove ci sono i preset a un tocco e i pulsanti ±
+per regolare di 5 in 5 fino a 3 ore. La stessa schermata si apre anche
+tenendo premuto su un punto vuoto della home → "Concentrazione".
+
+**All'avvio, sopra il dock, appare per qualche secondo una pill col tempo
+impostato**, poi sparisce da sola: è la conferma che la sessione è partita e
+per quanto, non un elemento fisso della home — un contatore sempre davanti
+agli occhi diventa un'altra cosa da guardare. Finché è visibile la puoi
+toccare per aprire Concentrazione (dove c'è "Termina ora"): fermarsi costa
+un tocco in più che iniziare, di proposito. Che la sessione sia in corso lo
+dicono comunque le icone grigie.
 
 Scegli la durata con un tocco (15/25/45/60/90 min, più i pulsanti ± per
 regolare di 5 in 5), selezioni le app che ti distraggono e avvii. Durante la

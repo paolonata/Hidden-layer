@@ -46,6 +46,11 @@ data class LauncherUiState(
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,
     /** Seconds left in the running session; 0 when none is running. */
     val focusRemainingSeconds: Int = 0,
+    /** Il doppio tap sulla home ha chiesto per quanto tempo. */
+    val focusPickerVisible: Boolean = false,
+    /** La pill col countdown è una conferma, non un elemento fisso della home: resta
+     * accesa qualche secondo dopo l'avvio e poi si spegne da sola. */
+    val focusToastVisible: Boolean = false,
     /** The app whose launch is being second-guessed by the "are you sure?" prompt. */
     val frictionApp: AppInfo? = null,
     val loaded: Boolean = false

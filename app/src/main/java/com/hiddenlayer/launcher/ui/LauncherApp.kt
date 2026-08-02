@@ -21,6 +21,7 @@ import com.hiddenlayer.launcher.LauncherViewModel
 import com.hiddenlayer.launcher.MenuOrigin
 import com.hiddenlayer.launcher.Screen
 import com.hiddenlayer.launcher.data.AppInfo
+import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.screens.DrawerScreen
 import com.hiddenlayer.launcher.ui.screens.FocusScreen
@@ -115,6 +116,15 @@ fun LauncherApp(
                 onDone = viewModel::backToHiddenDrawer
             )
         }
+    }
+
+    if (state.focusPickerVisible) {
+        FocusDurationPrompt(
+            options = FocusRepository.SHORTCUT_MINUTES,
+            onPick = viewModel::pickFocusDuration,
+            onOpenSettings = viewModel::openFocusFromPicker,
+            onDismiss = viewModel::dismissFocusPicker
+        )
     }
 
     state.frictionApp?.let { app ->
