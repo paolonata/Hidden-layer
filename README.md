@@ -62,7 +62,24 @@ usare lo strumento della riservatezza per fare le pulizie:
 ## Concentrazione
 
 Pensata per il momento in cui prendi il telefono senza motivo mentre lavori.
-Si apre tenendo premuto su un punto vuoto della home → "Concentrazione".
+
+**Si avvia con un doppio tap su un punto vuoto della home**, con l'ultima
+durata che hai scelto: iniziare deve costare un gesto, non quattro passaggi
+di menu, perché è proprio quando ti servirebbe che hai meno voglia di
+cercarla. Il doppio tap su un'icona resta due aperture dell'app, non avvia
+niente. Se una sessione è già in corso — o se non hai ancora scelto le app
+da mettere in grigio, perché allora non farebbe nulla — il doppio tap apre
+la schermata Concentrazione invece di agire: un doppio tap involontario non
+può buttare via il lavoro fatto.
+
+**Mentre la sessione è attiva, sopra il dock compare una pill con il tempo
+rimasto.** Le icone grigie dicono che qualcosa è cambiato ma non quanto
+manca, e una sessione di cui ti dimentichi non ti tiene. Toccandola si apre
+Concentrazione, dove c'è "Termina ora": fermarsi costa un tocco in più che
+iniziare, di proposito.
+
+La schermata completa resta raggiungibile tenendo premuto su un punto vuoto
+della home → "Concentrazione".
 
 Scegli la durata con un tocco (15/25/45/60/90 min, più i pulsanti ± per
 regolare di 5 in 5), selezioni le app che ti distraggono e avvii. Durante la

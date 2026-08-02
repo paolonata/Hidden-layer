@@ -53,6 +53,7 @@ import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.AppSearchField
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
+import com.hiddenlayer.launcher.ui.formatFocusRemaining
 import com.hiddenlayer.launcher.ui.closeOnDragDown
 
 private val PILL_SHAPE = RoundedCornerShape(percent = 50)
@@ -249,7 +250,7 @@ private fun RunningSession(remainingSeconds: Int, onStop: () -> Unit) {
         )
         Spacer(Modifier.height(6.dp))
         Text(
-            text = formatRemaining(remainingSeconds),
+            text = formatFocusRemaining(remainingSeconds),
             color = Color.White,
             fontSize = 52.sp,
             fontWeight = FontWeight.Light
@@ -257,12 +258,6 @@ private fun RunningSession(remainingSeconds: Int, onStop: () -> Unit) {
         Spacer(Modifier.height(20.dp))
         PrimaryPill(label = "Termina ora", onClick = onStop, prominent = false)
     }
-}
-
-private fun formatRemaining(totalSeconds: Int): String {
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
 }
 
 @Composable

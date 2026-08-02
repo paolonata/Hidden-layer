@@ -128,6 +128,24 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(focusPackages = focusRepository.getDistractingPackages())
     }
 
+    /**
+     * Il doppio tap sulla home. Avviare una sessione deve costare un gesto, non quattro
+     * passaggi di menu: è proprio quando ne hai bisogno che hai meno voglia di cercarla.
+     *
+     * Non è un interruttore: a sessione in corso porta alla schermata Concentrazione invece
+     * di terminarla, così un doppio tap involontario non può buttare via il lavoro fatto —
+     * fermarsi resta una scelta esplicita. Stessa cosa se non hai ancora scelto nessuna app
+     * da mettere in grigio, perché una sessione a mani vuote non farebbe nulla.
+     */
+    fun focusShortcut() {
+        val current = _uiState.value
+        if (current.focusActive || current.focusPackages.isEmpty()) {
+            openFocus()
+        } else {
+            startFocus()
+        }
+    }
+
     fun startFocus() {
         val endsAt = System.currentTimeMillis() + _uiState.value.focusDurationMinutes * 60_000L
         focusRepository.setSessionEndsAt(endsAt)

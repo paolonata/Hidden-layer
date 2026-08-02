@@ -64,6 +64,7 @@ import com.hiddenlayer.launcher.MenuOrigin
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.AppIcon
+import com.hiddenlayer.launcher.ui.FocusPill
 import kotlin.math.roundToInt
 
 private const val HOME_COLUMNS = 4
@@ -104,15 +105,27 @@ fun HomeScreen(
     onAppLongPress: (AppInfo, MenuOrigin, Int) -> Unit,
     onDockSlotLongPress: (Int) -> Unit,
     onEmptyPageLongPress: () -> Unit,
+    onFocusShortcut: () -> Unit,
+    onOpenFocus: () -> Unit,
     onOpenDrawer: () -> Unit,
     onMoveAppToAdjacentPage: (AppInfo, Int) -> Unit,
     onDropOnDock: (AppInfo, Int) -> Unit,
     onDropOnHome: (AppInfo) -> Unit,
     onPageSizeChanged: (Int) -> Unit
 ) {
-    val pages = state.homePages
+    // Mentre una sessione è in corso lo stato cambia una volta al secondo (il countdown).
+    // Ricalcolare pagine, dock e la lambda isMuted a ogni tick renderebbe HomePage e Dock
+    // non skippabili, cioè ricomporrebbe l'intera griglia ogni secondo: queste tre memo
+    // fanno sì che il ticker tocchi solo la pill.
+    val pages = remember(state.homeComponents, state.allApps, state.pageSize) { state.homePages }
+    val dockSlots = remember(state.dockComponents, state.allApps) { state.dockSlots }
+    val focusActive = state.focusActive
+    val focusPackages = state.focusPackages
+    val isMuted: (AppInfo) -> Boolean = remember(focusActive, focusPackages) {
+        { app -> focusActive && app.packageName in focusPackages }
+    }
+
     val pagerState = rememberPagerState(pageCount = { pages.size })
-    val dockSlots = state.dockSlots
 
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
@@ -278,7 +291,11 @@ fun HomeScreen(
                             draggedDockSlot = -1
                         },
                         onEmptyLongPress = onEmptyPageLongPress,
-                        isMuted = state::isMuted
+                        onEmptyDoubleTap = {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onFocusShortcut()
+                        },
+                        isMuted = isMuted
                     )
                 }
             }
@@ -301,6 +318,24 @@ fun HomeScreen(
                 }
             }
 
+            // Sopra il dock, dove la guardi già: appare solo a sessione in corso e non
+            // occupa spazio quando non c'è.
+            AnimatedVisibility(
+                visible = focusActive,
+                enter = fadeIn() + expandVertically(),
+                exit = fadeOut() + shrinkVertically()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    FocusPill(
+                        remainingSeconds = state.focusRemainingSeconds,
+                        onClick = onOpenFocus
+                    )
+                }
+            }
+
             Dock(
                 dockSlots = dockSlots,
                 expanded = dockExpanded,
@@ -314,7 +349,7 @@ fun HomeScreen(
                 onRowPositioned = { rowIndex, top -> dockRowTops[rowIndex] = top },
                 onAppTap = onAppTap,
                 draggedApp = if (dragVisible) draggedApp else null,
-                isMuted = state::isMuted,
+                isMuted = isMuted,
                 onAppLongPress = { app, slot ->
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     draggedApp = app
@@ -350,13 +385,20 @@ private fun HomePage(
     isMuted: (AppInfo) -> Boolean,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo) -> Unit,
-    onEmptyLongPress: () -> Unit
+    onEmptyLongPress: () -> Unit,
+    onEmptyDoubleTap: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .pointerInput(Unit) {
-                detectTapGestures(onLongPress = { onEmptyLongPress() })
+                // Il doppio tap vive qui, sullo sfondo dietro la griglia: le icone hanno il
+                // loro combinedClickable e consumano il tocco per prime, quindi un doppio tap
+                // su un'app resta due aperture e non fa partire niente per sbaglio.
+                detectTapGestures(
+                    onDoubleTap = { onEmptyDoubleTap() },
+                    onLongPress = { onEmptyLongPress() }
+                )
             }
     ) {
         LazyVerticalGrid(
