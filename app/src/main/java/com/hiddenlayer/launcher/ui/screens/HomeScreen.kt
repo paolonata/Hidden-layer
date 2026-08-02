@@ -20,12 +20,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -103,6 +107,7 @@ fun HomeScreen(
     onEmptyPageLongPress: () -> Unit,
     onOpenDrawer: () -> Unit,
     onMoveAppToAdjacentPage: (AppInfo, Int) -> Unit,
+    onDropOnDock: (AppInfo, Int) -> Unit,
     onPageSizeChanged: (Int) -> Unit
 ) {
     val pages = state.homePages
@@ -125,6 +130,8 @@ fun HomeScreen(
     // that opens the drawer: above this line opens the drawer, below it unfolds the dock.
     var dockExpanded by remember { mutableStateOf(false) }
     var dockZoneTop by remember { mutableStateOf(Float.MAX_VALUE) }
+    var dockBottomRowTop by remember { mutableStateOf(Float.MAX_VALUE) }
+    var rootWidthPx by remember { mutableStateOf(0f) }
 
     var draggedApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOrigin by remember { mutableStateOf(Offset.Zero) }
@@ -136,6 +143,7 @@ fun HomeScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onGloballyPositioned { rootWidthPx = it.size.width.toFloat() }
             .pointerInput(Unit) {
                 awaitEachGesture {
                     val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
@@ -168,6 +176,19 @@ fun HomeScreen(
                         when {
                             moved.getDistance() < tapVsDragThresholdPx ->
                                 onAppLongPress(app, MenuOrigin.HOME, -1)
+
+                            // Released over the dock: work out which slot it landed on from
+                            // the drop position — column from x, and which of the two rows
+                            // from y when the fold-out row is open.
+                            dragCurrent.y > dockZoneTop && rootWidthPx > 0f -> {
+                                val columns = HomeLayoutRepository.DOCK_COLUMNS
+                                val column = ((dragCurrent.x / rootWidthPx) * columns)
+                                    .toInt()
+                                    .coerceIn(0, columns - 1)
+                                val row = if (dockExpanded && dragCurrent.y < dockBottomRowTop) 1 else 0
+                                onDropOnDock(app, row * columns + column)
+                            }
+
                             moved.x > pageMoveThresholdPx -> onMoveAppToAdjacentPage(app, +1)
                             moved.x < -pageMoveThresholdPx -> onMoveAppToAdjacentPage(app, -1)
                         }
@@ -252,6 +273,7 @@ fun HomeScreen(
                     }
                 },
                 onZonePositioned = { top -> dockZoneTop = top },
+                onBottomRowPositioned = { top -> dockBottomRowTop = top },
                 onAppTap = onAppTap,
                 onAppLongPress = { app, slot -> onAppLongPress(app, MenuOrigin.DOCK, slot) },
                 onEmptySlotLongPress = onDockSlotLongPress
@@ -291,31 +313,24 @@ private fun HomePage(
                 detectTapGestures(onLongPress = { onEmptyLongPress() })
             }
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = PAGE_PADDING),
-            verticalArrangement = Arrangement.spacedBy(ROW_SPACING)
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(HOME_COLUMNS),
+            userScrollEnabled = false,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = PAGE_PADDING),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(ROW_SPACING),
+            modifier = Modifier.fillMaxSize()
         ) {
-            apps.chunked(HOME_COLUMNS).forEach { rowApps ->
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    rowApps.forEach { app ->
-                        Box(modifier = Modifier.weight(1f)) {
-                            HomeIconTile(
-                                app = app,
-                                isBeingDragged = draggedApp?.componentName == app.componentName,
-                                onTap = { onAppTap(app) },
-                                onLongPress = { onAppLongPress(app) }
-                            )
-                        }
-                    }
-                    repeat(HOME_COLUMNS - rowApps.size) {
-                        Spacer(modifier = Modifier.weight(1f))
-                    }
-                }
+            items(apps, key = { it.componentName.flattenToString() }) { app ->
+                HomeIconTile(
+                    app = app,
+                    isBeingDragged = draggedApp?.componentName == app.componentName,
+                    onTap = { onAppTap(app) },
+                    onLongPress = { onAppLongPress(app) },
+                    // Icons slide to their new spot when one leaves or joins the page,
+                    // instead of snapping there in a single frame.
+                    modifier = Modifier.animateItem()
+                )
             }
         }
     }
@@ -330,11 +345,12 @@ private fun HomeIconTile(
     app: AppInfo,
     isBeingDragged: Boolean,
     onTap: () -> Unit,
-    onLongPress: () -> Unit
+    onLongPress: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(HOME_TILE_HEIGHT)
             .alpha(if (isBeingDragged) 0.3f else 1f)
@@ -366,6 +382,7 @@ private fun Dock(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onZonePositioned: (Float) -> Unit,
+    onBottomRowPositioned: (Float) -> Unit,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
     onEmptySlotLongPress: (Int) -> Unit
@@ -419,7 +436,9 @@ private fun Dock(
                 onAppTap = onAppTap,
                 onAppLongPress = onAppLongPress,
                 onEmptySlotLongPress = onEmptySlotLongPress,
-                modifier = Modifier.navigationBarsPadding()
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .onGloballyPositioned { onBottomRowPositioned(it.positionInRoot().y) }
             )
         }
     }

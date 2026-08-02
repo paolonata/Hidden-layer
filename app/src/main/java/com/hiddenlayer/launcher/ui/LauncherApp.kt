@@ -70,6 +70,15 @@ fun LauncherApp(
                 onEmptyPageLongPress = { showEmptyPageMenu = true },
                 onOpenDrawer = viewModel::openDrawer,
                 onMoveAppToAdjacentPage = viewModel::moveToAdjacentPage,
+                onDropOnDock = { app, slot ->
+                    if (!viewModel.dropOnDock(app, slot)) {
+                        Toast.makeText(
+                            context,
+                            "Dock pieno (massimo ${HomeLayoutRepository.DOCK_SIZE} app).",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                },
                 onPageSizeChanged = viewModel::setPageSize
             )
 

@@ -165,6 +165,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         return added
     }
 
+    /** Dropping a dragged home icon onto the dock. Returns false when the dock is full so
+     * the caller can say so instead of the drop silently doing nothing. */
+    fun dropOnDock(app: AppInfo, slot: Int): Boolean {
+        val placed = homeLayoutRepository.insertIntoDock(app.componentName, slot)
+        syncLayout()
+        return placed
+    }
+
     fun addToHome(app: AppInfo) {
         homeLayoutRepository.addToHome(app.componentName)
         syncLayout()

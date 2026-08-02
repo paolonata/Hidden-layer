@@ -44,6 +44,19 @@ class HomeLayoutRepository(context: Context) {
         return true
     }
 
+    /** Drops an app into the dock at the position it was released over, closing ranks
+     * rather than leaving a hole (the stored dock is a plain ordered list, so a gap in the
+     * middle can't be represented anyway). Dropping past the last icon appends; dragging an
+     * app that is already docked just reorders it. Returns false when the dock is full. */
+    fun insertIntoDock(component: ComponentName, preferredSlot: Int): Boolean {
+        val dock = getDock().filterNot { it == component }.toMutableList()
+        if (dock.size >= DOCK_SIZE) return false
+        dock.add(preferredSlot.coerceIn(0, dock.size), component)
+        setDock(dock)
+        setHomeItems(getHomeItems().filterNot { it == component })
+        return true
+    }
+
     fun setDockSlot(slot: Int, component: ComponentName) {
         val dock = getDock().toMutableList()
         if (slot < dock.size) {
