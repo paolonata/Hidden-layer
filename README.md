@@ -169,9 +169,12 @@ l'alto apre il cassetto, sul dock apre le file nascoste.
 
 Per **richiuderle**: swipe verso il basso sul dock, oppure un tocco o uno
 swipe verso il basso in un punto qualsiasi dello schermo fuori dal dock. Con
-le file aperte, il primo gesto fuori dal dock serve solo a richiuderle — non
-apre l'app che hai toccato né cambia pagina, come da qualunque pannello
-aperto: prima lo chiudi, poi la home torna a comportarsi normalmente.
+le file aperte, un gesto fuori dal dock serve solo a richiuderle — non apre
+l'app che hai toccato né cambia pagina, come da qualunque pannello aperto:
+prima lo chiudi, poi la home torna a comportarsi normalmente. L'eccezione è
+il **tenere premuto**: quello resta un'intenzione precisa, quindi apre il
+menu contestuale o inizia un trascinamento, e le file restano aperte — è così
+che ci si porta sopra un'icona della home.
 
 Righe e colonne sono due costanti (`DOCK_ROWS` e `DOCK_COLUMNS` in
 `HomeLayoutRepository`): il layout e il calcolo di dove atterra un'app

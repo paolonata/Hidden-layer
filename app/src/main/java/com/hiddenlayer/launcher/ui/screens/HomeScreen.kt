@@ -172,17 +172,25 @@ fun HomeScreen(
                     // con le icone: siamo sul pass Initial, che arriva a questo genitore prima
                     // che una tile possa consumare il tocco e lanciare l'app che hai sfiorato.
                     val dismissingDock = dockExpanded && down.position.y < dockZoneTop
+                    // Un long press sulla griglia trasforma il gesto in un trascinamento, e
+                    // allora la chiusura del dock deve farsi da parte: altrimenti con le file
+                    // aperte non ci sarebbe alcun modo di portarci sopra un'icona della home.
+                    var draggingStarted = false
 
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
-                        if (dismissingDock) {
-                            change.consume()
-                        } else if (draggedApp != null) {
+                        if (draggedApp != null) {
+                            draggingStarted = true
                             // Long-click just flagged an app as being moved: anchor the drag
                             // at wherever the finger is now, and swallow the events so the
                             // pager doesn't also start flinging between pages underneath.
+                            //
+                            // L'ancoraggio qui è anche ciò che impedisce di riusare le
+                            // coordinate del gesto precedente: senza, un long press fermo
+                            // rilasciava usando dragCurrent vecchio e spostava l'app dove era
+                            // finito il trascinamento di prima.
                             if (origin == null) {
                                 origin = change.position
                                 dragOrigin = change.position
@@ -192,11 +200,13 @@ fun HomeScreen(
                                 dragVisible = true
                             }
                             change.consume()
+                        } else if (dismissingDock) {
+                            change.consume()
                         }
                         if (!change.pressed) break
                     }
 
-                    if (dismissingDock) {
+                    if (dismissingDock && !draggingStarted) {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         dockExpanded = false
                     }
