@@ -90,6 +90,7 @@ fun DrawerScreen(
     onHiddenAppClick: (AppInfo) -> Unit,
     onHiddenAppLongPress: (AppInfo) -> Unit,
     onPinSubmit: (String) -> Unit,
+    onClearUnlockError: () -> Unit,
     onOpenSettings: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -153,6 +154,7 @@ fun DrawerScreen(
                         canUseBiometrics = canUseBiometrics(),
                         onBiometricRequest = onRequestBiometric,
                         onPinSubmit = onPinSubmit,
+                        onClearError = onClearUnlockError,
                         onClose = onClose
                     )
                 } else {
@@ -301,6 +303,7 @@ private fun UnlockPage(
     canUseBiometrics: Boolean,
     onBiometricRequest: () -> Unit,
     onPinSubmit: (String) -> Unit,
+    onClearError: () -> Unit,
     onClose: () -> Unit
 ) {
     var pin by remember { mutableStateOf("") }
@@ -312,7 +315,10 @@ private fun UnlockPage(
     ) {
         OutlinedTextField(
             value = pin,
-            onValueChange = { if (it.length <= 8) pin = it.filter(Char::isDigit) },
+            onValueChange = {
+                if (it.length <= 8) pin = it.filter(Char::isDigit)
+                onClearError()
+            },
             label = { Text("PIN", color = Color.White.copy(alpha = 0.8f)) },
             singleLine = true,
             isError = error,

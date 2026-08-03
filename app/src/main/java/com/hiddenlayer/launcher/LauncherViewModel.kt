@@ -56,31 +56,46 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * seeds a sensible default layout (dock + home, in alphabetical order) on first run. */
     fun refreshApps() {
         viewModelScope.launch {
-            val apps = withContext(Dispatchers.IO) { appRepository.loadLaunchableApps() }
-            val hidden = hiddenAppsRepository.getHiddenPackages()
+            // Anche getHiddenPackages() sta su IO: la prima chiamata apre l'archivio
+            // cifrato, che parla col Keystore, e questo gira a ogni onResume.
+            val (apps, hidden) = withContext(Dispatchers.IO) {
+                appRepository.loadLaunchableApps() to hiddenAppsRepository.getHiddenPackages()
+            }
             val validComponents = apps
                 .filter { it.packageName !in hidden }
                 .map { it.componentName }
                 .toSet()
 
-            homeLayoutRepository.removeInvalid(validComponents)
+            // Potare in base a un elenco vuoto cancellerebbe l'intera disposizione, e
+            // queryIntentActivities può tornare vuota per motivi passeggeri (aggiornamento di
+            // un'app in corso, PackageManager non ancora pronto dopo un riavvio).
+            if (apps.isNotEmpty()) homeLayoutRepository.removeInvalid(validComponents)
 
             var home = homeLayoutRepository.getHomeItems()
             var dock = homeLayoutRepository.getDockSlots()
 
-            if (home.isEmpty() && dock.all { it == null } && apps.isNotEmpty()) {
-                // Seed only the always-visible dock row; the fold-out row starts empty.
-                val visible = apps.filter { it.packageName !in hidden }
-                dock = List(HomeLayoutRepository.DOCK_SIZE) { index ->
-                    if (index < HomeLayoutRepository.DOCK_COLUMNS) {
-                        visible.getOrNull(index)?.componentName
-                    } else {
-                        null
+            // La semina automatica avviene una volta sola nella vita dell'installazione.
+            // Prima era condizionata a "home e dock vuoti", che è la stessa cosa solo al
+            // primo avvio: dopo, svuotare la home a mano — o una potatura andata male — la
+            // faceva riscattare, ripopolando tutto in ordine alfabetico.
+            if (!homeLayoutRepository.isSeeded() && apps.isNotEmpty()) {
+                if (home.isEmpty() && dock.all { it == null }) {
+                    // Seed only the always-visible dock row; the fold-out row starts empty.
+                    val visible = apps.filter { it.packageName !in hidden }
+                    dock = List(HomeLayoutRepository.DOCK_SIZE) { index ->
+                        if (index < HomeLayoutRepository.DOCK_COLUMNS) {
+                            visible.getOrNull(index)?.componentName
+                        } else {
+                            null
+                        }
                     }
+                    home = visible.drop(HomeLayoutRepository.DOCK_COLUMNS).map { it.componentName }
+                    homeLayoutRepository.setDockSlots(dock)
+                    homeLayoutRepository.setHomeItems(home)
                 }
-                home = visible.drop(HomeLayoutRepository.DOCK_COLUMNS).map { it.componentName }
-                homeLayoutRepository.setDockSlots(dock)
-                homeLayoutRepository.setHomeItems(home)
+                // Marcato anche quando una disposizione c'era già: aggiornando da una
+                // versione senza questo flag, il layout esistente non va riscritto.
+                homeLayoutRepository.markSeeded()
             }
 
             _uiState.value = _uiState.value.copy(
@@ -147,7 +162,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun resetFocusStats() {
-        focusStatsRepository.reset()
+        focusStatsRepository.reset(
+            sessionActive = _uiState.value.focusActive,
+            nowMillis = System.currentTimeMillis()
+        )
         syncFocusStats()
     }
 
@@ -317,7 +335,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         when (_uiState.value.drawerMode) {
             DrawerMode.BROWSE -> {
                 launchApp(app)
-                backToHome()
+                // Se l'app è in grigio, launchApp non ha aperto niente: ha alzato la
+                // richiesta di conferma. Chiudere il cassetto adesso la lascerebbe sopra la
+                // home, e "Resta sul pezzo" ti farebbe perdere anche la ricerca digitata.
+                if (_uiState.value.frictionApp == null) backToHome()
             }
             DrawerMode.PICK_FOR_HOME -> {
                 homeLayoutRepository.addToHome(app.componentName)
@@ -405,7 +426,16 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         val pages = currentState.homePages
         val currentPageIndex = pages.indexOfFirst { page -> page.any { it.componentName == app.componentName } }
         if (currentPageIndex == -1) return
-        val targetPageIndex = (currentPageIndex + direction).coerceAtLeast(0)
+        val targetPageIndex = currentPageIndex + direction
+        // Fuori dalle pagine esistenti non si fa niente. Prima verso sinistra dalla prima
+        // pagina l'indice veniva portato a 0 e l'icona finiva in testa alla stessa pagina —
+        // cioè un riordino dentro la pagina, che questo launcher non fa; e verso destra
+        // dall'ultima l'inserimento ricadeva in fondo alla stessa pagina, quindi il gesto
+        // sembrava semplicemente ignorato.
+        if (targetPageIndex < 0 || targetPageIndex >= pages.size) {
+            dismissContextMenu()
+            return
+        }
         homeLayoutRepository.moveToPage(app.componentName, targetPageIndex, currentState.pageSize)
         syncLayout()
         dismissContextMenu()
@@ -442,6 +472,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
+    fun openWallpaperPicker(): Boolean = appRepository.openWallpaperPicker()
+
     fun openAppInfo(app: AppInfo) {
         appRepository.openAppInfo(app.packageName)
         dismissContextMenu()
@@ -464,6 +496,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             onUnlockSucceeded()
         } else {
             _uiState.value = _uiState.value.copy(unlockError = true)
+        }
+    }
+
+    /** Chiamata mentre riscrivi: "PIN errato" e il bordo rosso restavano accesi fino allo
+     * sblocco, quindi il secondo tentativo partiva già segnato come sbagliato. */
+    fun clearUnlockError() {
+        if (_uiState.value.unlockError) {
+            _uiState.value = _uiState.value.copy(unlockError = false)
         }
     }
 

@@ -134,6 +134,16 @@ class HomeLayoutRepository(context: Context) {
         setHomeItems(getHomeItems().filter { it in validComponents && it !in docked })
     }
 
+    /** Se la disposizione iniziale è già stata generata. Senza questo flag bastava
+     * svuotare home e dock — a mano, o dopo una potatura andata male — perché al riavvio
+     * successivo il launcher ripopolasse la home con tutte le app in ordine alfabetico,
+     * cancellando la disposizione scelta dall'utente. */
+    fun isSeeded(): Boolean = prefs.getBoolean(KEY_SEEDED, false)
+
+    fun markSeeded() {
+        prefs.edit().putBoolean(KEY_SEEDED, true).apply()
+    }
+
     private fun clearFromDock(component: ComponentName) {
         setDockSlots(getDockSlots().map { if (it == component) null else it })
     }
@@ -174,5 +184,6 @@ class HomeLayoutRepository(context: Context) {
         const val DOCK_SIZE = DOCK_COLUMNS * DOCK_ROWS
         private const val KEY_HOME = "home_items"
         private const val KEY_DOCK = "dock_items"
+        private const val KEY_SEEDED = "layout_seeded"
     }
 }

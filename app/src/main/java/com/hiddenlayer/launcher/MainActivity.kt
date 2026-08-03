@@ -37,10 +37,14 @@ class MainActivity : FragmentActivity() {
 
     /** Leaving the launcher for any reason — opening an app, screen off, task switcher —
      * closes the vault, so it is never left open behind your back and coming back always
-     * lands on the home screen. */
+     * lands on the home screen.
+     *
+     * Un cambio di configurazione (rotazione, tema di sistema, lingua) passa da qui pur non
+     * essendo un'uscita: senza questo controllo bastava girare lo schermo per ritrovarsi
+     * davanti alla richiesta di PIN. */
     override fun onStop() {
         super.onStop()
-        viewModel.lockVault()
+        if (!isChangingConfigurations) viewModel.lockVault()
     }
 
     override fun onNewIntent(intent: Intent) {

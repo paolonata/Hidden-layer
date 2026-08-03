@@ -1,5 +1,6 @@
 package com.hiddenlayer.launcher.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -54,6 +55,10 @@ fun FrictionPrompt(
     onOpenAnyway: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // È un overlay in composizione, non un Dialog: il tasto indietro va gestito a mano,
+    // altrimenti l'unico modo di uscire è toccare fuori dalla carta.
+    BackHandler(onBack = onDismiss)
+
     var secondsLeft by remember(app.componentName) { mutableIntStateOf(HOLD_SECONDS) }
 
     LaunchedEffect(app.componentName) {

@@ -1,6 +1,5 @@
 package com.hiddenlayer.launcher.ui
 
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
@@ -96,6 +95,7 @@ fun LauncherApp(
                 onHiddenAppClick = viewModel::launchApp,
                 onHiddenAppLongPress = { app -> viewModel.showContextMenu(app, MenuOrigin.HIDDEN_DRAWER) },
                 onPinSubmit = viewModel::verifyPin,
+                onClearUnlockError = viewModel::clearUnlockError,
                 onOpenSettings = viewModel::openHiddenSettings,
                 onClose = viewModel::backToHome
             )
@@ -160,7 +160,13 @@ fun LauncherApp(
                 },
                 MenuAction("Cambia sfondo") {
                     showEmptyPageMenu = false
-                    context.startActivity(Intent(Intent.ACTION_SET_WALLPAPER))
+                    if (!viewModel.openWallpaperPicker()) {
+                        Toast.makeText(
+                            context,
+                            "Nessun selettore di sfondo disponibile su questo sistema.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
                 },
                 MenuAction(
                     if (state.focusActive) "Concentrazione (in corso)" else "Concentrazione"
@@ -204,7 +210,11 @@ private fun buildContextMenuActions(
             if (currentPageIndex > 0) {
                 actions += MenuAction("Sposta a pagina precedente") { viewModel.moveToAdjacentPage(app, -1) }
             }
-            actions += MenuAction("Sposta a pagina successiva") { viewModel.moveToAdjacentPage(app, +1) }
+            // Solo se una pagina successiva esiste davvero: il modello dei dati non ha buchi,
+            // quindi non si può spostare un'icona su una pagina che non c'è ancora.
+            if (currentPageIndex in 0 until state.homePages.size - 1) {
+                actions += MenuAction("Sposta a pagina successiva") { viewModel.moveToAdjacentPage(app, +1) }
+            }
             actions += MenuAction("Nascondi app") { viewModel.hideApp(app) }
         }
         MenuOrigin.DOCK -> {

@@ -37,16 +37,30 @@ import kotlinx.coroutines.withContext
  * while this app is the active home/launcher (which is the whole point of this project);
  * if it's ever unavailable, this silently falls back to just the scrim rather than crashing.
  */
+/**
+ * La copia sfocata, tenuta per tutto il processo.
+ *
+ * `produceState` senza chiavi riparte a ogni ingresso in composizione, quindi lo sfondo
+ * veniva rifatto a ogni apertura del cassetto, della Concentrazione e delle impostazioni —
+ * e due volte insieme durante la transizione fra due di queste. Ogni giro allocava una
+ * bitmap **grande quanto lo schermo** (~10 MB su 1080×2400) solo per ridurla a 64 px:
+ * memoria e pressione sul garbage collector proprio nel frame in cui parte l'animazione di
+ * apertura. Il risultato non cambia finché non cambia lo sfondo, quindi si calcola una
+ * volta sola; un cambio di sfondo si vede al riavvio del launcher.
+ */
+private var cachedBlur: Bitmap? = null
+
 @Composable
 fun BlurredWallpaperBackground(modifier: Modifier = Modifier, scrimAlpha: Float = 0.28f) {
     val context = LocalContext.current
-    val blurredBitmap by produceState<Bitmap?>(initialValue = null) {
+    val blurredBitmap by produceState<Bitmap?>(initialValue = cachedBlur) {
+        if (value != null) return@produceState
         value = withContext(Dispatchers.Default) {
             runCatching {
                 val wallpaper = WallpaperManager.getInstance(context).drawable?.toBitmap() ?: return@runCatching null
                 downscaleAndBoxBlur(wallpaper, targetWidth = 64, passes = 3, radius = 3)
             }.getOrNull()
-        }
+        }.also { cachedBlur = it }
     }
 
     Box(modifier = modifier.fillMaxSize()) {

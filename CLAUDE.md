@@ -156,6 +156,19 @@ Se ti viene in mente una di queste, sappi che è già stata provata e scartata:
 Non sono sbagliate in sé, ma non hanno recuperato la reattività e hanno reso
 il diff difficile da bisezionare. La 1.0.24 le ha tolte tutte.
 
+### Trovate da un audit del codice (1.0.29)
+
+- **Sfondo sfocato ricalcolato a ogni apertura** di cassetto/Concentrazione:
+  `produceState` senza chiavi ripartiva a ogni ingresso in composizione e
+  ogni giro allocava una bitmap grande quanto lo schermo (~10 MB) solo per
+  ridurla a 64 px. Ora la copia sfocata è in cache per tutto il processo
+  (`cachedBlur`); un cambio di sfondo si vede al riavvio del launcher.
+- **`EncryptedSharedPreferences` costruito nel costruttore del ViewModel**,
+  sul thread principale e senza `try/catch`: se l'archivio si corrompe o la
+  chiave del Keystore viene invalidata, `MainActivity` crasha a ogni avvio e
+  il telefono resta senza home da cui disinstallare. Ora è pigro, su IO, e
+  degrada a "nessuna app nascosta" invece di far cadere tutto.
+
 ### Sospetto ancora aperto sulla 1.0.24
 
 `detectTapGestures(onDoubleTap = ...)` su `HomePage` **ritarda il
@@ -230,6 +243,12 @@ misura l'altezza reale e riporta `pageSize` al ViewModel. Cambiare
 ## 7. Privacy: la regola che si dimentica
 
 Le app nascoste non devono comparire in **nessuna** schermata non protetta.
+Un audit ne ha trovate quattro violazioni tutte insieme, quindi non è una
+regola che si applica da sola: l'elenco della Concentrazione le mostrava per
+nome, `lockVault` non azzerava menu contestuale e conferma di apertura né
+riportava alla home dal cassetto, e `FLAG_SECURE` si spegneva durante la
+transizione fra due schermate protette (ora è **contato**, non acceso e
+spento da ciascuna per conto suo).
 Vale anche per funzioni che sembrano non c'entrare: lo storico della
 Concentrazione le esclude sia in scrittura (`launchAnyway`) sia in lettura
 (`FocusHistory`), perché altrimenti il nome di un'app nascosta finirebbe in

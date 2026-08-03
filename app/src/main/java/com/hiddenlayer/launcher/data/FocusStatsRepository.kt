@@ -87,8 +87,15 @@ class FocusStatsRepository(context: Context) {
             .apply()
     }
 
-    fun reset() {
+    /** Azzera tutto. Se una sessione è in corso il tratto di resistenza riparte da adesso
+     * invece di sparire: `clear()` cancellava anche l'orario di inizio, e per tutto il resto
+     * della sessione il popup avrebbe detto "stai resistendo da meno di un minuto" e il
+     * record non si sarebbe più aggiornato. */
+    fun reset(sessionActive: Boolean, nowMillis: Long) {
         prefs.edit().clear().apply()
+        if (sessionActive) {
+            prefs.edit().putLong(KEY_STREAK_START, nowMillis).apply()
+        }
     }
 
     private fun encode(entry: FocusBreak): String =

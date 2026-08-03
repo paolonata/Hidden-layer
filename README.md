@@ -147,7 +147,11 @@ da altre app senza root. In più:
   (`FLAG_SECURE`): non compare nella schermata delle app recenti.
 - **Richiusura automatica**: appena esci dal launcher — apri un'app, spegni
   lo schermo, cambi task — l'area si richiude. Riaprendo riparti dalla home,
-  mai da dove eri rimasto.
+  mai da dove eri rimasto. Ruotare lo schermo non conta come uscita, quindi
+  non ti butta fuori mentre stai guardando.
+- Se l'archivio cifrato non è leggibile (può succedere se la chiave del
+  Keystore viene invalidata da un cambio di blocco schermo), il launcher parte
+  lo stesso mostrando nessuna app nascosta, invece di non partire affatto.
 
 **Cosa NON può fare.** Un launcher nasconde le app solo dentro di sé. Senza
 root non è possibile toglierle da: Impostazioni > App, la ricerca globale di

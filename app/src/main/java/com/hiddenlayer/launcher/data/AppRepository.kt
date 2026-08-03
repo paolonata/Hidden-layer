@@ -71,6 +71,13 @@ class AppRepository(private val context: Context) {
         return false
     }
 
+    /** Il selettore di sfondo di sistema. Passa da qui e non da un startActivity scritto
+     * nella UI perché era l'ultimo intent rimasto senza rete: se non risolve, il processo
+     * home cade e riparte, e sembra che il menu non abbia fatto niente. */
+    fun openWallpaperPicker(): Boolean = start(
+        Intent(Intent.ACTION_SET_WALLPAPER).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
+    )
+
     /** startActivity senza far cadere il launcher: un'eccezione qui è un crash del processo
      * home, che il sistema riavvia subito — da fuori sembra che il menu non abbia fatto
      * niente, ed è esattamente il modo in cui questo bug si era presentato. */

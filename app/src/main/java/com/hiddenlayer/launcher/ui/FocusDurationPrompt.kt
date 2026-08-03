@@ -1,5 +1,6 @@
 package com.hiddenlayer.launcher.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,6 +48,10 @@ fun FocusDurationPrompt(
     onOpenSettings: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    // Come per la conferma di apertura: overlay in composizione, quindi il tasto indietro
+    // non lo chiuderebbe da solo.
+    BackHandler(onBack = onDismiss)
+
     Box(
         modifier = Modifier
             .fillMaxSize()

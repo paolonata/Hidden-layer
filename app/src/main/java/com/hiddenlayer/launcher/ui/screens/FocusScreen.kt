@@ -393,7 +393,13 @@ private fun FocusHistory(state: LauncherUiState, onResetStats: () -> Unit) {
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+        }
+
+        // Fuori dall'elenco: serve anche quando di cedimenti non ce ne sono, per esempio per
+        // cancellare un record falsato da un cambio di ora di sistema, che altrimenti
+        // resterebbe imbattibile per sempre.
+        if (state.focusSessionCount > 0 || state.focusRecordSeconds > 0 || breaks.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
             Text(
                 text = "Azzera statistiche",
                 color = Color.White.copy(alpha = 0.5f),
