@@ -37,6 +37,9 @@ data class LauncherUiState(
     val pageSize: Int = HomeLayoutRepository.DEFAULT_PAGE_SIZE,
     /** Whether reaching the hidden page asks for biometrics/PIN first (off until switched on). */
     val unlockRequired: Boolean = false,
+    /** L'archivio cifrato non si è potuto aprire. L'elenco delle nascoste risulta vuoto, e
+     * va detto: altrimenti sembra che non ci sia mai stato niente. */
+    val vaultUnavailable: Boolean = false,
     val unlockError: Boolean = false,
     /** Cleared every time the launcher is left, so the hidden page re-locks itself. */
     val vaultUnlocked: Boolean = false,

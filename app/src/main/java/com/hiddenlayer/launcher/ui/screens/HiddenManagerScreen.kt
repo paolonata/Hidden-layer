@@ -95,6 +95,20 @@ fun HiddenManagerScreen(
                     .padding(padding)
                     .fillMaxSize()
             ) {
+                if (state.vaultUnavailable) {
+                    item {
+                        Text(
+                            text = "L'archivio cifrato delle app nascoste non è leggibile su " +
+                                "questo dispositivo: l'elenco risulta vuoto e le modifiche non " +
+                                "vengono salvate. Di solito succede quando la chiave viene " +
+                                "invalidata da un cambio del blocco schermo.",
+                            color = Color.White,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                        )
+                        HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                    }
+                }
+
                 item {
                     ListItem(
                         headlineContent = { Text("Richiedi sblocco", color = Color.White) },

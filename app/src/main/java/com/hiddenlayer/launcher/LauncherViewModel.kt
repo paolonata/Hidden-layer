@@ -104,6 +104,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 homeComponents = home,
                 dockComponents = dock,
                 unlockRequired = hiddenAppsRepository.isUnlockRequired(),
+                vaultUnavailable = hiddenAppsRepository.isUnavailable(),
                 focusPackages = focusRepository.getDistractingPackages(),
                 focusDurationMinutes = focusRepository.getDurationMinutes(),
                 focusRecordSeconds = focusStatsRepository.getRecordSeconds(),
