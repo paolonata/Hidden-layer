@@ -86,8 +86,14 @@ fun FocusScreen(
 
     // Deliberately not re-sorted with the selected ones on top: the list would reshuffle
     // under your finger every time you flick a switch.
-    val apps = remember(state.allApps, query) {
-        state.allApps.filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
+    //
+    // Le nascoste vanno escluse: questa schermata si raggiunge dalla home in due gesti e non
+    // è protetta dallo sblocco, quindi elencarle qui per nome — con tanto di ricerca — le
+    // rivelerebbe a chiunque prenda in mano il telefono.
+    val apps = remember(state.allApps, state.hiddenPackages, query) {
+        state.allApps
+            .filter { it.packageName !in state.hiddenPackages }
+            .filter { query.isBlank() || it.label.contains(query, ignoreCase = true) }
     }
 
     Box(

@@ -412,14 +412,34 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun hideApp(app: AppInfo) {
-        hiddenAppsRepository.setHidden(app.packageName, true)
-        homeLayoutRepository.removeFromHome(app.componentName)
+        applyHidden(app, hidden = true)
+        dismissContextMenu()
+    }
+
+    /**
+     * Nascondere e mostrare passano di qui perché la parte delicata è la stessa.
+     *
+     * Si ragiona per **package**, non per componente: un'app con più voci nel launcher (comune
+     * fra quelle di sistema Xiaomi) lascerebbe in home le icone che non hai toccato, ancora
+     * apribili fino al primo rientro nel launcher.
+     *
+     * E si toglie anche dalle app della Concentrazione: quell'elenco sta in preferenze **non
+     * cifrate**, quindi il nome del package di un'app nascosta non deve restarci.
+     */
+    private fun applyHidden(app: AppInfo, hidden: Boolean) {
+        hiddenAppsRepository.setHidden(app.packageName, hidden)
+        if (hidden) {
+            _uiState.value.allApps
+                .filter { it.packageName == app.packageName }
+                .forEach { homeLayoutRepository.removeFromHome(it.componentName) }
+            focusRepository.setDistracting(app.packageName, false)
+        }
         _uiState.value = _uiState.value.copy(
             hiddenPackages = hiddenAppsRepository.getHiddenPackages(),
             homeComponents = homeLayoutRepository.getHomeItems(),
-            dockComponents = homeLayoutRepository.getDockSlots()
+            dockComponents = homeLayoutRepository.getDockSlots(),
+            focusPackages = focusRepository.getDistractingPackages()
         )
-        dismissContextMenu()
     }
 
     fun openAppInfo(app: AppInfo) {
@@ -451,11 +471,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * page re-locks itself, so it is never left unlocked behind your back. */
     fun lockVault() {
         val current = _uiState.value
+        // Si torna sempre alla home, non solo dalle impostazioni delle nascoste: restando sul
+        // cassetto lo stato resterebbe DRAWER e il pager, che non viene ricreato, si
+        // ripresenterebbe sulla pagina delle app nascoste già aperta.
+        val leavingVault = current.screen == Screen.DRAWER || current.screen == Screen.HIDDEN_MANAGER
         _uiState.value = current.copy(
             vaultUnlocked = false,
             unlockError = false,
-            screen = if (current.screen == Screen.HIDDEN_MANAGER) Screen.HOME else current.screen,
-            drawerStartPage = 0
+            screen = if (leavingVault) Screen.HOME else current.screen,
+            drawerStartPage = 0,
+            // Menu contestuale e conferma di apertura portano scritto il nome dell'app: se
+            // sopravvivessero al blocco, riaccendendo lo schermo il nome di un'app nascosta
+            // resterebbe lì sopra un cassetto ormai chiuso.
+            contextMenu = null,
+            frictionApp = null
         )
     }
 
@@ -476,13 +505,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun toggleHidden(app: AppInfo) {
-        val nowHidden = app.packageName !in _uiState.value.hiddenPackages
-        hiddenAppsRepository.setHidden(app.packageName, nowHidden)
-        if (nowHidden) homeLayoutRepository.removeFromHome(app.componentName)
-        _uiState.value = _uiState.value.copy(
-            hiddenPackages = hiddenAppsRepository.getHiddenPackages(),
-            homeComponents = homeLayoutRepository.getHomeItems(),
-            dockComponents = homeLayoutRepository.getDockSlots()
-        )
+        applyHidden(app, hidden = app.packageName !in _uiState.value.hiddenPackages)
     }
 }
