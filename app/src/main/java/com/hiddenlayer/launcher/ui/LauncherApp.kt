@@ -225,6 +225,10 @@ private fun buildContextMenuActions(
     }
 
     actions += MenuAction("Info app") { viewModel.openAppInfo(app) }
-    actions += MenuAction("Disinstalla", destructive = true) { viewModel.requestUninstall(app) }
+    actions += MenuAction("Disinstalla", destructive = true) {
+        if (!viewModel.requestUninstall(app)) {
+            showToast("Il sistema non ha aperto la disinstallazione. Apro le info dell'app: il pulsante \"Disinstalla\" è lì.")
+        }
+    }
     return actions
 }

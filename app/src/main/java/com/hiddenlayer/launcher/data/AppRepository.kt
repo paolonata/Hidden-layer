@@ -1,5 +1,6 @@
 package com.hiddenlayer.launcher.data
 
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -40,23 +41,46 @@ class AppRepository(private val context: Context) {
             this.component = component
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-        context.startActivity(intent)
+        start(intent)
     }
 
-    fun openAppInfo(packageName: String) {
-        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+    fun openAppInfo(packageName: String): Boolean = start(
+        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.fromParts("package", packageName, null)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
-        context.startActivity(intent)
-    }
+    )
 
-    fun requestUninstall(packageName: String) {
-        val intent = Intent(Intent.ACTION_DELETE).apply {
+    /**
+     * Chiede al sistema di disinstallare un'app. Torna false se non ci è riuscito: in quel
+     * caso ripiega sulla pagina Info app, che il pulsante "Disinstalla" ce l'ha comunque, così
+     * l'azione non finisce nel vuoto.
+     *
+     * Il ripiego serve perché i motivi per cui il sistema può rifiutare non li controlliamo:
+     * app di sistema che non sono disinstallabili, ROM che sostituiscono l'installer, criteri
+     * di visibilità dei package. Meglio portare l'utente a un passo dal risultato che lasciarlo
+     * davanti a un menu che non fa niente.
+     */
+    fun requestUninstall(packageName: String): Boolean {
+        val uninstall = Intent(Intent.ACTION_DELETE).apply {
             data = Uri.fromParts("package", packageName, null)
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         }
+        if (start(uninstall)) return true
+        openAppInfo(packageName)
+        return false
+    }
+
+    /** startActivity senza far cadere il launcher: un'eccezione qui è un crash del processo
+     * home, che il sistema riavvia subito — da fuori sembra che il menu non abbia fatto
+     * niente, ed è esattamente il modo in cui questo bug si era presentato. */
+    private fun start(intent: Intent): Boolean = try {
         context.startActivity(intent)
+        true
+    } catch (e: ActivityNotFoundException) {
+        false
+    } catch (e: SecurityException) {
+        false
     }
 
     private companion object {

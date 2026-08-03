@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- Serve dall'API 26 per poter chiedere al sistema di disinstallare un'app: senza,
+         l'intent di disinstallazione non arriva da nessuna parte. È un permesso "normal",
+         concesso all'installazione, non chiede niente all'utente. -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
     <!-- Required on Android 11+ to enumerate other apps' launcher activities
          without requesting the broad QUERY_ALL_PACKAGES permission. -->
@@ -9,6 +13,19 @@
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Su Android 11+ un'app vede solo ciò che dichiara qui. Senza queste due voci
+             l'installer di sistema e la pagina Info app sono invisibili, resolveActivity
+             torna null e startActivity solleva ActivityNotFoundException: per un launcher
+             vuol dire crash e riavvio istantaneo sulla home, che da fuori sembra "non
+             succede niente". -->
+        <intent>
+            <action android:name="android.intent.action.DELETE" />
+            <data android:scheme="package" />
+        </intent>
+        <intent>
+            <action android:name="android.settings.APPLICATION_DETAILS_SETTINGS" />
+            <data android:scheme="package" />
         </intent>
     </queries>
 

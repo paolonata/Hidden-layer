@@ -95,6 +95,15 @@ aggiorna di continuo.
 Repository su `SharedPreferences`, tranne le app nascoste e l'hash del PIN che
 stanno in `EncryptedSharedPreferences` (AES-256-GCM, chiave nel Keystore).
 
+**Visibilità dei package (Android 11+)**: l'app vede solo ciò che dichiara in
+`<queries>` nel manifest. Ogni intent implicito verso un'altra app va dichiarato
+lì, altrimenti `startActivity` solleva `ActivityNotFoundException` — e per un
+launcher significa crash del processo home e riavvio istantaneo sulla home, che
+da fuori sembra **"il menu non fa niente"** (era il bug di "Disinstalla"). Per
+lo stesso motivo ogni `startActivity` di `AppRepository` passa da `start()`, che
+cattura l'eccezione invece di far cadere il launcher. La disinstallazione vuole
+anche il permesso `REQUEST_DELETE_PACKAGES`.
+
 `HomeLayoutRepository`: gli item della home sono una **lista ordinata senza
 buchi**; il dock è una **griglia a slot fissi** (`DOCK_ROWS × DOCK_COLUMNS`,
 con `null` dove è vuoto) — serve a far atterrare un drop nella riga giusta.

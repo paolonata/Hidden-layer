@@ -427,9 +427,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         dismissContextMenu()
     }
 
-    fun requestUninstall(app: AppInfo) {
-        appRepository.requestUninstall(app.packageName)
+    /** False quando il sistema non ha aperto la disinstallazione e si è ripiegato sulle info
+     * dell'app: chi chiama lo dice all'utente invece di lasciare il menu senza effetto. */
+    fun requestUninstall(app: AppInfo): Boolean {
+        val started = appRepository.requestUninstall(app.packageName)
         dismissContextMenu()
+        return started
     }
 
     fun onUnlockSucceeded() {
