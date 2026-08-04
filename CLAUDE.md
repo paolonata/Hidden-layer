@@ -9,7 +9,7 @@ già stato provato, e dove sono le trappole.
 
 ## 1. Versione di riferimento per il troubleshooting
 
-> **Riferimento corrente: `1.0.33` — commit `cd61cda` — build GitHub Actions #33.**
+> **Riferimento corrente: `1.0.36` — commit `cc2d905` — build GitHub Actions #36.**
 >
 > Ogni volta che si indaga un problema (lag, gesture che non rispondono,
 > regressioni), **il confronto si fa con questa versione**, non con `HEAD`.
@@ -17,17 +17,17 @@ già stato provato, e dove sono le trappole.
 > indispensabile, invece di stratificare correzioni sopra correzioni.
 >
 > **Questo riferimento si cambia solo se l'utente lo dice esplicitamente**
-> ("usa la 1.0.36 come riferimento"). In quel caso: aggiorna questa sezione con
+> ("usa la 1.0.40 come riferimento"). In quel caso: aggiorna questa sezione con
 > nuova versione, commit e cosa contiene, e sposta la vecchia nello storico
 > qui sotto.
 
 Per ripartire dal riferimento:
 
 ```bash
-git checkout cd61cda -- app README.md
+git checkout cc2d905 -- app README.md
 ```
 
-Cosa contiene la 1.0.33, in breve:
+Cosa contiene la 1.0.36, in breve:
 
 - home a pagine (4 colonne) + dock 3×5 con le due file superiori a scomparsa,
   che si richiudono con un gesto fuori dal dock;
@@ -40,6 +40,10 @@ Cosa contiene la 1.0.33, in breve:
   col countdown sopra il dock per 5 secondi, poi sparisce; storico di sempre
   delle aperture forzate e record di resistenza, mostrato anche nel popup di
   conferma;
+- app in grigio riconoscibili anche quando l'icona è già in bianco e nero
+  (scolorite **e** sbiadite, `MUTED_ALPHA`);
+- popup con carta scura piena, leggibili anche sopra la griglia del cassetto;
+- versione installata in fondo alle impostazioni delle app nascoste;
 - tutte le correzioni dell'audit: le quattro falle di privacy, le due
   regressioni della chiusura del dock, l'archivio cifrato che degrada invece
   di far crashare il launcher, il layout che non viene più riscritto, e lo
@@ -51,7 +55,8 @@ Cosa contiene la 1.0.33, in breve:
 |---|---|---|
 | 1.0.20 | `c712d9a` | Ultima considerata veloce dall'utente. Le build 21–23 hanno perso reattività e le correzioni non l'hanno recuperata, quindi la 1.0.24 è stata ricostruita ripartendo da qui. |
 | 1.0.24 | `1997f45` | 1.0.20 + solo la Concentrazione a doppio tap, senza le ottimizzazioni stratificate nelle build 21–23. |
-| 1.0.33 | `cd61cda` | **Attuale.** La 1.0.24 più lo storico della Concentrazione, le correzioni dell'audit e i popup leggibili. Confermata buona dall'utente. |
+| 1.0.33 | `cd61cda` | La 1.0.24 più lo storico della Concentrazione, le correzioni dell'audit e i popup leggibili. |
+| 1.0.36 | `cc2d905` | **Attuale.** La 1.0.33 più le app in grigio riconoscibili, la carta dei popup opaca e la versione visibile nell'app. Confermata buona dall'utente. |
 
 ---
 
