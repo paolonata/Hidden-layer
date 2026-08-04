@@ -156,6 +156,14 @@ Se ti viene in mente una di queste, sappi che è già stata provata e scartata:
 Non sono sbagliate in sé, ma non hanno recuperato la reattività e hanno reso
 il diff difficile da bisezionare. La 1.0.24 le ha tolte tutte.
 
+### Leggibilità dei popup
+
+I due popup (scelta della durata, conferma di apertura) condividono i colori in
+`PromptStyle.kt`. La carta è **scura e quasi piena**, non un velo bianco
+traslucido: il velo si leggeva sulla home ma non sopra il cassetto, che è una
+griglia di icone colorate. Se un giorno si rimette la trasparenza, provarla
+sopra il cassetto e non sopra la home.
+
 ### Trovate da un audit del codice (1.0.29)
 
 - **Sfondo sfocato ricalcolato a ogni apertura** di cassetto/Concentrazione:
@@ -229,6 +237,7 @@ gesture di questo progetto venivano da lì.
 | `HomeScreen` | `DOCK_TOGGLE_THRESHOLD` | 28dp |
 | `DrawerScreen.AppGrid` | colonne | 5 |
 | `AppGridTile` / `HomeIconTile` | icona | 48dp |
+| `PromptStyle` | superficie dei due popup | `#16171A` al 95% |
 | `AppRepository` | `ICON_SIZE_PX` | 128 |
 | `FocusRepository` | `PRESET_MINUTES` | 15/30/45/60/120 |
 | `FocusRepository` | `SHORTCUT_MINUTES` | 30/60/120 (il popup) |

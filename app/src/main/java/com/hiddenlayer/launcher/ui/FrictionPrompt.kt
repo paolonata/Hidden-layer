@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,8 +34,6 @@ import com.hiddenlayer.launcher.data.AppInfo
 import kotlinx.coroutines.delay
 
 private const val HOLD_SECONDS = 5
-private val CARD_SHAPE = RoundedCornerShape(28.dp)
-private val PILL_SHAPE = RoundedCornerShape(percent = 50)
 
 /**
  * The pause between reaching for a muted app and opening it. The point isn't to forbid
@@ -44,8 +41,9 @@ private val PILL_SHAPE = RoundedCornerShape(percent = 50)
  * turns on the impulse has usually passed.
  *
  * Rendered as an in-place overlay rather than a system dialog so it can carry the same
- * frosted, rounded look as the drawer's search field; a platform AlertDialog would drop a
- * squared-off Material surface on top of everything and break that.
+ * rounded look as the rest of the launcher; a platform AlertDialog would drop a squared-off
+ * Material surface on top of everything and break that. I colori vengono da PromptStyle,
+ * condivisi con la scelta della durata.
  */
 @Composable
 fun FrictionPrompt(
@@ -71,7 +69,7 @@ fun FrictionPrompt(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.55f))
+            .background(PromptScrim)
             // Tapping the backdrop backs out — the easy gesture is the one that keeps you
             // on task, not the one that breaks it.
             .clickable(
@@ -85,9 +83,9 @@ fun FrictionPrompt(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .padding(28.dp)
-                .clip(CARD_SHAPE)
-                .background(Color.White.copy(alpha = 0.13f))
-                .border(1.dp, Color.White.copy(alpha = 0.20f), CARD_SHAPE)
+                .clip(PromptCardShape)
+                .background(PromptSurface)
+                .border(1.dp, PromptBorder, PromptCardShape)
                 .padding(horizontal = 24.dp, vertical = 28.dp)
         ) {
             AppIcon(app = app, size = 56.dp, grayscale = true)
@@ -96,7 +94,7 @@ fun FrictionPrompt(
 
             Text(
                 text = "Vuoi davvero aprire ${app.label}?",
-                color = Color.White,
+                color = PromptTitle,
                 fontSize = 19.sp,
                 fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center
@@ -106,7 +104,7 @@ fun FrictionPrompt(
 
             Text(
                 text = "Sei in una sessione di concentrazione.",
-                color = Color.White.copy(alpha = 0.6f),
+                color = PromptCaption,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
@@ -124,7 +122,7 @@ fun FrictionPrompt(
                         "ne mancano ${formatFocusDuration(recordSeconds - streakSeconds)} " +
                         "per battere il tuo record di ${formatFocusDuration(recordSeconds)}."
                 },
-                color = Color.White.copy(alpha = 0.85f),
+                color = PromptBody,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
@@ -159,23 +157,24 @@ private fun PromptButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    val background = when {
-        prominent -> Color.White.copy(alpha = 0.92f)
-        else -> Color.White.copy(alpha = 0.12f)
-    }
+    val background = if (prominent) PromptAccent else PromptSecondary
     val content = when {
-        !enabled -> Color.White.copy(alpha = 0.35f)
-        prominent -> Color(0xFF17181B)
-        else -> Color.White.copy(alpha = 0.85f)
+        !enabled -> PromptDisabledContent
+        prominent -> PromptAccentContent
+        else -> PromptSecondaryContent
     }
 
     Box(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .height(46.dp)
-            .clip(PILL_SHAPE)
+            .clip(PromptPillShape)
             .background(background)
-            .border(1.dp, Color.White.copy(alpha = if (prominent) 0f else 0.22f), PILL_SHAPE)
+            .border(
+                1.dp,
+                if (prominent) Color.Transparent else PromptSecondaryBorder,
+                PromptPillShape
+            )
             .clickable(enabled = enabled, onClick = onClick)
     ) {
         Text(
