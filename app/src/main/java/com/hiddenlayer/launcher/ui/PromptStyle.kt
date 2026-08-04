@@ -8,11 +8,14 @@ import androidx.compose.ui.unit.dp
  * L'aspetto condiviso dei due popup (scelta della durata e conferma di apertura). Stanno qui
  * e non duplicati nei due file perché sono la stessa carta: separati, prima o poi divergono.
  *
- * La superficie è **scura e quasi piena**, non un velo bianco traslucido. Il velo funzionava
- * sulla home, dove sotto c'è lo sfondo; sopra il cassetto, che è una griglia di icone
- * colorate, il testo bianco ci finiva dentro e non si leggeva più. Un fondo scuro tiene lo
- * stesso carattere — angoli morbidi, bordo appena accennato, niente superficie squadrata di
- * sistema — ma garantisce il contrasto qualunque cosa ci sia dietro.
+ * La superficie è **scura e piena**, non un velo traslucido. Il velo funzionava sulla home,
+ * dove sotto c'è lo sfondo; sopra il cassetto, che è una griglia di icone colorate, il testo
+ * bianco ci finiva dentro e non si leggeva più. Un fondo pieno tiene lo stesso carattere —
+ * angoli morbidi, bordo appena accennato, niente superficie squadrata di sistema — e il
+ * contrasto non dipende più da cosa c'è dietro né da quanto è colorato.
+ *
+ * Opaco e non "quasi": con un filo di trasparenza il contrasto torna a dipendere dallo
+ * sfondo, e questo problema è già stato segnalato due volte.
  */
 val PromptCardShape = RoundedCornerShape(28.dp)
 val PromptPillShape = RoundedCornerShape(percent = 50)
@@ -20,7 +23,7 @@ val PromptPillShape = RoundedCornerShape(percent = 50)
 /** Il velo dietro la carta: abbastanza scuro da staccare il popup da una griglia di icone. */
 val PromptScrim = Color.Black.copy(alpha = 0.72f)
 
-val PromptSurface = Color(0xFF16171A).copy(alpha = 0.95f)
+val PromptSurface = Color(0xFF16171A)
 val PromptBorder = Color.White.copy(alpha = 0.16f)
 
 /** Il pulsante che vuoi che si prema: bianco pieno, testo scuro. */

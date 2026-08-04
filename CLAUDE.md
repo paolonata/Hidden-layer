@@ -159,10 +159,15 @@ il diff difficile da bisezionare. La 1.0.24 le ha tolte tutte.
 ### Leggibilità dei popup
 
 I due popup (scelta della durata, conferma di apertura) condividono i colori in
-`PromptStyle.kt`. La carta è **scura e quasi piena**, non un velo bianco
-traslucido: il velo si leggeva sulla home ma non sopra il cassetto, che è una
-griglia di icone colorate. Se un giorno si rimette la trasparenza, provarla
-sopra il cassetto e non sopra la home.
+`PromptStyle.kt`. La carta è **scura e piena**, non un velo traslucido: il velo
+si leggeva sulla home ma non sopra il cassetto, che è una griglia di icone
+colorate. Non "quasi piena": con un filo di trasparenza il contrasto torna a
+dipendere da cosa c'è dietro, ed è già stato segnalato due volte.
+
+**Verificare la versione installata**: in fondo alle impostazioni delle app
+nascoste c'è `Hidden Layer 1.0.x`. Prima di indagare una segnalazione che
+sembra già corretta, chiedere quel numero: due giri sono stati spesi su uno
+screenshot che mostrava una build precedente alla correzione.
 
 ### Trovate da un audit del codice (1.0.29)
 

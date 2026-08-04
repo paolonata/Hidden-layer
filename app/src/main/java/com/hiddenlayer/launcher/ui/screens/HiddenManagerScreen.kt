@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
@@ -150,6 +151,25 @@ fun HiddenManagerScreen(
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                }
+
+                // In fondo, la versione installata. Serve a rispondere in un secondo alla
+                // domanda che è già costata due giri di segnalazioni: "questo APK contiene
+                // davvero la correzione di cui stiamo parlando?".
+                item {
+                    val context = LocalContext.current
+                    val version = remember(context) {
+                        runCatching {
+                            context.packageManager
+                                .getPackageInfo(context.packageName, 0)
+                                .versionName
+                        }.getOrNull() ?: "sconosciuta"
+                    }
+                    Text(
+                        text = "Hidden Layer $version",
+                        color = Color.White.copy(alpha = 0.45f),
+                        modifier = Modifier.padding(16.dp)
+                    )
                 }
             }
         }
