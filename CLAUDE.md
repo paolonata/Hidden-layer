@@ -9,7 +9,7 @@ già stato provato, e dove sono le trappole.
 
 ## 1. Versione di riferimento per il troubleshooting
 
-> **Riferimento corrente: `1.0.24` — commit `1997f45` — build GitHub Actions #24.**
+> **Riferimento corrente: `1.0.33` — commit `cd61cda` — build GitHub Actions #33.**
 >
 > Ogni volta che si indaga un problema (lag, gesture che non rispondono,
 > regressioni), **il confronto si fa con questa versione**, non con `HEAD`.
@@ -17,33 +17,41 @@ già stato provato, e dove sono le trappole.
 > indispensabile, invece di stratificare correzioni sopra correzioni.
 >
 > **Questo riferimento si cambia solo se l'utente lo dice esplicitamente**
-> ("usa la 1.0.27 come riferimento"). In quel caso: aggiorna questa sezione con
+> ("usa la 1.0.36 come riferimento"). In quel caso: aggiorna questa sezione con
 > nuova versione, commit e cosa contiene, e sposta la vecchia nello storico
 > qui sotto.
 
 Per ripartire dal riferimento:
 
 ```bash
-git checkout 1997f45 -- app README.md
+git checkout cd61cda -- app README.md
 ```
 
-Cosa contiene la 1.0.24, in breve:
+Cosa contiene la 1.0.33, in breve:
 
-- home a pagine (4 colonne) + dock 3×5 con le due file superiori a scomparsa;
+- home a pagine (4 colonne) + dock 3×5 con le due file superiori a scomparsa,
+  che si richiudono con un gesto fuori dal dock;
 - cassetto a 5 colonne, **senza etichette sotto le icone** (solo icone,
   ovunque tranne nelle liste con interruttore delle impostazioni, nel menu
   contestuale e nella conferma della Concentrazione);
 - app nascoste come seconda pagina del cassetto (swipe a sinistra), stile
   incognito, sblocco biometrico/PIN facoltativo;
 - Concentrazione: doppio tap sulla home → popup 30 min / 1 ora / 2 ore → pill
-  col countdown sopra il dock per 5 secondi, poi sparisce.
+  col countdown sopra il dock per 5 secondi, poi sparisce; storico di sempre
+  delle aperture forzate e record di resistenza, mostrato anche nel popup di
+  conferma;
+- tutte le correzioni dell'audit: le quattro falle di privacy, le due
+  regressioni della chiusura del dock, l'archivio cifrato che degrada invece
+  di far crashare il launcher, il layout che non viene più riscritto, e lo
+  sfondo sfocato in cache.
 
 ### Storico dei riferimenti
 
 | Versione | Commit | Perché era il riferimento |
 |---|---|---|
 | 1.0.20 | `c712d9a` | Ultima considerata veloce dall'utente. Le build 21–23 hanno perso reattività e le correzioni non l'hanno recuperata, quindi la 1.0.24 è stata ricostruita ripartendo da qui. |
-| 1.0.24 | `1997f45` | **Attuale.** 1.0.20 + solo la Concentrazione a doppio tap. |
+| 1.0.24 | `1997f45` | 1.0.20 + solo la Concentrazione a doppio tap, senza le ottimizzazioni stratificate nelle build 21–23. |
+| 1.0.33 | `cd61cda` | **Attuale.** La 1.0.24 più lo storico della Concentrazione, le correzioni dell'audit e i popup leggibili. Confermata buona dall'utente. |
 
 ---
 
@@ -182,14 +190,17 @@ screenshot che mostrava una build precedente alla correzione.
   il telefono resta senza home da cui disinstallare. Ora è pigro, su IO, e
   degrada a "nessuna app nascosta" invece di far cadere tutto.
 
-### Sospetto ancora aperto sulla 1.0.24
+### Sospetto rimasto sul doppio tap
 
 `detectTapGestures(onDoubleTap = ...)` su `HomePage` **ritarda il
 riconoscimento del tocco singolo** di tutta la finestra del doppio tap. Sulla
-home non c'è un `onTap` in quel detector, quindi in teoria non si nota — ma se
-l'utente riferisce lentezza **anche senza mai avviare una sessione**, è questo
-il primo posto da guardare, e la soluzione è spostare la scorciatoia su un
-gesto che non tocchi il riconoscimento dei tap normali.
+home non c'è un `onTap` in quel detector, quindi in teoria non si nota, e dalla
+1.0.24 alla 1.0.33 l'utente non ha più segnalato lentezza — il sospetto è
+molto più debole, ma non è mai stato verificato in isolamento.
+
+Se la lentezza torna **anche senza mai avviare una sessione**, è ancora il
+primo posto da guardare, e la soluzione è spostare la scorciatoia su un gesto
+che non tocchi il riconoscimento dei tap normali.
 
 ### Come far diagnosticare all'utente
 
