@@ -164,6 +164,16 @@ Se ti viene in mente una di queste, sappi che è già stata provata e scartata:
 Non sono sbagliate in sé, ma non hanno recuperato la reattività e hanno reso
 il diff difficile da bisezionare. La 1.0.24 le ha tolte tutte.
 
+### App in grigio: servono due segnali, non uno
+
+Togliere la saturazione a un'icona già bianca, nera o grigia **non cambia un
+pixel**, e non si capiva quali app fossero bloccate durante una sessione. Per
+questo `AppIcon` applica anche `MUTED_ALPHA`: la trasparenza agisce sul
+rapporto con lo sfondo, non sui colori dell'icona, quindi funziona sempre.
+Il parametro `faded` è separato da `grayscale` solo per la conferma di
+apertura, dove l'icona è il soggetto e sbiadirla la renderebbe difficile da
+riconoscere.
+
 ### Leggibilità dei popup
 
 I due popup (scelta della durata, conferma di apertura) condividono i colori in
@@ -253,6 +263,7 @@ gesture di questo progetto venivano da lì.
 | `HomeScreen` | `DOCK_TOGGLE_THRESHOLD` | 28dp |
 | `DrawerScreen.AppGrid` | colonne | 5 |
 | `AppGridTile` / `HomeIconTile` | icona | 48dp |
+| `AppIcon` | `MUTED_ALPHA` (app in grigio) | 0.4 |
 | `PromptStyle` | superficie dei due popup | `#16171A` al 95% |
 | `AppRepository` | `ICON_SIZE_PX` | 128 |
 | `FocusRepository` | `PRESET_MINUTES` | 15/30/45/60/120 |

@@ -88,7 +88,7 @@ fun FrictionPrompt(
                 .border(1.dp, PromptBorder, PromptCardShape)
                 .padding(horizontal = 24.dp, vertical = 28.dp)
         ) {
-            AppIcon(app = app, size = 56.dp, grayscale = true)
+            AppIcon(app = app, size = 56.dp, grayscale = true, faded = false)
 
             Spacer(Modifier.height(16.dp))
 

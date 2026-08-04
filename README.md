@@ -88,8 +88,12 @@ della home. Lì scegli la durata con un tocco (15/30/45/60/120 min, più i
 pulsanti ± per regolare di 5 in 5 fino a 3 ore), selezioni le app che ti
 distraggono e avvii. Durante la sessione quelle app:
 
-- **perdono il colore** ovunque — home, dock e cassetto. Il colore è metà del
-  richiamo visivo di un'icona;
+- **perdono il colore e sbiadiscono** ovunque — home, dock e cassetto. Il
+  colore è metà del richiamo visivo di un'icona, ma da solo non basta: su
+  un'icona già bianca, nera o grigia togliere la saturazione non cambia
+  niente, e non si capiva quali app fossero bloccate. La trasparenza agisce
+  sul rapporto con lo sfondo invece che sui colori dell'icona, quindi si vede
+  sempre;
 - **chiedono conferma** prima di aprirsi, con qualche secondo di attesa prima
   che il pulsante "Apri comunque" si attivi.
 
