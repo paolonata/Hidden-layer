@@ -16,7 +16,7 @@ usare lo strumento della riservatezza per fare le pulizie:
    home. È dove cerchi ciò che usi di rado. Nessun blocco, nessuna cerimonia.
 3. **App nascoste** — le poche app davvero private. Non compaiono in home,
    **non compaiono nel cassetto e non escono nella ricerca**: esistono solo
-   dietro un tocco lungo sui due puntini in fondo al cassetto, senza alcun
+   dietro un doppio tap sui due puntini in fondo al cassetto, senza alcun
    indizio nell'interfaccia.
 
 ## Come funziona
@@ -47,17 +47,18 @@ usare lo strumento della riservatezza per fare le pulizie:
   superata una certa distanza va alla pagina precedente/successiva. Se la
   tieni premuta senza spostarla (o la sposti pochissimo) si apre invece il
   menu contestuale di cui sopra, come prima.
-- **App nascoste**: si aprono **tenendo premuti per un secondo i due puntini
-  in fondo al cassetto**. Non c'è nessun'altra strada: niente voce di menu,
-  niente pulsante, e un tocco normale sui puntini non fa assolutamente nulla.
-  Hanno lo stesso aspetto della maniglietta in cima, così sembrano un elemento
-  dell'interfaccia come gli altri, e sono **uguali fra loro**: un indicatore di
-  pagina con uno acceso direbbe che esiste una seconda pagina. Lo swipe verso
-  sinistra **non** ci porta più: era troppo facile da scovare, e trattandosi
-  di un pager la pagina si affacciava già durante il trascinamento, così
-  bastava una scorsa accidentale per capire che c'era qualcosa. Una volta
-  dentro, lo swipe verso destra riporta al cassetto normale. L'icona
-  ingranaggio su quella pagina porta alle impostazioni, dove scegli quali app
+- **App nascoste**: si aprono con un **doppio tap sui due puntini in fondo al
+  cassetto**. Non c'è nessun'altra strada: niente voce di menu, niente
+  pulsante, e un tocco singolo sui puntini non fa assolutamente nulla. Hanno
+  lo stesso aspetto della maniglietta in cima, così sembrano un elemento
+  dell'interfaccia come gli altri, e sono **uguali fra loro**: un indicatore
+  di pagina con uno acceso direbbe che esiste una seconda pagina. Lo swipe
+  verso sinistra **non** ci porta più: era troppo facile da scovare, e
+  trattandosi di un pager la pagina si affacciava già durante il
+  trascinamento. Ora non è più nemmeno una pagina di fianco — il passaggio è
+  una dissolvenza, perché uno scorrimento laterale racconterebbe comunque che
+  lì accanto c'è qualcosa. Per tornare al cassetto normale: il tasto indietro.
+  L'icona ingranaggio porta alle impostazioni, dove scegli quali app
   nascondere e se richiedere lo sblocco.
 - Tieni premuto su un punto vuoto della home per aggiungere un'app o
   cambiare sfondo (apre il selettore di sfondo di sistema).

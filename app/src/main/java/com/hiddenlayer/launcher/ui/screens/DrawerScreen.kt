@@ -1,9 +1,14 @@
 package com.hiddenlayer.launcher.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +27,6 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -48,7 +51,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,14 +58,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.pointer.positionChange
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 import com.hiddenlayer.launcher.DrawerMode
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
@@ -74,16 +72,13 @@ import com.hiddenlayer.launcher.ui.DragHandle
 import com.hiddenlayer.launcher.ui.SecureScreen
 import com.hiddenlayer.launcher.ui.closeOnDragDown
 
-private const val PAGE_ALL_APPS = 0
+/** Il valore di `drawerStartPage` che significa "apri direttamente sulle nascoste": succede
+ * solo tornando dalle loro impostazioni. */
 private const val PAGE_HIDDEN = 1
 
-/** Quanto vanno tenuti premuti i due punti in fondo. Il doppio della soglia di sistema
- * (mezzo secondo): deve restare un gesto che non si fa per caso, perché è l'unica cosa che
- * rivela l'esistenza delle app nascoste. */
-private const val SECRET_HOLD_MILLIS = 1_000L
-
-/** Quanto può scivolare il dito senza annullare il tocco lungo. */
-private val HOLD_SLOP = 12.dp
+/** Quanto dura la dissolvenza fra cassetto e app nascoste. Corta: è un cambio di posto, non
+ * un'animazione da guardare. */
+private const val FADE_MILLIS = 200
 
 // Stessa presenza della maniglietta in cima al cassetto (vedi DragHandle in
 // CloseGestures.kt): stesso bianco al 60%, stessa aria attorno. Devono leggersi come un
@@ -99,15 +94,17 @@ private val IncognitoSurface = Color(0xFF202124)
 private val IncognitoAccent = Color(0xFFBDC1C6)
 
 /**
- * The drawer is two pages side by side: all apps, and — one swipe to the left — the hidden
- * ones. Making them pages of a pager rather than separate screens is what lets the
- * transition follow the finger instead of being a jump, and it means nothing in the UI has
- * to advertise that the hidden page exists (there is no menu entry for it anywhere).
+ * Cassetto e app nascoste sono due schermate **sovrapposte**, non due pagine affiancate.
  *
- * The flip side of a horizontal swipe is that it can be triggered by accident, so when the
- * lock is switched on the second page renders the unlock prompt rather than the apps — a
- * stray swipe reaches a PIN screen, never the contents. Screenshot/recents protection kicks
- * in as soon as the pager starts heading that way, not once it arrives.
+ * Era un pager: lo swipe a sinistra ci portava, e siccome un pager mostra la pagina già
+ * durante il trascinamento bastava una scorsa accidentale per scoprire che esisteva. Ora ci
+ * si arriva solo col doppio tap sui due punti in fondo, e il passaggio è una **dissolvenza**:
+ * uno scorrimento laterale racconterebbe comunque che c'è "la pagina di fianco", che è
+ * esattamente l'unica cosa che non deve trapelare. Sparito il pager, sparisce anche l'ultimo
+ * indizio — nessuna resistenza al bordo, nessun rimbalzo, niente da provare.
+ *
+ * Con lo sblocco attivo si arriva alla richiesta di PIN invece che alle app. La protezione da
+ * screenshot e anteprime nei recenti si accende appena si passa di là.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,60 +122,51 @@ fun DrawerScreen(
     onOpenSettings: () -> Unit,
     onClose: () -> Unit
 ) {
-    BackHandler(onBack = onClose)
-
-    val pagerState = rememberPagerState(
-        initialPage = state.drawerStartPage.coerceIn(PAGE_ALL_APPS, PAGE_HIDDEN),
-        pageCount = { 2 }
-    )
     val locked = state.unlockRequired && !state.vaultUnlocked
-    val scope = rememberCoroutineScope()
+    // Si parte dalle nascoste solo tornando dalle loro impostazioni. `remember` senza chiavi
+    // basta: uscendo dal cassetto questa schermata viene smontata, quindi al rientro il
+    // valore viene riletto — e lockVault azzera drawerStartPage.
+    var showHidden by remember { mutableStateOf(state.drawerStartPage == PAGE_HIDDEN) }
 
-    val headingForHidden = pagerState.currentPage == PAGE_HIDDEN || pagerState.targetPage == PAGE_HIDDEN
-    if (headingForHidden) SecureScreen()
+    if (showHidden) SecureScreen()
+
+    // Dalle nascoste il tasto indietro riporta al cassetto normale invece di chiudere tutto:
+    // senza lo swipe non ci sarebbe altro modo di tornare senza uscire.
+    BackHandler(enabled = !showHidden, onBack = onClose)
+    BackHandler(enabled = showHidden) { showHidden = false }
 
     // Search text belongs to the page you're on, not to the drawer as a whole.
-    LaunchedEffect(pagerState.currentPage) { onQueryChange("") }
+    LaunchedEffect(showHidden) { onQueryChange("") }
 
-    // Only once the swipe has settled — not while merely peeking mid-drag.
-    LaunchedEffect(pagerState.currentPage, pagerState.isScrollInProgress, locked) {
-        if (!pagerState.isScrollInProgress &&
-            pagerState.currentPage == PAGE_HIDDEN &&
-            locked &&
-            canUseBiometrics()
-        ) {
-            onRequestBiometric()
-        }
+    LaunchedEffect(showHidden, locked) {
+        if (showHidden && locked && canUseBiometrics()) onRequestBiometric()
     }
 
-    // Travelling towards the hidden page fades the wallpaper out behind a flat, near-black
-    // incognito surface, so by the time you arrive the wallpaper is gone entirely and the
-    // page reads as a separate place rather than a darker shade of the same one.
-    val progress = (pagerState.currentPage + pagerState.currentPageOffsetFraction)
-        .coerceIn(PAGE_ALL_APPS.toFloat(), PAGE_HIDDEN.toFloat())
+    // Passando alle nascoste lo sfondo reale sparisce dietro una superficie incognito piatta,
+    // così la pagina si legge come un altro posto e non come una versione più scura di questo.
+    val incognito by animateFloatAsState(
+        targetValue = if (showHidden) 1f else 0f,
+        animationSpec = tween(FADE_MILLIS),
+        label = "incognito"
+    )
 
     Box(modifier = Modifier.fillMaxSize()) {
         BlurredWallpaperBackground(scrimAlpha = 0.28f)
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(IncognitoSurface.copy(alpha = progress))
+                .background(IncognitoSurface.copy(alpha = incognito))
         )
 
-        HorizontalPager(
-            state = pagerState,
-            // Lo swipe NON porta più alle app nascoste: era troppo facile da scovare, e
-            // trattandosi di un pager la pagina si affacciava già durante il trascinamento —
-            // bastava una scorsa accidentale per sapere che c'era qualcosa. Ci si arriva solo
-            // col tocco lungo sui due punti in fondo. Lo scorrimento resta abilitato mentre
-            // sei sulla pagina nascosta, così torni indietro con il gesto naturale.
-            //
-            // While picking an app for the home screen or the dock there is nowhere else to go.
-            userScrollEnabled = state.drawerMode == DrawerMode.BROWSE && headingForHidden,
-            modifier = Modifier.fillMaxSize()
-        ) { page ->
-            when (page) {
-                PAGE_ALL_APPS -> AllAppsPage(
+        AnimatedContent(
+            targetState = showHidden,
+            transitionSpec = {
+                fadeIn(tween(FADE_MILLIS)) togetherWith fadeOut(tween(FADE_MILLIS))
+            },
+            label = "drawer-page"
+        ) { hidden ->
+            when {
+                !hidden -> AllAppsPage(
                     state = state,
                     onQueryChange = onQueryChange,
                     onAppClick = onAppClick,
@@ -188,32 +176,28 @@ fun DrawerScreen(
                         // lì il cassetto è un selettore e non c'è nessun altro posto dove
                         // andare. I punti restano disegnati, così non cambiano di aspetto a
                         // seconda del modo — sono decorazione, e devono sembrarlo sempre.
-                        if (state.drawerMode == DrawerMode.BROWSE) {
-                            scope.launch { pagerState.animateScrollToPage(PAGE_HIDDEN) }
-                        }
+                        if (state.drawerMode == DrawerMode.BROWSE) showHidden = true
                     },
                     onClose = onClose
                 )
 
-                else -> if (locked) {
-                    UnlockPage(
-                        error = state.unlockError,
-                        canUseBiometrics = canUseBiometrics(),
-                        onBiometricRequest = onRequestBiometric,
-                        onPinSubmit = onPinSubmit,
-                        onClearError = onClearUnlockError,
-                        onClose = onClose
-                    )
-                } else {
-                    HiddenAppsPage(
-                        state = state,
-                        onQueryChange = onQueryChange,
-                        onAppClick = onHiddenAppClick,
-                        onAppLongPress = onHiddenAppLongPress,
-                        onOpenSettings = onOpenSettings,
-                        onClose = onClose
-                    )
-                }
+                locked -> UnlockPage(
+                    error = state.unlockError,
+                    canUseBiometrics = canUseBiometrics(),
+                    onBiometricRequest = onRequestBiometric,
+                    onPinSubmit = onPinSubmit,
+                    onClearError = onClearUnlockError,
+                    onClose = onClose
+                )
+
+                else -> HiddenAppsPage(
+                    state = state,
+                    onQueryChange = onQueryChange,
+                    onAppClick = onHiddenAppClick,
+                    onAppLongPress = onHiddenAppLongPress,
+                    onOpenSettings = onOpenSettings,
+                    onClose = onClose
+                )
             }
         }
     }
@@ -258,7 +242,7 @@ private fun AllAppsPage(
                     )
                 }
             },
-            bottomBar = { HiddenDoorDots(onHold = onRevealHidden) }
+            bottomBar = { HiddenDoorDots(onOpen = onRevealHidden) }
         ) { padding ->
             AppGrid(
                 apps = state.visibleApps,
@@ -444,52 +428,35 @@ private fun AppGrid(
  * pagina, con uno acceso e uno spento, direbbe che esiste una seconda pagina — che è
  * esattamente ciò che non deve trapelare.
  *
- * Si apre solo tenendoli premuti per SECRET_HOLD_MILLIS — il doppio della soglia di sistema,
- * che è mezzo secondo. Un tocco normale non fa niente e non dà alcun segnale: chi ci finisce
- * sopra per caso non scopre nulla. L'area sensibile è un rettangolo centrato attorno ai punti,
- * non tutta la striscia in fondo, così un dito appoggiato al bordo mentre leggi non la attiva.
+ * Si apre solo col **doppio tap**. Un tocco singolo non fa niente e non produce nessun
+ * segnale, quindi chi ci finisce sopra per caso non scopre nulla; e non essendoci un `onTap`
+ * nello stesso rilevatore, il tocco singolo non viene nemmeno ritardato. L'area sensibile è
+ * un rettangolo centrato attorno ai punti, non tutta la striscia in fondo, così un dito
+ * appoggiato al bordo mentre leggi non la attiva.
  */
 @Composable
-private fun HiddenDoorDots(onHold: () -> Unit) {
+private fun HiddenDoorDots(onOpen: () -> Unit) {
     val haptics = LocalHapticFeedback.current
-    val density = LocalDensity.current
-    val slopPx = remember(density) { with(density) { HOLD_SLOP.toPx() } }
 
     Box(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
         contentAlignment = Alignment.Center
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(DOT_SPACING),
+            // Con spacedBy e basta i punti si impacchettano a sinistra dell'area sensibile e
+            // finiscono fuori asse rispetto alla maniglietta, che è centrata davvero.
+            horizontalArrangement = Arrangement.spacedBy(DOT_SPACING, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .width(TOUCH_WIDTH)
                 .height(TOUCH_HEIGHT)
                 .pointerInput(Unit) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown()
-                        var travelled = 0f
-                        // withTimeoutOrNull torna null solo se scade il tempo, cioè se il dito
-                        // è rimasto giù e fermo per tutta la durata.
-                        val heldStill = withTimeoutOrNull(SECRET_HOLD_MILLIS) {
-                            while (true) {
-                                val change = awaitPointerEvent().changes
-                                    .firstOrNull { it.id == down.id } ?: break
-                                travelled += change.positionChange().getDistance()
-                                if (!change.pressed || travelled > slopPx) break
-                            }
-                        } == null
-
-                        if (heldStill) {
+                    detectTapGestures(
+                        onDoubleTap = {
                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onHold()
-                            do {
-                                val change = awaitPointerEvent().changes
-                                    .firstOrNull { it.id == down.id } ?: break
-                                change.consume()
-                            } while (change.pressed)
+                            onOpen()
                         }
-                    }
+                    )
                 },
             content = {
                 repeat(2) {
