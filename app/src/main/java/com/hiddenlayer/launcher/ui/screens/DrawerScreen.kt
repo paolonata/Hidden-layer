@@ -77,15 +77,20 @@ import com.hiddenlayer.launcher.ui.closeOnDragDown
 private const val PAGE_ALL_APPS = 0
 private const val PAGE_HIDDEN = 1
 
-/** Quanto vanno tenuti premuti i due punti in fondo. Molto più della soglia di sistema
- * (mezzo secondo): deve essere un gesto che non si fa mai per caso, perché è l'unica cosa che
+/** Quanto vanno tenuti premuti i due punti in fondo. Il doppio della soglia di sistema
+ * (mezzo secondo): deve restare un gesto che non si fa per caso, perché è l'unica cosa che
  * rivela l'esistenza delle app nascoste. */
-private const val SECRET_HOLD_MILLIS = 1_500L
+private const val SECRET_HOLD_MILLIS = 1_000L
 
 /** Quanto può scivolare il dito senza annullare il tocco lungo. */
 private val HOLD_SLOP = 12.dp
-private val DOT_SIZE = 5.dp
-private val DOT_SPACING = 7.dp
+
+// Stessa presenza della maniglietta in cima al cassetto (vedi DragHandle in
+// CloseGestures.kt): stesso bianco al 60%, stessa aria attorno. Devono leggersi come un
+// elemento dell'interfaccia al pari degli altri, non come un dettaglio da cercare.
+private val DOT_SIZE = 8.dp
+private val DOT_SPACING = 10.dp
+private val DOT_COLOR_ALPHA = 0.6f
 private val TOUCH_WIDTH = 96.dp
 private val TOUCH_HEIGHT = 44.dp
 
@@ -434,10 +439,12 @@ private fun AppGrid(
  * I due punti in fondo al cassetto: **l'unica strada** per le app nascoste.
  *
  * Sta in basso e non sulla maniglietta in cima perché è lì che arriva il pollice senza
- * cambiare presa. Sono due punti spenti e uguali fra loro, non un indicatore di pagina con
- * uno acceso: devono leggersi come decorazione, non come "esiste una seconda pagina".
+ * cambiare presa, e ha lo stesso aspetto della maniglietta perché deve sembrare un elemento
+ * dell'interfaccia come gli altri. I due punti sono **uguali fra loro**: un indicatore di
+ * pagina, con uno acceso e uno spento, direbbe che esiste una seconda pagina — che è
+ * esattamente ciò che non deve trapelare.
  *
- * Si apre solo tenendoli premuti per SECRET_HOLD_MILLIS — molto più della soglia di sistema,
+ * Si apre solo tenendoli premuti per SECRET_HOLD_MILLIS — il doppio della soglia di sistema,
  * che è mezzo secondo. Un tocco normale non fa niente e non dà alcun segnale: chi ci finisce
  * sopra per caso non scopre nulla. L'area sensibile è un rettangolo centrato attorno ai punti,
  * non tutta la striscia in fondo, così un dito appoggiato al bordo mentre leggi non la attiva.
@@ -490,7 +497,7 @@ private fun HiddenDoorDots(onHold: () -> Unit) {
                         modifier = Modifier
                             .size(DOT_SIZE)
                             .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.30f))
+                            .background(Color.White.copy(alpha = DOT_COLOR_ALPHA))
                     )
                 }
             }

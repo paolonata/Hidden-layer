@@ -47,11 +47,12 @@ usare lo strumento della riservatezza per fare le pulizie:
   superata una certa distanza va alla pagina precedente/successiva. Se la
   tieni premuta senza spostarla (o la sposti pochissimo) si apre invece il
   menu contestuale di cui sopra, come prima.
-- **App nascoste**: si aprono **tenendo premuti per un secondo e mezzo i due
-  puntini in fondo al cassetto**. Non c'è nessun'altra strada: niente voce di
-  menu, niente pulsante, e un tocco normale sui puntini non fa assolutamente
-  nulla. I due punti sono spenti e uguali fra loro — non un indicatore di
-  pagina con uno acceso — quindi si leggono come decorazione. Lo swipe verso
+- **App nascoste**: si aprono **tenendo premuti per un secondo i due puntini
+  in fondo al cassetto**. Non c'è nessun'altra strada: niente voce di menu,
+  niente pulsante, e un tocco normale sui puntini non fa assolutamente nulla.
+  Hanno lo stesso aspetto della maniglietta in cima, così sembrano un elemento
+  dell'interfaccia come gli altri, e sono **uguali fra loro**: un indicatore di
+  pagina con uno acceso direbbe che esiste una seconda pagina. Lo swipe verso
   sinistra **non** ci porta più: era troppo facile da scovare, e trattandosi
   di un pager la pagina si affacciava già durante il trascinamento, così
   bastava una scorsa accidentale per capire che c'era qualcosa. Una volta
