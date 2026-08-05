@@ -34,8 +34,9 @@ Cosa contiene la 1.0.36, in breve:
 - cassetto a 5 colonne, **senza etichette sotto le icone** (solo icone,
   ovunque tranne nelle liste con interruttore delle impostazioni, nel menu
   contestuale e nella conferma della Concentrazione);
-- app nascoste come seconda pagina del cassetto (swipe a sinistra), stile
-  incognito, sblocco biometrico/PIN facoltativo;
+- app nascoste come seconda pagina del cassetto, raggiungibile **solo** con un
+  tocco lungo (1,5 s) sui due puntini in fondo — lo swipe a sinistra non ci
+  porta più; stile incognito, sblocco biometrico/PIN facoltativo;
 - Concentrazione: doppio tap sulla home → popup 30 min / 1 ora / 2 ore → pill
   col countdown sopra il dock per 5 secondi, poi sparisce; storico di sempre
   delle aperture forzate e record di resistenza, mostrato anche nel popup di
@@ -241,6 +242,13 @@ gesture di questo progetto venivano da lì.
 - Le tile hanno **un solo `combinedClickable`** (tap + long click). Il
   trascinamento tra pagine è seguito **a livello di `HomeScreen`** sul pass
   `Initial`, che arriva al genitore prima che un figlio possa consumare.
+- **Le app nascoste si aprono solo tenendo premuti i due puntini in fondo al
+  cassetto** (`HiddenDoorDots`, 1,5 s). Lo swipe a sinistra è stato tolto: il
+  pager mostrava la pagina già durante il trascinamento, quindi bastava una
+  scorsa accidentale per scoprirla. `userScrollEnabled` resta acceso solo
+  quando sei *già* sulla pagina nascosta, per tornare indietro. I punti vanno
+  tenuti spenti e uguali fra loro: un indicatore con uno acceso direbbe che
+  esiste una seconda pagina.
 - Lo swipe-giù-per-chiudere di cassetto e Concentrazione osserva il pass
   `Initial` sulla radice della schermata e **non consuma mai** (`CloseGestures.kt`).
   Metterlo sulla `TopAppBar` non funzionava: il campo di ricerca la copre.

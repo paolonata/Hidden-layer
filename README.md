@@ -16,8 +16,8 @@ usare lo strumento della riservatezza per fare le pulizie:
    home. È dove cerchi ciò che usi di rado. Nessun blocco, nessuna cerimonia.
 3. **App nascoste** — le poche app davvero private. Non compaiono in home,
    **non compaiono nel cassetto e non escono nella ricerca**: esistono solo
-   nella seconda pagina del cassetto, raggiungibile con uno swipe a
-   sinistra e senza alcun indizio nell'interfaccia.
+   dietro un tocco lungo sui due puntini in fondo al cassetto, senza alcun
+   indizio nell'interfaccia.
 
 ## Come funziona
 
@@ -47,12 +47,17 @@ usare lo strumento della riservatezza per fare le pulizie:
   superata una certa distanza va alla pagina precedente/successiva. Se la
   tieni premuta senza spostarla (o la sposti pochissimo) si apre invece il
   menu contestuale di cui sopra, come prima.
-- **App nascoste**: sono la **seconda pagina del cassetto**, a sinistra —
-  apri il cassetto e scorri verso sinistra. La transizione segue il dito e
-  lo sfondo si scurisce man mano che ci arrivi. Nell'interfaccia non c'è
-  alcuna voce di menu né pulsante che ne riveli l'esistenza: se non sai che
-  c'è, non la trovi. L'icona ingranaggio su quella pagina porta alle
-  impostazioni, dove scegli quali app nascondere e se richiedere lo sblocco.
+- **App nascoste**: si aprono **tenendo premuti per un secondo e mezzo i due
+  puntini in fondo al cassetto**. Non c'è nessun'altra strada: niente voce di
+  menu, niente pulsante, e un tocco normale sui puntini non fa assolutamente
+  nulla. I due punti sono spenti e uguali fra loro — non un indicatore di
+  pagina con uno acceso — quindi si leggono come decorazione. Lo swipe verso
+  sinistra **non** ci porta più: era troppo facile da scovare, e trattandosi
+  di un pager la pagina si affacciava già durante il trascinamento, così
+  bastava una scorsa accidentale per capire che c'era qualcosa. Una volta
+  dentro, lo swipe verso destra riporta al cassetto normale. L'icona
+  ingranaggio su quella pagina porta alle impostazioni, dove scegli quali app
+  nascondere e se richiedere lo sblocco.
 - Tieni premuto su un punto vuoto della home per aggiungere un'app o
   cambiare sfondo (apre il selettore di sfondo di sistema).
 - **Per chiudere** cassetto e app nascoste: trascina verso il basso da un

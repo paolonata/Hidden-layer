@@ -2,6 +2,8 @@ package com.hiddenlayer.launcher.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +13,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -20,6 +24,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
@@ -43,13 +48,22 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import com.hiddenlayer.launcher.DrawerMode
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
@@ -62,6 +76,18 @@ import com.hiddenlayer.launcher.ui.closeOnDragDown
 
 private const val PAGE_ALL_APPS = 0
 private const val PAGE_HIDDEN = 1
+
+/** Quanto vanno tenuti premuti i due punti in fondo. Molto più della soglia di sistema
+ * (mezzo secondo): deve essere un gesto che non si fa mai per caso, perché è l'unica cosa che
+ * rivela l'esistenza delle app nascoste. */
+private const val SECRET_HOLD_MILLIS = 1_500L
+
+/** Quanto può scivolare il dito senza annullare il tocco lungo. */
+private val HOLD_SLOP = 12.dp
+private val DOT_SIZE = 5.dp
+private val DOT_SPACING = 7.dp
+private val TOUCH_WIDTH = 96.dp
+private val TOUCH_HEIGHT = 44.dp
 
 /** Chrome's incognito grey: flat, cold and deliberately not "your wallpaper, but darker". */
 private val IncognitoSurface = Color(0xFF202124)
@@ -101,6 +127,7 @@ fun DrawerScreen(
         pageCount = { 2 }
     )
     val locked = state.unlockRequired && !state.vaultUnlocked
+    val scope = rememberCoroutineScope()
 
     val headingForHidden = pagerState.currentPage == PAGE_HIDDEN || pagerState.targetPage == PAGE_HIDDEN
     if (headingForHidden) SecureScreen()
@@ -135,8 +162,14 @@ fun DrawerScreen(
 
         HorizontalPager(
             state = pagerState,
+            // Lo swipe NON porta più alle app nascoste: era troppo facile da scovare, e
+            // trattandosi di un pager la pagina si affacciava già durante il trascinamento —
+            // bastava una scorsa accidentale per sapere che c'era qualcosa. Ci si arriva solo
+            // col tocco lungo sui due punti in fondo. Lo scorrimento resta abilitato mentre
+            // sei sulla pagina nascosta, così torni indietro con il gesto naturale.
+            //
             // While picking an app for the home screen or the dock there is nowhere else to go.
-            userScrollEnabled = state.drawerMode == DrawerMode.BROWSE,
+            userScrollEnabled = state.drawerMode == DrawerMode.BROWSE && headingForHidden,
             modifier = Modifier.fillMaxSize()
         ) { page ->
             when (page) {
@@ -145,6 +178,15 @@ fun DrawerScreen(
                     onQueryChange = onQueryChange,
                     onAppClick = onAppClick,
                     onAppLongPress = onAppLongPress,
+                    onRevealHidden = {
+                        // Inerte mentre stai scegliendo un'app per la home o per il dock:
+                        // lì il cassetto è un selettore e non c'è nessun altro posto dove
+                        // andare. I punti restano disegnati, così non cambiano di aspetto a
+                        // seconda del modo — sono decorazione, e devono sembrarlo sempre.
+                        if (state.drawerMode == DrawerMode.BROWSE) {
+                            scope.launch { pagerState.animateScrollToPage(PAGE_HIDDEN) }
+                        }
+                    },
                     onClose = onClose
                 )
 
@@ -179,6 +221,7 @@ private fun AllAppsPage(
     onQueryChange: (String) -> Unit,
     onAppClick: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo) -> Unit,
+    onRevealHidden: () -> Unit,
     onClose: () -> Unit
 ) {
     val gridState = rememberLazyGridState()
@@ -209,7 +252,8 @@ private fun AllAppsPage(
                         }
                     )
                 }
-            }
+            },
+            bottomBar = { HiddenDoorDots(onHold = onRevealHidden) }
         ) { padding ->
             AppGrid(
                 apps = state.visibleApps,
@@ -383,6 +427,74 @@ private fun AppGrid(
                 grayscale = isMuted(app)
             )
         }
+    }
+}
+
+/**
+ * I due punti in fondo al cassetto: **l'unica strada** per le app nascoste.
+ *
+ * Sta in basso e non sulla maniglietta in cima perché è lì che arriva il pollice senza
+ * cambiare presa. Sono due punti spenti e uguali fra loro, non un indicatore di pagina con
+ * uno acceso: devono leggersi come decorazione, non come "esiste una seconda pagina".
+ *
+ * Si apre solo tenendoli premuti per SECRET_HOLD_MILLIS — molto più della soglia di sistema,
+ * che è mezzo secondo. Un tocco normale non fa niente e non dà alcun segnale: chi ci finisce
+ * sopra per caso non scopre nulla. L'area sensibile è un rettangolo centrato attorno ai punti,
+ * non tutta la striscia in fondo, così un dito appoggiato al bordo mentre leggi non la attiva.
+ */
+@Composable
+private fun HiddenDoorDots(onHold: () -> Unit) {
+    val haptics = LocalHapticFeedback.current
+    val density = LocalDensity.current
+    val slopPx = remember(density) { with(density) { HOLD_SLOP.toPx() } }
+
+    Box(
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
+        contentAlignment = Alignment.Center
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(DOT_SPACING),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .width(TOUCH_WIDTH)
+                .height(TOUCH_HEIGHT)
+                .pointerInput(Unit) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown()
+                        var travelled = 0f
+                        // withTimeoutOrNull torna null solo se scade il tempo, cioè se il dito
+                        // è rimasto giù e fermo per tutta la durata.
+                        val heldStill = withTimeoutOrNull(SECRET_HOLD_MILLIS) {
+                            while (true) {
+                                val change = awaitPointerEvent().changes
+                                    .firstOrNull { it.id == down.id } ?: break
+                                travelled += change.positionChange().getDistance()
+                                if (!change.pressed || travelled > slopPx) break
+                            }
+                        } == null
+
+                        if (heldStill) {
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onHold()
+                            do {
+                                val change = awaitPointerEvent().changes
+                                    .firstOrNull { it.id == down.id } ?: break
+                                change.consume()
+                            } while (change.pressed)
+                        }
+                    }
+                },
+            content = {
+                repeat(2) {
+                    Box(
+                        modifier = Modifier
+                            .size(DOT_SIZE)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.30f))
+                    )
+                }
+            }
+        )
     }
 }
 
