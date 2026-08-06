@@ -190,7 +190,8 @@ l'alto apre il cassetto, sul dock apre le file nascoste. A **due dita**,
 ovunque, lo stesso movimento porta invece alle app nascoste.
 
 Per **richiuderle**: swipe verso il basso sul dock, oppure un tocco o uno
-swipe verso il basso in un punto qualsiasi dello schermo fuori dal dock. Con
+swipe verso il basso in un punto qualsiasi dello schermo fuori dal dock,
+oppure il tasto indietro. Con
 le file aperte, un gesto fuori dal dock serve solo a richiuderle — non apre
 l'app che hai toccato né cambia pagina, come da qualunque pannello aperto:
 prima lo chiudi, poi la home torna a comportarsi normalmente. L'eccezione è

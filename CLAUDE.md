@@ -275,6 +275,14 @@ gesture di questo progetto venivano da lì.
   launcher in primo piano — rientrava senza impronta. Attenzione all'ordine
   quando si tocca quel punto: se `locked` tornasse vero mentre la schermata è
   ancora quella nascosta, `LaunchedEffect` rilancerebbe il prompt biometrico.
+- **La home assorbe il tasto indietro** (`BackHandler` in `HomeScreen`). Un
+  launcher è la radice del suo task: lasciando passare l'indietro, l'activity
+  finisce e il sistema la riapre subito perché è la home, quindi si ripassa da
+  `onResume` → `refreshApps()` — tutte le app rilette e tutte le icone
+  ridecodificate. Da fuori si vede il dock che si ridisegna a vuoto. Se le file
+  del dock sono aperte le richiude, altrimenti non fa niente. I popup hanno i
+  loro `BackHandler` e sono composti **dopo**, quindi mantengono la precedenza
+  (vince l'ultimo registrato).
 - Lo swipe-giù-per-chiudere di cassetto e Concentrazione osserva il pass
   `Initial` sulla radice della schermata e **non consuma mai** (`CloseGestures.kt`).
   Metterlo sulla `TopAppBar` non funzionava: il campo di ricerca la copre.

@@ -1,5 +1,6 @@
 package com.hiddenlayer.launcher.ui.screens
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -159,6 +160,21 @@ fun HomeScreen(
     // from: back onto the grid means "take it out of the dock", not "move it a page along".
     var draggedFromDock by remember { mutableStateOf(false) }
     var draggedDockSlot by remember { mutableStateOf(-1) }
+
+    // Un launcher è la radice del suo task: dalla home il tasto indietro non ha nessun posto
+    // dove tornare. Lasciandolo passare, l'activity finisce e il sistema la riapre subito
+    // perché è la home — e la riapertura passa da onResume → refreshApps(), che rilegge tutte
+    // le app installate e ridecodifica tutte le icone. Da fuori si vede solo il dock che si
+    // ridisegna a vuoto. Quindi lo si assorbe sempre; se c'è qualcosa di aperto lo chiude,
+    // così il tasto non risulta morto. I popup (menu contestuale, scelta della durata,
+    // conferma di apertura) hanno i loro BackHandler e vengono registrati dopo questo, quindi
+    // continuano ad avere la precedenza.
+    BackHandler {
+        if (dockExpanded) {
+            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            dockExpanded = false
+        }
+    }
 
     var draggedApp by remember { mutableStateOf<AppInfo?>(null) }
     var dragOrigin by remember { mutableStateOf(Offset.Zero) }
