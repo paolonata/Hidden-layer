@@ -32,7 +32,7 @@ import com.hiddenlayer.launcher.ui.screens.HomeScreen
  * (slides up) — e.g. HIDDEN_MANAGER is nested one level under the drawer. */
 private fun screenDepth(screen: Screen): Int = when (screen) {
     Screen.HOME -> 0
-    Screen.DRAWER, Screen.FOCUS -> 1
+    Screen.DRAWER, Screen.HIDDEN_DRAWER, Screen.FOCUS -> 1
     Screen.HIDDEN_MANAGER -> 2
 }
 
@@ -86,8 +86,11 @@ fun LauncherApp(
                 onPageSizeChanged = viewModel::setPageSize
             )
 
-            Screen.DRAWER -> DrawerScreen(
+            Screen.DRAWER, Screen.HIDDEN_DRAWER -> DrawerScreen(
                 state = state,
+                // Dal valore dell'enum, non da un campo dello stato: è ciò che rende le due
+                // versioni due voci separate per AnimatedContent, e quindi due composizioni.
+                hiddenDrawer = screen == Screen.HIDDEN_DRAWER,
                 canUseBiometrics = canUseBiometrics,
                 onRequestBiometric = onRequestBiometric,
                 onQueryChange = viewModel::onQueryChange,

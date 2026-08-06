@@ -314,7 +314,6 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(
             screen = Screen.DRAWER,
             drawerMode = DrawerMode.BROWSE,
-            drawerStartPage = 0,
             query = ""
         )
     }
@@ -323,9 +322,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * richiesta di sblocco se è attiva. Non passa dal cassetto normale — è tutto il punto. */
     fun openHiddenDrawer() {
         _uiState.value = _uiState.value.copy(
-            screen = Screen.DRAWER,
+            screen = Screen.HIDDEN_DRAWER,
             drawerMode = DrawerMode.BROWSE,
-            drawerStartPage = 1,
             query = ""
         )
     }
@@ -375,13 +373,12 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
-    /** Back from the nested "manage hidden apps" settings screen to the drawer page it was
-     * opened from (the hidden one), rather than all the way home. */
+    /** Back from the nested "manage hidden apps" settings screen to the hidden drawer it was
+     * opened from, rather than all the way home. */
     fun backToHiddenDrawer() {
         _uiState.value = _uiState.value.copy(
-            screen = Screen.DRAWER,
+            screen = Screen.HIDDEN_DRAWER,
             drawerMode = DrawerMode.BROWSE,
-            drawerStartPage = 1,
             query = "",
             contextMenu = null
         )
@@ -523,15 +520,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
      * page re-locks itself, so it is never left unlocked behind your back. */
     fun lockVault() {
         val current = _uiState.value
-        // Si torna sempre alla home, non solo dalle impostazioni delle nascoste: restando sul
-        // cassetto lo stato resterebbe DRAWER e il pager, che non viene ricreato, si
-        // ripresenterebbe sulla pagina delle app nascoste già aperta.
-        val leavingVault = current.screen == Screen.DRAWER || current.screen == Screen.HIDDEN_MANAGER
+        // Si torna sempre alla home, anche dal cassetto normale: riaccendendo lo schermo su una
+        // schermata aperta prima di andarsene si perde il senso di dove si è, e per le nascoste
+        // sarebbe anche un'anteprima gratis di cosa c'era dentro.
+        val leavingVault = current.screen != Screen.HOME && current.screen != Screen.FOCUS
         _uiState.value = current.copy(
             vaultUnlocked = false,
             unlockError = false,
             screen = if (leavingVault) Screen.HOME else current.screen,
-            drawerStartPage = 0,
             // Menu contestuale e conferma di apertura portano scritto il nome dell'app: se
             // sopravvivessero al blocco, riaccendendo lo schermo il nome di un'app nascosta
             // resterebbe lì sopra un cassetto ormai chiuso.

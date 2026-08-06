@@ -8,7 +8,17 @@ import com.hiddenlayer.launcher.data.HomeLayoutRepository
 
 /** The hidden apps are no longer a screen of their own: they're the second page of the
  * drawer, reached by swiping left, so the transition follows the finger. */
-enum class Screen { HOME, DRAWER, HIDDEN_MANAGER, FOCUS }
+/**
+ * Il cassetto delle app nascoste è una **schermata a sé**, non un modo del cassetto normale.
+ *
+ * Erano lo stesso `DRAWER` con un campo a dire quale delle due mostrare, e il campo veniva
+ * letto una volta all'ingresso. Ma `AnimatedContent`, alla radice, tiene la schermata uscente
+ * composta finché la sua animazione non finisce: chiudere il cassetto e riaprirlo subito col
+ * gesto a due dita ricadeva su quella composizione ancora viva, il `remember` non veniva
+ * rivalutato e si riapriva il cassetto normale. Due valori distinti dell'enum sono due voci
+ * distinte per `AnimatedContent`, quindi la schermata giusta viene composta da zero.
+ */
+enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER, FOCUS }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
@@ -43,8 +53,6 @@ data class LauncherUiState(
     val unlockError: Boolean = false,
     /** Cleared every time the launcher is left, so the hidden page re-locks itself. */
     val vaultUnlocked: Boolean = false,
-    /** Which drawer page to open on: 1 when coming back from the hidden-apps settings. */
-    val drawerStartPage: Int = 0,
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,

@@ -62,9 +62,6 @@ import com.hiddenlayer.launcher.ui.DragHandle
 import com.hiddenlayer.launcher.ui.SecureScreen
 import com.hiddenlayer.launcher.ui.closeOnDragDown
 
-/** Il valore di `drawerStartPage` che significa "questa è la schermata delle nascoste". */
-private const val PAGE_HIDDEN = 1
-
 /** Quanto dura la dissolvenza fra richiesta di sblocco e app nascoste. Corta: è un cambio di
  * posto, non un'animazione da guardare. */
 private const val FADE_MILLIS = 200
@@ -74,8 +71,11 @@ private val IncognitoSurface = Color(0xFF202124)
 private val IncognitoAccent = Color(0xFFBDC1C6)
 
 /**
- * Cassetto normale e app nascoste sono la **stessa schermata in due versioni**, scelte
- * all'apertura e mai scambiate mentre sei dentro.
+ * Cassetto normale e app nascoste sono la **stessa schermata in due versioni**, decise da
+ * [hiddenDrawer] e mai scambiate mentre sei dentro. Quale delle due arriva lo dice `Screen`,
+ * non un campo dello stato letto all'ingresso: erano lo stesso `Screen.DRAWER` e chiudere il
+ * cassetto per riaprire subito quello nascosto ricadeva sulla composizione ancora in uscita,
+ * che si riapriva com'era (vedi il commento sull'enum `Screen`).
  *
  * Ci si è arrivati per gradi. Era un pager: lo swipe a sinistra ci portava, e siccome un pager
  * mostra la pagina già durante il trascinamento bastava una scorsa accidentale per scoprire
@@ -95,6 +95,7 @@ private val IncognitoAccent = Color(0xFFBDC1C6)
 @Composable
 fun DrawerScreen(
     state: LauncherUiState,
+    hiddenDrawer: Boolean,
     canUseBiometrics: () -> Boolean,
     onRequestBiometric: () -> Unit,
     onQueryChange: (String) -> Unit,
@@ -108,9 +109,6 @@ fun DrawerScreen(
     onRelock: () -> Unit,
     onClose: () -> Unit
 ) {
-    // Fissato all'ingresso: `lockVault` azzera drawerStartPage mentre la schermata è ancora
-    // montata, e senza `remember` la pagina cambierebbe sotto le dita.
-    val hiddenDrawer = remember { state.drawerStartPage == PAGE_HIDDEN }
     val locked = state.unlockRequired && !state.vaultUnlocked
 
     if (hiddenDrawer) SecureScreen()

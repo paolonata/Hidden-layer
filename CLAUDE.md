@@ -244,7 +244,7 @@ gesture di questo progetto venivano da lì.
   `Initial`, che arriva al genitore prima che un figlio possa consumare.
 - **Le app nascoste si aprono solo con lo swipe su a due dita dalla home**
   (tracker sul pass `Initial` in `HomeScreen`, `SECRET_SWIPE_THRESHOLD`), che
-  chiama `openHiddenDrawer()` → `drawerStartPage = 1`. L'ingresso è passato per
+  chiama `openHiddenDrawer()` → `Screen.HIDDEN_DRAWER`. L'ingresso è passato per
   tre forme, e la direzione è sempre la stessa — **togliere ciò che si vede**:
   1. swipe a sinistra su un pager: la pagina si affacciava già durante il
      trascinamento, bastava una scorsa per scoprirla;
@@ -254,13 +254,20 @@ gesture di questo progetto venivano da lì.
      dalla home** invece di cassetto → puntini → doppio tap.
 
   Conseguenze in `DrawerScreen`: cassetto e nascoste non sono più due stati
-  scambiabili ma **la stessa schermata in due versioni**, decisa all'ingresso
-  (`val hiddenDrawer = remember { state.drawerStartPage == PAGE_HIDDEN }`) e
-  mai scambiata mentre sei dentro. Niente `showHidden`, niente crossfade fra le
-  due: `FADE_MILLIS` serve solo fra sblocco e app nascoste. Dalle nascoste si
-  esce **alla home** con X, trascinamento in giù o tasto indietro — prima
-  l'unica uscita era il tasto indietro di sistema, che per una schermata aperta
-  con un gesto non si trova.
+  scambiabili ma **la stessa schermata in due versioni**, decisa dal parametro
+  `hiddenDrawer` e mai scambiata mentre sei dentro. Niente `showHidden`, niente
+  crossfade fra le due: `FADE_MILLIS` serve solo fra sblocco e app nascoste.
+  Dalle nascoste si esce **alla home** con X, trascinamento in giù o tasto
+  indietro — prima l'unica uscita era il tasto indietro di sistema, che per una
+  schermata aperta con un gesto non si trova.
+- **Le due versioni sono due valori di `Screen`** (`DRAWER` e `HIDDEN_DRAWER`),
+  non un campo dello stato letto all'ingresso con `remember`. `AnimatedContent`
+  alla radice tiene la schermata uscente **composta** finché la sua animazione
+  non finisce: con un solo `Screen.DRAWER`, chiudere il cassetto e riaprire
+  subito quello nascosto ricadeva su quella composizione ancora viva, il
+  `remember` non veniva rivalutato e si riapriva il cassetto normale. Vale come
+  regola: **se due schermate devono essere composte da zero, devono essere due
+  voci diverse per `AnimatedContent`** — un flag dentro lo stato non basta.
 - **Il gesto nasconde la porta, non la chiude a chiave.** Contro chi ha il
   telefono in mano vale solo lo sblocco (`unlockRequired`). Per questo uscendo
   dalle nascoste si chiama `relockVault()`: `lockVault()` da solo scatta a
