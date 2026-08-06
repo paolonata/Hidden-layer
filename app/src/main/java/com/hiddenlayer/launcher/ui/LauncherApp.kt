@@ -71,6 +71,7 @@ fun LauncherApp(
                 onOpenFocus = viewModel::openFocus,
                 focusRemaining = viewModel.focusRemainingSeconds,
                 onOpenDrawer = viewModel::openDrawer,
+                onOpenHiddenDrawer = viewModel::openHiddenDrawer,
                 onMoveAppToAdjacentPage = viewModel::moveToAdjacentPage,
                 onDropOnDock = { app, slot ->
                     if (!viewModel.dropOnDock(app, slot)) {
@@ -97,6 +98,7 @@ fun LauncherApp(
                 onPinSubmit = viewModel::verifyPin,
                 onClearUnlockError = viewModel::clearUnlockError,
                 onOpenSettings = viewModel::openHiddenSettings,
+                onRelock = viewModel::relockVault,
                 onClose = viewModel::backToHome
             )
 

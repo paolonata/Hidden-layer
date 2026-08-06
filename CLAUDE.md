@@ -242,15 +242,32 @@ gesture di questo progetto venivano da lì.
 - Le tile hanno **un solo `combinedClickable`** (tap + long click). Il
   trascinamento tra pagine è seguito **a livello di `HomeScreen`** sul pass
   `Initial`, che arriva al genitore prima che un figlio possa consumare.
-- **Le app nascoste si aprono solo col doppio tap sui due puntini in fondo al
-  cassetto** (`HiddenDoorDots`). Il pager è stato **tolto**: mostrava la pagina
-  già durante il trascinamento, quindi bastava una scorsa accidentale per
-  scoprirla, e anche senza swipe uno scorrimento laterale racconta che c'è "la
-  pagina di fianco". Ora sono due schermate sovrapposte con una dissolvenza
-  (`AnimatedContent`, `FADE_MILLIS`), e dalle nascoste si torna col tasto
-  indietro. I punti hanno lo stesso aspetto della maniglietta (bianco al 60%) e
-  vanno tenuti **uguali fra loro**: un indicatore con uno acceso direbbe che
-  esiste una seconda pagina.
+- **Le app nascoste si aprono solo con lo swipe su a due dita dalla home**
+  (tracker sul pass `Initial` in `HomeScreen`, `SECRET_SWIPE_THRESHOLD`), che
+  chiama `openHiddenDrawer()` → `drawerStartPage = 1`. L'ingresso è passato per
+  tre forme, e la direzione è sempre la stessa — **togliere ciò che si vede**:
+  1. swipe a sinistra su un pager: la pagina si affacciava già durante il
+     trascinamento, bastava una scorsa per scoprirla;
+  2. doppio tap su due puntini in fondo al cassetto (`HiddenDoorDots`): niente
+     scorrimento laterale, ma un elemento disegnato prima o poi viene toccato;
+  3. gesto a due dita: non lascia niente sullo schermo, ed è **un gesto solo
+     dalla home** invece di cassetto → puntini → doppio tap.
+
+  Conseguenze in `DrawerScreen`: cassetto e nascoste non sono più due stati
+  scambiabili ma **la stessa schermata in due versioni**, decisa all'ingresso
+  (`val hiddenDrawer = remember { state.drawerStartPage == PAGE_HIDDEN }`) e
+  mai scambiata mentre sei dentro. Niente `showHidden`, niente crossfade fra le
+  due: `FADE_MILLIS` serve solo fra sblocco e app nascoste. Dalle nascoste si
+  esce **alla home** con X, trascinamento in giù o tasto indietro — prima
+  l'unica uscita era il tasto indietro di sistema, che per una schermata aperta
+  con un gesto non si trova.
+- **Il gesto nasconde la porta, non la chiude a chiave.** Contro chi ha il
+  telefono in mano vale solo lo sblocco (`unlockRequired`). Per questo uscendo
+  dalle nascoste si chiama `relockVault()`: `lockVault()` da solo scatta a
+  `onStop`, quindi chi prendeva il telefono nei secondi dopo — schermo acceso,
+  launcher in primo piano — rientrava senza impronta. Attenzione all'ordine
+  quando si tocca quel punto: se `locked` tornasse vero mentre la schermata è
+  ancora quella nascosta, `LaunchedEffect` rilancerebbe il prompt biometrico.
 - Lo swipe-giù-per-chiudere di cassetto e Concentrazione osserva il pass
   `Initial` sulla radice della schermata e **non consuma mai** (`CloseGestures.kt`).
   Metterlo sulla `TopAppBar` non funzionava: il campo di ricerca la copre.
@@ -258,7 +275,13 @@ gesture di questo progetto venivano da lì.
   - primi `TOP_GESTURE_EXCLUSION` (56dp) dall'alto → lasciati al sistema
     (tendina notifiche);
   - sopra `dockZoneTop` → swipe su apre il **cassetto**;
-  - sul dock → swipe su apre le **file nascoste del dock**.
+  - sul dock → swipe su apre le **file nascoste del dock**;
+  - **due dita**, ovunque sotto la striscia in alto → app nascoste. Distinguere
+    un dito da due è l'unico modo di far convivere due gesti identici: il
+    tracker sulla radice conta `event.changes.count { it.pressed }`, alza
+    `multiTouch` e consuma, e lo swipe a un dito nel `Column` si tira indietro
+    leggendo quel flag. Funziona perché il pass `Initial` del genitore precede
+    il pass `Main` del figlio **nello stesso evento**.
 - **File del dock aperte**: il primo gesto che parte fuori dal dock le
   richiude e basta (consumato sul pass `Initial` nel tracker di `HomeScreen`,
   variabile `dismissingDock`). Non è un velo cliccabile a parte apposta: un
@@ -276,6 +299,7 @@ gesture di questo progetto venivano da lì.
 | `HomeScreen` | `TOP_GESTURE_EXCLUSION` | 56dp |
 | `HomeScreen` | `PAGE_MOVE_THRESHOLD` / `TAP_VS_DRAG_THRESHOLD` | 72dp / 16dp |
 | `HomeScreen` | `DOCK_TOGGLE_THRESHOLD` | 28dp |
+| `HomeScreen` | `SECRET_SWIPE_THRESHOLD` (due dita → nascoste) | 48dp |
 | `DrawerScreen.AppGrid` | colonne | 5 |
 | `AppGridTile` / `HomeIconTile` | icona | 48dp |
 | `AppIcon` | `MUTED_ALPHA` (app in grigio) | 0.4 |

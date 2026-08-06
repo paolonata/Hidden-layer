@@ -80,6 +80,9 @@ private val TAP_VS_DRAG_THRESHOLD = 16.dp
 private val DRAG_ICON_SIZE = 56.dp
 private val DOCK_TOGGLE_THRESHOLD = 28.dp
 private val DOCK_FALLBACK_HEIGHT = 132.dp
+// Quanto bisogna salire con due dita per aprire le app nascoste. Corto: è una scorciatoia,
+// deve costare un movimento solo — ma non così corto da scattare su un pizzico sbagliato.
+private val SECRET_SWIPE_THRESHOLD = 48.dp
 
 /**
  * Swipe-up-to-open-drawer is a single gesture detector on the whole screen (not one per
@@ -97,6 +100,11 @@ private val DOCK_FALLBACK_HEIGHT = 132.dp
  * combinedClickable (tap + long-click, the combination that always worked), long-click just
  * flags which app is being moved, and the drag itself is followed here on the *Initial*
  * pointer pass, which reaches this parent before any child can consume it.
+ *
+ * Sullo stesso pass vive anche la scorciatoia per le app nascoste — swipe su a **due dita**,
+ * [onOpenHiddenDrawer]. Deve stare qui e non su un elemento suo perché è il solo punto che
+ * vede il gesto prima che se lo prenda lo swipe a un dito, quello che apre il cassetto
+ * normale: sono lo stesso movimento, distinguerli è solo questione di contare i tocchi.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -110,6 +118,7 @@ fun HomeScreen(
     onOpenFocus: () -> Unit,
     focusRemaining: StateFlow<Int>,
     onOpenDrawer: () -> Unit,
+    onOpenHiddenDrawer: () -> Unit,
     onMoveAppToAdjacentPage: (AppInfo, Int) -> Unit,
     onDropOnDock: (AppInfo, Int) -> Unit,
     onDropOnHome: (AppInfo) -> Unit,
@@ -124,9 +133,14 @@ fun HomeScreen(
     val topExclusionPx = remember(density) { with(density) { TOP_GESTURE_EXCLUSION.toPx() } }
     val pageMoveThresholdPx = remember(density) { with(density) { PAGE_MOVE_THRESHOLD.toPx() } }
     val tapVsDragThresholdPx = remember(density) { with(density) { TAP_VS_DRAG_THRESHOLD.toPx() } }
+    val secretSwipePx = remember(density) { with(density) { SECRET_SWIPE_THRESHOLD.toPx() } }
 
     var swipeAccum by remember { mutableStateOf(0f) }
     var swipeArmed by remember { mutableStateOf(false) }
+    // Alzata dal tracker sulla radice appena scende un secondo dito, e letta dallo swipe a un
+    // dito qui sotto perché si tiri indietro: il pass Initial arriva al genitore prima del
+    // pass Main del figlio, quindi quando la lambda del trascinamento la legge è già giusta.
+    var multiTouch by remember { mutableStateOf(false) }
 
     // The second dock row is folded away until you swipe up on the dock itself. Knowing
     // where the dock starts is what keeps that gesture from colliding with the swipe-up
@@ -177,11 +191,46 @@ fun HomeScreen(
                     // aperte non ci sarebbe alcun modo di portarci sopra un'icona della home.
                     var draggingStarted = false
 
+                    // Scorciatoia per le app nascoste. Due dita non capitano per sbaglio e,
+                    // soprattutto, **non lasciano niente sullo schermo**: è questo a tenere
+                    // l'ingresso fuori dalla portata di chi prende in mano il telefono, non un
+                    // elemento piccolo da trovare. Un elemento disegnato, prima o poi, viene
+                    // toccato — i due punti in fondo al cassetto stavano lì per quello e sono
+                    // stati tolti. La protezione vera resta comunque lo sblocco: questo gesto
+                    // nasconde la porta, non la chiude a chiave.
+                    if (multiTouch) multiTouch = false
+                    var secretAnchorY: Float? = null
+                    var secretFired = false
+                    // La striscia in alto è lasciata alla tendina di sistema come per lo swipe
+                    // a un dito: due dita che partono di lì sono quasi sempre le notifiche.
+                    val secretAllowed = down.position.y > topExclusionPx
+
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull { it.id == down.id } ?: break
 
-                        if (draggedApp != null) {
+                        if (event.changes.count { it.pressed } > 1) {
+                            if (!multiTouch) multiTouch = true
+                            // Si misura da dove il gesto è diventato a due dita, non da dove
+                            // era sceso il primo: quello che conta è quanto sali dopo aver
+                            // appoggiato il secondo, altrimenti il tratto già percorso a un
+                            // dito farebbe scattare la scorciatoia all'istante.
+                            if (secretAnchorY == null) secretAnchorY = change.position.y
+                        }
+
+                        val anchorY = secretAnchorY
+                        if (anchorY != null && draggedApp == null) {
+                            if (!secretFired && secretAllowed &&
+                                anchorY - change.position.y > secretSwipePx
+                            ) {
+                                secretFired = true
+                                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                                onOpenHiddenDrawer()
+                            }
+                            // Consumato in ogni caso: un gesto a due dita non deve finire per
+                            // aprire il cassetto normale né per spostare qualcosa.
+                            change.consume()
+                        } else if (draggedApp != null) {
                             draggingStarted = true
                             // Long-click just flagged an app as being moved: anchor the drag
                             // at wherever the finger is now, and swallow the events so the
@@ -206,7 +255,7 @@ fun HomeScreen(
                         if (!change.pressed) break
                     }
 
-                    if (dismissingDock && !draggingStarted) {
+                    if (dismissingDock && !draggingStarted && !secretFired) {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         dockExpanded = false
                     }
@@ -274,7 +323,7 @@ fun HomeScreen(
                             swipeArmed = offset.y > topExclusionPx && offset.y < dockZoneTop
                         },
                         onVerticalDrag = { change, dragAmount ->
-                            if (swipeArmed && draggedApp == null) {
+                            if (swipeArmed && draggedApp == null && !multiTouch) {
                                 change.consume()
                                 swipeAccum += dragAmount
                                 if (swipeAccum < -SWIPE_OPEN_THRESHOLD_PX) {

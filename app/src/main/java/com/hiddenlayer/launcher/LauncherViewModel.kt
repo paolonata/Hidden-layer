@@ -319,6 +319,17 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         )
     }
 
+    /** La scorciatoia dalla home (swipe su a due dita): porta dritti alle app nascoste, o alla
+     * richiesta di sblocco se è attiva. Non passa dal cassetto normale — è tutto il punto. */
+    fun openHiddenDrawer() {
+        _uiState.value = _uiState.value.copy(
+            screen = Screen.DRAWER,
+            drawerMode = DrawerMode.BROWSE,
+            drawerStartPage = 1,
+            query = ""
+        )
+    }
+
     fun openDrawerForHomePick() {
         _uiState.value = _uiState.value.copy(screen = Screen.DRAWER, drawerMode = DrawerMode.PICK_FOR_HOME, query = "")
     }
@@ -527,6 +538,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             contextMenu = null,
             frictionApp = null
         )
+    }
+
+    /** Uscendo dalle app nascoste lo sblocco decade **subito**, senza aspettare che il
+     * launcher vada in pausa: altrimenti bastava che qualcuno prendesse il telefono nei
+     * secondi dopo — schermo ancora acceso, launcher ancora in primo piano — e rifacesse il
+     * gesto per entrare senza impronta né PIN. Cambia solo il lucchetto: la schermata la
+     * gestisce chi chiama. */
+    fun relockVault() {
+        val current = _uiState.value
+        if (current.vaultUnlocked || current.unlockError) {
+            _uiState.value = current.copy(vaultUnlocked = false, unlockError = false)
+        }
     }
 
     /** Opens the toggle list to choose which apps are hidden — reached from the gear on the

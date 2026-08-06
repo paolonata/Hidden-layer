@@ -15,9 +15,9 @@ usare lo strumento della riservatezza per fare le pulizie:
 2. **Cassetto** — l'indice completo delle app installate, comprese quelle in
    home. È dove cerchi ciò che usi di rado. Nessun blocco, nessuna cerimonia.
 3. **App nascoste** — le poche app davvero private. Non compaiono in home,
-   **non compaiono nel cassetto e non escono nella ricerca**: esistono solo
-   dietro un doppio tap sui due puntini in fondo al cassetto, senza alcun
-   indizio nell'interfaccia.
+   **non compaiono nel cassetto e non escono nella ricerca**: si raggiungono
+   con uno swipe verso l'alto a due dita dalla home, e nell'interfaccia non
+   c'è nessun indizio che esistano.
 
 ## Come funziona
 
@@ -47,19 +47,25 @@ usare lo strumento della riservatezza per fare le pulizie:
   superata una certa distanza va alla pagina precedente/successiva. Se la
   tieni premuta senza spostarla (o la sposti pochissimo) si apre invece il
   menu contestuale di cui sopra, come prima.
-- **App nascoste**: si aprono con un **doppio tap sui due puntini in fondo al
-  cassetto**. Non c'è nessun'altra strada: niente voce di menu, niente
-  pulsante, e un tocco singolo sui puntini non fa assolutamente nulla. Hanno
-  lo stesso aspetto della maniglietta in cima, così sembrano un elemento
-  dell'interfaccia come gli altri, e sono **uguali fra loro**: un indicatore
-  di pagina con uno acceso direbbe che esiste una seconda pagina. Lo swipe
-  verso sinistra **non** ci porta più: era troppo facile da scovare, e
-  trattandosi di un pager la pagina si affacciava già durante il
-  trascinamento. Ora non è più nemmeno una pagina di fianco — il passaggio è
-  una dissolvenza, perché uno scorrimento laterale racconterebbe comunque che
-  lì accanto c'è qualcosa. Per tornare al cassetto normale: il tasto indietro.
-  L'icona ingranaggio porta alle impostazioni, dove scegli quali app
-  nascondere e se richiedere lo sblocco.
+- **App nascoste**: si aprono con uno **swipe verso l'alto a due dita dalla
+  home**, in un gesto solo e da qualunque punto (tranne la striscia in cima,
+  lasciata alla tendina di sistema). Non c'è nessun'altra strada: niente voce
+  di menu, niente pulsante, e soprattutto **niente da vedere** — l'ingresso
+  non è un elemento piccolo da trovare, è un gesto che non lascia traccia
+  sullo schermo. Ci si è arrivati per gradi: prima lo swipe a sinistra (un
+  pager che si affacciava già durante il trascinamento, troppo facile da
+  scovare), poi un doppio tap su due puntini in fondo al cassetto — ma un
+  elemento disegnato, prima o poi, qualcuno lo tocca. Si esce come da ogni
+  altra schermata — X, trascinamento verso il basso, tasto indietro — e si
+  torna alla home. L'icona ingranaggio porta alle impostazioni, dove scegli
+  quali app nascondere e se richiedere lo sblocco.
+- **Il gesto nasconde la porta, non la chiude a chiave.** Se ti serve la
+  certezza che nessun altro entri col telefono in mano, attiva **Richiedi
+  sblocco** nelle impostazioni delle app nascoste: da lì in poi il gesto porta
+  all'impronta (o al PIN), che sono meno di un secondo per te e un muro per
+  chiunque altro. Lo sblocco vale **solo finché resti sulla schermata**:
+  appena esci decade, quindi rifare il gesto dieci secondi dopo richiede di
+  nuovo l'impronta.
 - Tieni premuto su un punto vuoto della home per aggiungere un'app o
   cambiare sfondo (apre il selettore di sfondo di sistema).
 - **Per chiudere** cassetto e app nascoste: trascina verso il basso da un
@@ -180,7 +186,8 @@ Il dock è composto da **tre righe da 5 posizioni** (15 in totale). La riga in
 basso è sempre visibile; le due sopra restano ripiegate e si aprono insieme
 con uno **swipe verso l'alto sulla zona del dock**. Il gesto non va in
 conflitto con quello che apre il cassetto: sopra il dock lo swipe verso
-l'alto apre il cassetto, sul dock apre le file nascoste.
+l'alto apre il cassetto, sul dock apre le file nascoste. A **due dita**,
+ovunque, lo stesso movimento porta invece alle app nascoste.
 
 Per **richiuderle**: swipe verso il basso sul dock, oppure un tocco o uno
 swipe verso il basso in un punto qualsiasi dello schermo fuori dal dock. Con
