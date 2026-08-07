@@ -301,6 +301,13 @@ gesture di questo progetto venivano da lì.
   richiude e basta (consumato sul pass `Initial` nel tracker di `HomeScreen`,
   variabile `dismissingDock`). Non è un velo cliccabile a parte apposta: un
   secondo detector sopra la griglia si contenderebbe i tocchi con le tile.
+- **Slot vuoto del dock**: sia il tap sia il tocco lungo aprono il selettore
+  (`DockRow`, parametro `onEmptySlot`). Prima rispondeva solo al tocco lungo,
+  ma l'icona "+" disegnata lì suggerisce un tap — l'unico gesto che
+  l'interfaccia promette era anche l'unico che non faceva niente. E dal
+  cassetto (`MenuOrigin.DRAWER`) il menu contestuale ha anche "Aggiungi al
+  dock", non solo "Aggiungi alla home": prima l'unica strada per il dock era
+  aggiungere l'app alla home e poi tenerla premuta di nuovo lì.
 
 ---
 

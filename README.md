@@ -41,7 +41,10 @@ usare lo strumento della riservatezza per fare le pulizie:
 - **Tieni premuto** su un'icona per aprire un menu con le azioni disponibili
   a seconda di dove ti trovi: aggiungere/rimuovere dalla home o dal dock,
   spostare un'app alla pagina home precedente/successiva, vedere le info
-  dell'app, disinstallarla, oppure **nasconderla**.
+  dell'app, disinstallarla, oppure **nasconderla**. Dal cassetto puoi mandare
+  un'app **direttamente al dock**, senza doverla prima mettere in home.
+- **Tocca uno slot vuoto del dock** (la crocetta) per scegliere subito
+  un'app dall'elenco completo e metterla lì: non serve passare dalla home.
 - **Sposta un'app tra le pagine home tenendola premuta**: tieni premuta
   un'icona in home e trascinala a sinistra o a destra (senza rilasciare) —
   superata una certa distanza va alla pagina precedente/successiva. Se la

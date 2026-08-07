@@ -65,7 +65,7 @@ fun LauncherApp(
                 state = state,
                 onAppTap = viewModel::launchApp,
                 onAppLongPress = { app, origin, slot -> viewModel.showContextMenu(app, origin, slot) },
-                onDockSlotLongPress = { slot -> viewModel.openDrawerForDockPick(slot) },
+                onDockSlotPick = { slot -> viewModel.openDrawerForDockPick(slot) },
                 onEmptyPageLongPress = { showEmptyPageMenu = true },
                 onFocusShortcut = viewModel::focusShortcut,
                 onOpenFocus = viewModel::openFocus,
@@ -232,6 +232,13 @@ private fun buildContextMenuActions(
         }
         MenuOrigin.DRAWER -> {
             actions += MenuAction("Aggiungi alla home") { viewModel.addToHome(app) }
+            // Prima l'unica strada per il dock era passare dalla home: aggiungerla lì, tenerla
+            // premuta di nuovo, "Aggiungi al dock". Due passaggi per un'azione sola.
+            actions += MenuAction("Aggiungi al dock") {
+                if (!viewModel.addToDock(app)) {
+                    showToast("Dock pieno (massimo ${HomeLayoutRepository.DOCK_SIZE} app). Rimuovine una dal dock per aggiungerne un'altra.")
+                }
+            }
             actions += MenuAction("Nascondi app") { viewModel.hideApp(app) }
         }
         MenuOrigin.HIDDEN_DRAWER -> {

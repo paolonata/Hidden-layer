@@ -113,7 +113,7 @@ fun HomeScreen(
     state: LauncherUiState,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, MenuOrigin, Int) -> Unit,
-    onDockSlotLongPress: (Int) -> Unit,
+    onDockSlotPick: (Int) -> Unit,
     onEmptyPageLongPress: () -> Unit,
     onFocusShortcut: () -> Unit,
     onOpenFocus: () -> Unit,
@@ -434,7 +434,7 @@ fun HomeScreen(
                     draggedFromDock = true
                     draggedDockSlot = slot
                 },
-                onEmptySlotLongPress = onDockSlotLongPress
+                onEmptySlot = onDockSlotPick
             )
         }
 
@@ -547,7 +547,7 @@ private fun Dock(
     onRowPositioned: (Int, Float) -> Unit,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
-    onEmptySlotLongPress: (Int) -> Unit
+    onEmptySlot: (Int) -> Unit
 ) {
     val density = LocalDensity.current
     val toggleThresholdPx = remember(density) { with(density) { DOCK_TOGGLE_THRESHOLD.toPx() } }
@@ -593,7 +593,7 @@ private fun Dock(
                             isMuted = isMuted,
                             onAppTap = onAppTap,
                             onAppLongPress = onAppLongPress,
-                            onEmptySlotLongPress = onEmptySlotLongPress,
+                            onEmptySlot = onEmptySlot,
                             modifier = Modifier.onGloballyPositioned {
                                 onRowPositioned(rowIndex, it.positionInRoot().y)
                             }
@@ -609,7 +609,7 @@ private fun Dock(
                 isMuted = isMuted,
                 onAppTap = onAppTap,
                 onAppLongPress = onAppLongPress,
-                onEmptySlotLongPress = onEmptySlotLongPress,
+                onEmptySlot = onEmptySlot,
                 modifier = Modifier
                     .navigationBarsPadding()
                     .onGloballyPositioned { onRowPositioned(0, it.positionInRoot().y) }
@@ -652,7 +652,10 @@ private fun DockRow(
     isMuted: (AppInfo) -> Boolean,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
-    onEmptySlotLongPress: (Int) -> Unit,
+    // Slot vuoto: sia il tap sia il tocco lungo aprono il selettore. L'icona "+" disegnata
+    // lì suggerisce un tap, non un tocco lungo — prima rispondeva solo al secondo, e il tap
+    // (l'unico gesto suggerito dall'interfaccia) non faceva niente.
+    onEmptySlot: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -668,9 +671,9 @@ private fun DockRow(
                 modifier = Modifier
                     .size(52.dp)
                     .combinedClickable(
-                        onClick = { app?.let(onAppTap) },
+                        onClick = { if (app != null) onAppTap(app) else onEmptySlot(slot) },
                         onLongClick = {
-                            if (app != null) onAppLongPress(app, slot) else onEmptySlotLongPress(slot)
+                            if (app != null) onAppLongPress(app, slot) else onEmptySlot(slot)
                         }
                     ),
                 contentAlignment = Alignment.Center
