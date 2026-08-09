@@ -150,6 +150,27 @@ Trappole già pagate in questo pezzo:
 - Da `targetSdk` 34 il servizio deve dichiarare `foregroundServiceType`:
   qui `specialUse`, con la `<property>` che lo motiva — nessuno dei tipi
   previsti descrive "tenere in piedi un overlay".
+- **`redFilter` deve avere qualcosa di opaco, disegnato da Compose, sotto le
+  dita.** La finestra del launcher è trasparente (`MainActivity` la imposta
+  così per lasciar vedere lo sfondo di sistema); sulla home, senza uno sfondo
+  esplicito, quello che si vede è disegnato *sotto* la nostra finestra da un
+  livello che il filtro — che tinge solo ciò che disegniamo noi — non tocca
+  affatto. Per questo `HomeScreen` disegna `NightNeutralBackground` (un
+  `Box` opaco) quando la modalità è accesa, invece di continuare a fidarsi
+  della trasparenza. Bug reale trovato dall'utente: i cursori Rosso/
+  Attenuazione sembravano non fare niente ed era vero due volte — sulla home
+  il filtro non toccava lo sfondo per il motivo sopra, e in generale
+  `redFilter` inizialmente prendeva solo `enabled: Boolean` e ignorava del
+  tutto i due livelli (tinta fissa, nessun velo scuro). Ora `redFilter`
+  accetta `redIntensity` e `dimLevel` e li usa entrambi.
+- **Lo sfondo va sostituito con uno neutro (`NightNeutralBackground`, R=G=B),
+  non lasciato vero.** Un cielo notturno è spesso già rosso o arancione di
+  suo (nebulose a emissione): moltiplicarlo per il rosso non lo appiattisce,
+  resta la stessa foto sotto un filtro — illeggibile, e fa sembrare i cursori
+  ancora meno efficaci perché il dettaglio della foto domina comunque. Vale
+  per `BlurredWallpaperBackground` (parametro `neutral`, usato da cassetto,
+  Concentrazione, impostazioni nascoste e dalla stessa schermata della
+  modalità rossa) tanto quanto per la home.
 - Il permesso di overlay si concede **solo da una schermata di sistema**, non
   con una richiesta a comparsa, e può sparire mentre siamo fuori: viene
   riletto a ogni `onResume` (`onOverlayPermissionChanged`), che è anche il

@@ -125,7 +125,7 @@ fun DrawerScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        BlurredWallpaperBackground(scrimAlpha = 0.28f)
+        BlurredWallpaperBackground(scrimAlpha = 0.28f, neutral = state.nightModeEnabled)
         // Sulle nascoste lo sfondo reale sparisce dietro una superficie incognito piatta, così
         // la pagina si legge come un altro posto e non come una versione più scura di questo.
         if (hiddenDrawer) {

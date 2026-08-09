@@ -55,7 +55,13 @@ fun LauncherApp(
     // resta un rettangolo bianco a metà schermo. Non tocca i menu contestuali, che sono
     // AlertDialog e quindi finestre a parte: quelli li copre il velo di sistema, quando è
     // concesso il permesso.
-    Box(modifier = Modifier.fillMaxSize().redFilter(state.nightModeEnabled)) {
+    Box(
+        modifier = Modifier.fillMaxSize().redFilter(
+            enabled = state.nightModeEnabled,
+            redIntensity = state.nightRedIntensity,
+            dimLevel = state.nightDimLevel
+        )
+    ) {
 
     AnimatedContent(
         targetState = state.screen,

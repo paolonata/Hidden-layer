@@ -50,8 +50,23 @@ import kotlinx.coroutines.withContext
  */
 private var cachedBlur: Bitmap? = null
 
+/**
+ * [neutral] sostituisce la foto vera con [NightNeutralBackground]: serve alla modalità rossa,
+ * dove il vero sfondo — spesso già rosso o arancione di suo, essendo il cielo notturno — non
+ * diventa un pannello pulito ma resta la stessa foto colorata sotto un filtro, illeggibile.
+ * Un fondo davvero neutro invece dà un rosso piatto e uniforme una volta filtrato.
+ */
 @Composable
-fun BlurredWallpaperBackground(modifier: Modifier = Modifier, scrimAlpha: Float = 0.28f) {
+fun BlurredWallpaperBackground(
+    modifier: Modifier = Modifier,
+    scrimAlpha: Float = 0.28f,
+    neutral: Boolean = false
+) {
+    if (neutral) {
+        Box(modifier = modifier.fillMaxSize().background(NightNeutralBackground))
+        return
+    }
+
     val context = LocalContext.current
     val blurredBitmap by produceState<Bitmap?>(initialValue = cachedBlur) {
         if (value != null) return@produceState

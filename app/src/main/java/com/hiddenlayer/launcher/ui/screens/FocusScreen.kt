@@ -106,7 +106,7 @@ fun FocusScreen(
                 onClose = onDone
             )
     ) {
-        BlurredWallpaperBackground(scrimAlpha = 0.45f)
+        BlurredWallpaperBackground(scrimAlpha = 0.45f, neutral = state.nightModeEnabled)
 
         Scaffold(
             containerColor = Color.Transparent,

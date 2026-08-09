@@ -198,12 +198,20 @@ Le manopole sono **due e separate**, perché fanno cose diverse:
   nativa fa.
 
 **Due livelli di qualità, ed è bene saperlo prima.** Dentro il launcher il
-rosso è **esatto**: il contenuto viene moltiplicato per il rosso, quindi verde
-e blu vanno a **zero** — su OLED quei subpixel restano proprio spenti. Sulle
-altre app è invece un **velo**: il blu cala molto ma non si azzera e un po' di
-contrasto si perde, perché Android non permette a un'app di filtrare
-davvero il contenuto di un'altra (la composizione fra finestre è alpha
-blending e basta, non si può chiedere un multiply).
+rosso è **esatto**: il contenuto viene moltiplicato per il rosso, quindi a
+intensità massima verde e blu vanno a **zero** — su OLED quei subpixel restano
+proprio spenti. Sulle altre app è invece un **velo**: il blu cala molto ma non
+si azzera e un po' di contrasto si perde, perché Android non permette a
+un'app di filtrare davvero il contenuto di un'altra (la composizione fra
+finestre è alpha blending e basta, non si può chiedere un multiply).
+
+**Lo sfondo diventa un pannello grigio piatto**, non resta la tua foto vera.
+Un cielo notturno è spesso già rosso o arancione di suo (nebulose a
+emissione): moltiplicarlo per il rosso non lo appiattisce, resta la stessa
+foto sotto un filtro — illeggibile, e con i cursori che sembrano non fare
+niente perché il dettaglio della foto domina comunque. Un fondo neutro invece
+dà, una volta filtrato, un rosso pulito e uniforme: le icone restano l'unica
+cosa a risaltare. Il tuo sfondo vero torna non appena spegni la modalità.
 
 Per filtrare anche le altre app serve il permesso **"Visualizza sopra altre
 app"**, che si concede solo da una schermata di sistema: te la apre il pulsante
