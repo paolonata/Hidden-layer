@@ -66,7 +66,6 @@ import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.FocusPill
-import com.hiddenlayer.launcher.ui.NightNeutralBackground
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
@@ -329,16 +328,6 @@ fun HomeScreen(
                 }
             }
     ) {
-        // La finestra del launcher è trasparente: normalmente qui si vede lo sfondo di
-        // sistema, disegnato *sotto* la nostra finestra da un livello che non passa per
-        // Compose — il filtro rosso, che tinge solo ciò che disegniamo noi, non lo tocca. Con
-        // la modalità rossa accesa copriamo lo sfondo vero con questo pannello neutro, che
-        // essendo nostro il filtro lo tinge regolarmente: niente più foto intatta sotto un
-        // filtro che sembra non funzionare.
-        if (state.nightModeEnabled) {
-            Box(modifier = Modifier.fillMaxSize().background(NightNeutralBackground))
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()

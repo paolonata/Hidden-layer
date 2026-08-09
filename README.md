@@ -208,13 +208,11 @@ il blu cala molto ma non si azzera e un po' di contrasto si perde, perché
 Android non permette a un'app di filtrare davvero il contenuto di un'altra (la
 composizione fra finestre è alpha blending e basta).
 
-**Lo sfondo diventa nero pieno**, non resta la tua foto vera. Un cielo
-notturno è spesso già rosso o arancione di suo (nebulose a emissione):
-moltiplicarlo per il rosso non lo appiattisce, resta la stessa foto sotto un
-filtro — illeggibile, e con i cursori che sembrano non fare niente perché il
-dettaglio della foto domina comunque. Su OLED il nero è anche l'unica scelta
-giusta: un pixel nero è un pixel **spento**, non emette luce affatto. Il tuo
-sfondo vero torna non appena spegni la modalità.
+**Lo sfondo resta il tuo, quello vero.** Nel cassetto e nelle altre
+schermate del launcher viene filtrato insieme al resto; in home, dove la
+finestra è trasparente e lo sfondo di sistema viene disegnato sotto di essa,
+il filtro non lo tocca e resta a colori naturali — solo le icone diventano
+rosse.
 
 **Perché sulle altre app non verrà mai come un'app col tema rosso nativo.**
 Un'app con tema rosso disegna *lei* rosso su nero: sceglie i colori pixel per

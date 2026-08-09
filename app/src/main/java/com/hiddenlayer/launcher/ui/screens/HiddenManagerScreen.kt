@@ -70,7 +70,7 @@ fun HiddenManagerScreen(
                 onClose = onDone
             )
     ) {
-        BlurredWallpaperBackground(neutral = state.nightModeEnabled)
+        BlurredWallpaperBackground()
 
         Scaffold(
             containerColor = Color.Transparent,

@@ -81,19 +81,3 @@ private fun nightVisionMatrix(t: Float): ColorMatrix {
         )
     )
 }
-
-/**
- * Sfondo da mostrare al posto di quello vero quando la modalità rossa è accesa: **nero puro**.
- *
- * Prima era un grigio (`0xFF262626`), che filtrato dava un fondo rosso spento e uniforme —
- * leggibile, ma "lavato". Le app con tema rosso nativo, quelle che l'utente ha in mano al
- * telescopio, non fanno così: disegnano **rosso su nero**, e il nero è nero davvero. Su OLED è
- * anche l'unica scelta giusta in assoluto, perché un pixel nero è un pixel **spento**: non
- * emette luce, quindi non c'è niente da attenuare e niente che disturbi chi ti sta accanto.
- * Ogni grigio, per quanto scuro, è luce emessa a vuoto su tutto lo schermo.
- *
- * Il vero sfondo va comunque sostituito e non semplicemente filtrato: una foto di cielo
- * notturno è spesso già rossa o arancione di suo (nebulose a emissione), e filtrarla lascia
- * comunque tutto il suo dettaglio, illeggibile dietro le icone.
- */
-val NightNeutralBackground = Color(0xFF000000)

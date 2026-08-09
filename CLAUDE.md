@@ -160,30 +160,30 @@ Trappole già pagate in questo pezzo:
 - Da `targetSdk` 34 il servizio deve dichiarare `foregroundServiceType`:
   qui `specialUse`, con la `<property>` che lo motiva — nessuno dei tipi
   previsti descrive "tenere in piedi un overlay".
-- **`redFilter` deve avere qualcosa di opaco, disegnato da Compose, sotto le
-  dita.** La finestra del launcher è trasparente (`MainActivity` la imposta
-  così per lasciar vedere lo sfondo di sistema); sulla home, senza uno sfondo
-  esplicito, quello che si vede è disegnato *sotto* la nostra finestra da un
-  livello che il filtro — che tinge solo ciò che disegniamo noi — non tocca
-  affatto. Per questo `HomeScreen` disegna `NightNeutralBackground` (un
-  `Box` opaco) quando la modalità è accesa, invece di continuare a fidarsi
-  della trasparenza. Bug reale trovato dall'utente: i cursori Rosso/
-  Attenuazione sembravano non fare niente ed era vero due volte — sulla home
-  il filtro non toccava lo sfondo per il motivo sopra, e in generale
-  `redFilter` inizialmente prendeva solo `enabled: Boolean` e ignorava del
-  tutto i due livelli (tinta fissa, nessun velo scuro). Ora `redFilter`
-  accetta `redIntensity` e `dimLevel` e li usa entrambi.
-- **Lo sfondo va sostituito con `NightNeutralBackground` (nero puro), non
-  lasciato vero.** Un cielo notturno è spesso già rosso o arancione di suo
-  (nebulose a emissione): moltiplicarlo per il rosso non lo appiattisce,
-  resta la stessa foto sotto un filtro — illeggibile, e fa sembrare i cursori
-  ancora meno efficaci perché il dettaglio della foto domina comunque. Vale
-  per `BlurredWallpaperBackground` (parametro `neutral`, usato da cassetto,
-  Concentrazione, impostazioni nascoste e dalla stessa schermata della
-  modalità rossa) tanto quanto per la home. Era un grigio `0xFF262626`, ora è
-  nero: su OLED il pixel nero è **spento**, quindi non emette luce da
-  attenuare — ed è così che si ottiene il "rosso su nero" delle app con tema
-  rosso nativo, che è il riferimento che l'utente ha in mano al telescopio.
+- **`redFilter` tinge solo ciò che Compose disegna.** La finestra del
+  launcher è trasparente (`MainActivity` la imposta così per lasciar vedere
+  lo sfondo di sistema); sulla home, senza uno sfondo esplicito disegnato da
+  noi, quello che si vede è lo sfondo di sistema vero, dietro la nostra
+  finestra — e il filtro non lo tocca affatto. **È così di proposito**, vedi
+  sotto. Bug reale trovato dall'utente durante lo sviluppo: i cursori Rosso/
+  Attenuazione sembravano non fare niente, ed era vero anche per un secondo
+  motivo — `redFilter` inizialmente prendeva solo `enabled: Boolean` e
+  ignorava del tutto i due livelli (tinta fissa, nessun velo scuro). Ora
+  `redFilter` accetta `redIntensity` e `dimLevel` e li usa entrambi.
+- **Non sostituire lo sfondo vero con un pannello neutro senza che l'utente
+  lo chieda di nuovo — è già stato fatto e tolto.** Un cielo notturno è
+  spesso già rosso o arancione di suo (nebulose a emissione): filtrarlo
+  lascia comunque leggibile tutto il dettaglio della foto sotto le icone.
+  Per questo si era introdotto un pannello nero (`NightNeutralBackground`) al
+  posto dello sfondo vero — in `BlurredWallpaperBackground` (parametro
+  `neutral`) e con un `Box` dedicato sulla home — e l'utente lo aveva persino
+  definito "perfetto" in uno screenshot. Ha comunque chiesto esplicitamente
+  di toglierlo e tornare al proprio sfondo. **Conseguenza da tenere a
+  mente**: sulla home lo sfondo resta **non filtrato** (vedi il punto sopra),
+  mentre nelle altre schermate (cassetto, Concentrazione…) lo sfondo sfocato
+  *è* filtrato, perché lì `BlurredWallpaperBackground` lo disegna dentro
+  l'albero Compose. L'asimmetria è nota e voluta, non un bug da correggere
+  d'ufficio.
 - **Il cursore "Rosso" significa due cose diverse nei due meccanismi.** Dentro
   il launcher pilota la matrice di colore, e a 1.0 dà il rosso esatto (è il
   valore che si vuole); sull'overlay è l'opacità di un velo rosso, e a 1.0
