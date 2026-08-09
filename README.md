@@ -198,12 +198,15 @@ Le manopole sono **due e separate**, perché fanno cose diverse:
   nativa fa.
 
 **Due livelli di qualità, ed è bene saperlo prima.** Dentro il launcher il
-rosso è **esatto**: il contenuto viene moltiplicato per il rosso, quindi a
-intensità massima verde e blu vanno a **zero** — su OLED quei subpixel restano
-proprio spenti. Sulle altre app è invece un **velo**: il blu cala molto ma non
-si azzera e un po' di contrasto si perde, perché Android non permette a
-un'app di filtrare davvero il contenuto di un'altra (la composizione fra
-finestre è alpha blending e basta, non si può chiedere un multiply).
+rosso è **esatto**: ogni pixel viene convertito nella sua luminanza e
+riversato sul canale rosso, quindi il blu va a **zero** — su OLED quei
+subpixel restano proprio spenti — ma il **contrasto originale sopravvive**,
+tradotto in tonalità di rosso. Non è un semplice "tingere di rosso": tingere
+appiattirebbe insieme il bianco e i colori accesi, rendendo illeggibili le
+scritte chiare sopra le icone colorate. Sulle altre app è invece un **velo**:
+il blu cala molto ma non si azzera e un po' di contrasto si perde, perché
+Android non permette a un'app di filtrare davvero il contenuto di un'altra (la
+composizione fra finestre è alpha blending e basta).
 
 **Lo sfondo diventa nero pieno**, non resta la tua foto vera. Un cielo
 notturno è spesso già rosso o arancione di suo (nebulose a emissione):

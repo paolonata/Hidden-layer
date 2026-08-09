@@ -127,11 +127,21 @@ Un'app sta **o nel dock o nella home, mai in entrambi**.
 
 Sono due implementazioni separate perché Android non ne permette una sola.
 
-- **Dentro il launcher** (`redFilter` in `RedFilter.kt`): `BlendMode.Modulate`
-  — il multiply vero — sul contenuto già disegnato, dentro un
-  `CompositingStrategy.Offscreen` che confina il blend al nostro contenuto.
-  Verde e blu vanno a **zero**. Serve `Offscreen`: senza, il multiply finisce
-  su ciò che è già nel buffer sotto di noi.
+- **Dentro il launcher** (`redFilter` in `RedFilter.kt`): una **matrice di
+  colore luminanza → rosso**, applicata con `saveLayer` + `ColorFilter`
+  (funziona da API 26, a differenza di `RenderEffect`).
+
+  **Non usare un multiply qui, è già stato provato e sbagliato.** Moltiplicare
+  per un rosso puro tiene solo il canale rosso e butta via gli altri due:
+  tutto ciò che differiva solo per verde e blu collassa sullo stesso valore.
+  Conseguenze reali viste dall'utente: bianco `(1,1,1)` e rosso acceso
+  `(0.9,0.3,0.1)` finivano a 1.00 e 0.90 — la scritta bianca sull'icona
+  ASIAIR spariva dentro il suo stesso sfondo; e le icone **blu andavano a
+  0.00**, cioè nero pieno (Telegram, Spotify: invisibili). Passando per la
+  luminanza (`0.2126·R + 0.7152·G + 0.0722·B`, pesi Rec. 709) gli stessi tre
+  casi danno 1.00 / 0.41 / 0.28: il contrasto originale sopravvive tradotto in
+  tonalità di rosso. Il blu in uscita resta comunque **zero**, che è l'unica
+  cosa che conta per l'adattamento al buio.
 - **Fuori dal launcher** (`RedOverlayService`): finestra
   `TYPE_APPLICATION_OVERLAY` in un servizio in foreground. Qui il multiply
   **non è ottenibile**: la composizione fra finestre la fa SurfaceFlinger con
