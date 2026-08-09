@@ -183,6 +183,51 @@ Detto in breve: protegge da chi dà un'occhiata al tuo telefono, non da chi
 lo esamina. Se serve di più, su MIUI l'unica strada seria è il **Secondo
 Spazio** di sistema.
 
+## Modalità rossa (astrofotografia)
+
+Pensata per stare al telescopio senza perdere l'adattamento al buio — il tuo e
+quello di chi ti sta accanto. Si accende da **tocco lungo su un punto vuoto
+della home → "Modalità rossa"**, dove ci sono anche i due cursori.
+
+Le manopole sono **due e separate**, perché fanno cose diverse:
+
+- **Rosso** — toglie il blu, che è la componente che rovina davvero la visione
+  notturna;
+- **Attenuazione** — abbassa la luce totale, e riesce a portare lo schermo
+  **sotto la luminosità minima di sistema**, cosa che nessuna impostazione
+  nativa fa.
+
+**Due livelli di qualità, ed è bene saperlo prima.** Dentro il launcher il
+rosso è **esatto**: il contenuto viene moltiplicato per il rosso, quindi verde
+e blu vanno a **zero** — su OLED quei subpixel restano proprio spenti. Sulle
+altre app è invece un **velo**: il blu cala molto ma non si azzera e un po' di
+contrasto si perde, perché Android non permette a un'app di filtrare
+davvero il contenuto di un'altra (la composizione fra finestre è alpha
+blending e basta, non si può chiedere un multiply).
+
+Per filtrare anche le altre app serve il permesso **"Visualizza sopra altre
+app"**, che si concede solo da una schermata di sistema: te la apre il pulsante
+nella schermata della modalità rossa, e viene chiesto **solo se accendi la
+modalità**. Senza permesso il filtro resta attivo dentro il launcher e te lo
+dice, invece di far finta di funzionare.
+
+Limiti dichiarati del velo: non copre la schermata di blocco né alcune
+finestre di sistema, e le app che dichiarano `HIDE_OVERLAY_WINDOWS` (tipicamente
+quelle bancarie) lo fanno sparire di proposito mentre sono in primo piano.
+Non copre nemmeno i menu contestuali del launcher stesso quando il permesso
+manca, perché sono finestre a parte.
+
+**Su MIUI/HyperOS**: il velo vive in un servizio in foreground con notifica
+persistente, e il risparmio energetico lo chiude volentieri — se il rosso
+sparisce da solo è quello. Metti Hidden Layer tra le app **senza restrizioni
+di batteria**. Rientrando nel launcher il velo riparte da sé. Per spegnerlo da
+qualunque app c'è il pulsante **"Spegni"** sulla notifica: al buio non si torna
+alla home a cercare un interruttore.
+
+Se fai visuale spinto e ti serve rosso puro certificato, l'unica strada
+davvero pulita resta un filtro fisico davanti allo schermo: nessun filtro
+software può azzerare il blu delle altre app.
+
 ## Dock: tre file da 5, le due superiori a scomparsa
 
 Il dock è composto da **tre righe da 5 posizioni** (15 in totale). La riga in

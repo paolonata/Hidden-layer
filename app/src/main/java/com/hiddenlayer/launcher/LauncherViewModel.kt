@@ -9,6 +9,8 @@ import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.FocusStatsRepository
 import com.hiddenlayer.launcher.data.HiddenAppsRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
+import com.hiddenlayer.launcher.data.NightModeRepository
+import com.hiddenlayer.launcher.night.RedOverlayService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -28,6 +30,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val homeLayoutRepository = HomeLayoutRepository(application)
     private val focusRepository = FocusRepository(application)
     private val focusStatsRepository = FocusStatsRepository(application)
+    private val nightModeRepository = NightModeRepository(application)
 
     private val _uiState = MutableStateFlow(LauncherUiState())
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
@@ -50,6 +53,69 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         refreshApps()
         restoreFocusSession()
+        restoreNightMode()
+    }
+
+    // ----- Modalità rossa (astrofotografia) -----
+
+    private fun restoreNightMode() {
+        _uiState.value = _uiState.value.copy(
+            nightModeEnabled = nightModeRepository.isEnabled(),
+            nightRedIntensity = nightModeRepository.getRedIntensity(),
+            nightDimLevel = nightModeRepository.getDimLevel()
+        )
+    }
+
+    /**
+     * Accende o spegne la modalità rossa.
+     *
+     * Il filtro dentro il launcher si accende **sempre**, anche senza il permesso di overlay:
+     * è la parte che non dipende da nessuna concessione, e lasciarla spenta perché manca il
+     * permesso vorrebbe dire non fare niente di ciò che si può fare. [canDrawOverlays] decide
+     * solo se provare a stendere il velo anche fuori dal launcher.
+     */
+    fun setNightMode(enabled: Boolean) {
+        nightModeRepository.setEnabled(enabled)
+        _uiState.value = _uiState.value.copy(nightModeEnabled = enabled)
+        applyOverlay(enabled && _uiState.value.nightOverlayAllowed)
+    }
+
+    fun setNightRedIntensity(value: Float) {
+        nightModeRepository.setRedIntensity(value)
+        _uiState.value = _uiState.value.copy(nightRedIntensity = nightModeRepository.getRedIntensity())
+        refreshOverlay()
+    }
+
+    fun setNightDimLevel(value: Float) {
+        nightModeRepository.setDimLevel(value)
+        _uiState.value = _uiState.value.copy(nightDimLevel = nightModeRepository.getDimLevel())
+        refreshOverlay()
+    }
+
+    /** Richiamato a ogni rientro nel launcher: il permesso si concede da una schermata di
+     * sistema, quindi può essere cambiato mentre eravamo fuori. È anche il punto in cui il
+     * velo riparte da solo se il risparmio energetico di MIUI ha ucciso il servizio. */
+    fun onOverlayPermissionChanged(canDrawOverlays: Boolean) {
+        _uiState.value = _uiState.value.copy(nightOverlayAllowed = canDrawOverlays)
+        if (_uiState.value.nightModeEnabled && canDrawOverlays) applyOverlay(true)
+    }
+
+    private fun refreshOverlay() {
+        val current = _uiState.value
+        if (current.nightModeEnabled && current.nightOverlayAllowed) applyOverlay(true)
+    }
+
+    /** False quando il sistema non espone la schermata del permesso: chi chiama lo dice
+     * all'utente invece di lasciare il pulsante senza effetto. */
+    fun openOverlayPermissionSettings(): Boolean = appRepository.openOverlayPermissionSettings()
+
+    fun openNightMode() {
+        _uiState.value = _uiState.value.copy(screen = Screen.NIGHT_MODE)
+    }
+
+    private fun applyOverlay(show: Boolean) {
+        val context = getApplication<Application>()
+        if (show) RedOverlayService.start(context) else RedOverlayService.stop(context)
     }
 
     /** Re-reads installed apps, drops uninstalled/hidden components from the layout, and
@@ -523,7 +589,9 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         // Si torna sempre alla home, anche dal cassetto normale: riaccendendo lo schermo su una
         // schermata aperta prima di andarsene si perde il senso di dove si è, e per le nascoste
         // sarebbe anche un'anteprima gratis di cosa c'era dentro.
-        val leavingVault = current.screen != Screen.HOME && current.screen != Screen.FOCUS
+        val leavingVault = current.screen != Screen.HOME &&
+            current.screen != Screen.FOCUS &&
+            current.screen != Screen.NIGHT_MODE
         _uiState.value = current.copy(
             vaultUnlocked = false,
             unlockError = false,

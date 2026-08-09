@@ -7,12 +7,15 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.hiddenlayer.launcher.ContextMenuState
 import com.hiddenlayer.launcher.LauncherUiState
@@ -26,13 +29,14 @@ import com.hiddenlayer.launcher.ui.screens.DrawerScreen
 import com.hiddenlayer.launcher.ui.screens.FocusScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenManagerScreen
 import com.hiddenlayer.launcher.ui.screens.HomeScreen
+import com.hiddenlayer.launcher.ui.screens.NightModeScreen
 
 /** Nesting depth of each screen, used purely to pick the slide direction: going to a
  * shallower screen plays as "closing" (slides down), going deeper plays as "opening"
  * (slides up) — e.g. HIDDEN_MANAGER is nested one level under the drawer. */
 private fun screenDepth(screen: Screen): Int = when (screen) {
     Screen.HOME -> 0
-    Screen.DRAWER, Screen.HIDDEN_DRAWER, Screen.FOCUS -> 1
+    Screen.DRAWER, Screen.HIDDEN_DRAWER, Screen.FOCUS, Screen.NIGHT_MODE -> 1
     Screen.HIDDEN_MANAGER -> 2
 }
 
@@ -46,6 +50,12 @@ fun LauncherApp(
     val context = LocalContext.current
 
     var showEmptyPageMenu by remember { mutableStateOf(false) }
+
+    // Il filtro rosso avvolge **tutto** il launcher, schermate e popup compresi, così non
+    // resta un rettangolo bianco a metà schermo. Non tocca i menu contestuali, che sono
+    // AlertDialog e quindi finestre a parte: quelli li copre il velo di sistema, quando è
+    // concesso il permesso.
+    Box(modifier = Modifier.fillMaxSize().redFilter(state.nightModeEnabled)) {
 
     AnimatedContent(
         targetState = state.screen,
@@ -116,6 +126,25 @@ fun LauncherApp(
                 onDone = viewModel::backToHome
             )
 
+            Screen.NIGHT_MODE -> NightModeScreen(
+                state = state,
+                onToggle = viewModel::setNightMode,
+                onRedChange = viewModel::setNightRedIntensity,
+                onDimChange = viewModel::setNightDimLevel,
+                onRequestOverlayPermission = {
+                    // Non è un permesso che si chiede con una richiesta a comparsa: si
+                    // concede solo da questa schermata di sistema.
+                    if (!viewModel.openOverlayPermissionSettings()) {
+                        Toast.makeText(
+                            context,
+                            "Questo sistema non espone la schermata del permesso. Cercalo a mano: Impostazioni → App → Hidden Layer → Visualizza sopra altre app.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                },
+                onDone = viewModel::backToHome
+            )
+
             Screen.HIDDEN_MANAGER -> HiddenManagerScreen(
                 state = state,
                 onToggleHidden = viewModel::toggleHidden,
@@ -178,10 +207,18 @@ fun LauncherApp(
                 ) {
                     showEmptyPageMenu = false
                     viewModel.openFocus()
+                },
+                MenuAction(
+                    if (state.nightModeEnabled) "Modalità rossa (attiva)" else "Modalità rossa"
+                ) {
+                    showEmptyPageMenu = false
+                    viewModel.openNightMode()
                 }
             ),
             onDismiss = { showEmptyPageMenu = false }
         )
+    }
+
     }
 }
 

@@ -5,9 +5,8 @@ import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.FocusBreak
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
+import com.hiddenlayer.launcher.data.NightModeRepository
 
-/** The hidden apps are no longer a screen of their own: they're the second page of the
- * drawer, reached by swiping left, so the transition follows the finger. */
 /**
  * Il cassetto delle app nascoste è una **schermata a sé**, non un modo del cassetto normale.
  *
@@ -18,7 +17,7 @@ import com.hiddenlayer.launcher.data.HomeLayoutRepository
  * rivalutato e si riapriva il cassetto normale. Due valori distinti dell'enum sono due voci
  * distinte per `AnimatedContent`, quindi la schermata giusta viene composta da zero.
  */
-enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER, FOCUS }
+enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER, FOCUS, NIGHT_MODE }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
@@ -53,6 +52,16 @@ data class LauncherUiState(
     val unlockError: Boolean = false,
     /** Cleared every time the launcher is left, so the hidden page re-locks itself. */
     val vaultUnlocked: Boolean = false,
+    // --- Modalità rossa (astrofotografia) ---
+    /** Cambia due volte per sessione notturna, quindi può stare qui dentro senza problemi
+     * (vedi la regola su ciò che non deve ticchettare in `uiState`). */
+    val nightModeEnabled: Boolean = false,
+    val nightRedIntensity: Float = NightModeRepository.DEFAULT_RED,
+    val nightDimLevel: Float = NightModeRepository.DEFAULT_DIM,
+    /** Se il permesso "Visualizza sopra altre app" è concesso. Senza, il rosso vale solo
+     * dentro il launcher, e va detto invece di lasciar credere che sia rotto. Aggiornato al
+     * rientro nel launcher, perché si concede da una schermata di sistema. */
+    val nightOverlayAllowed: Boolean = false,
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,

@@ -123,6 +123,41 @@ buchi**; il dock è una **griglia a slot fissi** (`DOCK_ROWS × DOCK_COLUMNS`,
 con `null` dove è vuoto) — serve a far atterrare un drop nella riga giusta.
 Un'app sta **o nel dock o nella home, mai in entrambi**.
 
+### Modalità rossa: due meccanismi diversi, non uno
+
+Sono due implementazioni separate perché Android non ne permette una sola.
+
+- **Dentro il launcher** (`redFilter` in `RedFilter.kt`): `BlendMode.Modulate`
+  — il multiply vero — sul contenuto già disegnato, dentro un
+  `CompositingStrategy.Offscreen` che confina il blend al nostro contenuto.
+  Verde e blu vanno a **zero**. Serve `Offscreen`: senza, il multiply finisce
+  su ciò che è già nel buffer sotto di noi.
+- **Fuori dal launcher** (`RedOverlayService`): finestra
+  `TYPE_APPLICATION_OVERLAY` in un servizio in foreground. Qui il multiply
+  **non è ottenibile**: la composizione fra finestre la fa SurfaceFlinger con
+  alpha blending, e un'app non può chiedere altro. Resta un velo — blu
+  smorzato, non azzerato. Non riproporre "usa PorterDuff.MULTIPLY
+  sull'overlay": il blend mode di un `Paint` vale solo dentro la superficie
+  che stai disegnando, non contro le finestre sotto.
+
+Trappole già pagate in questo pezzo:
+
+- `startForeground` va chiamato **per primo in `onStartCommand`, anche sul ramo
+  che spegne**: arrivando da `startForegroundService` il sistema pretende la
+  promozione entro pochi secondi, altrimenti uccide il processo con
+  `ForegroundServiceDidNotStartInTimeException`. Per questo `stop()` dal
+  launcher usa `stopService`, che quel vincolo non ce l'ha.
+- Da `targetSdk` 34 il servizio deve dichiarare `foregroundServiceType`:
+  qui `specialUse`, con la `<property>` che lo motiva — nessuno dei tipi
+  previsti descrive "tenere in piedi un overlay".
+- Il permesso di overlay si concede **solo da una schermata di sistema**, non
+  con una richiesta a comparsa, e può sparire mentre siamo fuori: viene
+  riletto a ogni `onResume` (`onOverlayPermissionChanged`), che è anche il
+  punto in cui il velo riparte se MIUI ha ucciso il servizio.
+- `FLAG_NOT_TOUCHABLE` è ciò che rende il velo attraversabile; `MAX_DIM` non
+  arriva a 1 apposta, perché un velo opaco su una finestra che non riceve
+  tocchi non si potrebbe più spegnere.
+
 ---
 
 ## 4. Reattività: cosa è già stato scoperto
@@ -327,6 +362,8 @@ gesture di questo progetto venivano da lì.
 | `AppIcon` | `MUTED_ALPHA` (app in grigio) | 0.4 |
 | `PromptStyle` | superficie dei due popup | `#16171A` al 95% |
 | `AppRepository` | `ICON_SIZE_PX` | 128 |
+| `NightModeRepository` | `DEFAULT_RED` / `DEFAULT_DIM` | 0.55 / 0.35 |
+| `NightModeRepository` | `MAX_DIM` (non 1, vedi sopra) | 0.85 |
 | `FocusRepository` | `PRESET_MINUTES` | 15/30/45/60/120 |
 | `FocusRepository` | `SHORTCUT_MINUTES` | 30/60/120 (il popup) |
 | `LauncherViewModel` | `FOCUS_TOAST_MILLIS` | 5000 |
