@@ -205,13 +205,24 @@ si azzera e un po' di contrasto si perde, perché Android non permette a
 un'app di filtrare davvero il contenuto di un'altra (la composizione fra
 finestre è alpha blending e basta, non si può chiedere un multiply).
 
-**Lo sfondo diventa un pannello grigio piatto**, non resta la tua foto vera.
-Un cielo notturno è spesso già rosso o arancione di suo (nebulose a
-emissione): moltiplicarlo per il rosso non lo appiattisce, resta la stessa
-foto sotto un filtro — illeggibile, e con i cursori che sembrano non fare
-niente perché il dettaglio della foto domina comunque. Un fondo neutro invece
-dà, una volta filtrato, un rosso pulito e uniforme: le icone restano l'unica
-cosa a risaltare. Il tuo sfondo vero torna non appena spegni la modalità.
+**Lo sfondo diventa nero pieno**, non resta la tua foto vera. Un cielo
+notturno è spesso già rosso o arancione di suo (nebulose a emissione):
+moltiplicarlo per il rosso non lo appiattisce, resta la stessa foto sotto un
+filtro — illeggibile, e con i cursori che sembrano non fare niente perché il
+dettaglio della foto domina comunque. Su OLED il nero è anche l'unica scelta
+giusta: un pixel nero è un pixel **spento**, non emette luce affatto. Il tuo
+sfondo vero torna non appena spegni la modalità.
+
+**Perché sulle altre app non verrà mai come un'app col tema rosso nativo.**
+Un'app con tema rosso disegna *lei* rosso su nero: sceglie i colori pixel per
+pixel. Un filtro di sistema può solo stendere un velo **sopra** un'immagine
+già composta, e un velo sa scurire e far virare al rosso, ma non può
+trasformare il bianco in rosso lasciando il nero nero — servirebbe il
+multiply, che fra finestre diverse Android non concede a nessuna app senza
+root. In pratica: dove un'app ha un suo tema rosso (o almeno scuro), **usa
+quello**; il velo serve a coprire tutto il resto. Con app già scure il
+risultato migliora parecchio abbassando **Rosso** e alzando
+**Attenuazione**.
 
 Per filtrare anche le altre app serve il permesso **"Visualizza sopra altre
 app"**, che si concede solo da una schermata di sistema: te la apre il pulsante

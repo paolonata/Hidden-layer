@@ -50,15 +50,18 @@ fun Modifier.redFilter(enabled: Boolean, redIntensity: Float, dimLevel: Float): 
 private val RED_TINT = Color(0xFFFF1A00)
 
 /**
- * Sfondo piatto e **davvero neutro** (R = G = B) da mostrare al posto del vero sfondo quando
- * la modalità rossa è accesa.
+ * Sfondo da mostrare al posto di quello vero quando la modalità rossa è accesa: **nero puro**.
  *
- * Il vero sfondo — una foto di cielo notturno, spesso già rossa o arancione di suo (nebulose a
- * emissione) — non si limita a diventare "rosso": resta la stessa foto, con tutto il suo
- * dettaglio e i suoi colori originali che il multiply non azzera (moltiplicare del rosso per
- * del rosso dà ancora rosso). Il risultato è illeggibile: sembra la foto originale con un
- * filtro sopra, non un pannello da strumentazione notturna. Un fondo neutro invece, moltiplicato
- * per lo stesso rosso, dà un rosso **piatto e uniforme** — le icone restano l'unica cosa a
- * risaltare.
+ * Prima era un grigio (`0xFF262626`), che moltiplicato per il rosso dava un fondo rosso
+ * spento e uniforme — leggibile, ma "lavato". Le app con tema rosso nativo, quelle che
+ * l'utente ha in mano al telescopio, non fanno così: disegnano **rosso su nero**, e il nero è
+ * nero davvero. Su OLED è anche l'unica scelta giusta in assoluto, perché un pixel nero è un
+ * pixel **spento**: non emette luce, quindi non c'è niente da attenuare e niente che disturbi
+ * chi ti sta accanto. Ogni grigio, per quanto scuro, è luce emessa a vuoto su tutto lo schermo.
+ *
+ * Il vero sfondo va comunque sostituito e non semplicemente filtrato: una foto di cielo
+ * notturno è spesso già rossa o arancione di suo (nebulose a emissione), e moltiplicarla per
+ * il rosso non la appiattisce — resta la stessa foto con tutto il suo dettaglio, illeggibile
+ * dietro le icone.
  */
-val NightNeutralBackground = Color(0xFF262626)
+val NightNeutralBackground = Color(0xFF000000)

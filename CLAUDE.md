@@ -163,14 +163,29 @@ Trappole già pagate in questo pezzo:
   `redFilter` inizialmente prendeva solo `enabled: Boolean` e ignorava del
   tutto i due livelli (tinta fissa, nessun velo scuro). Ora `redFilter`
   accetta `redIntensity` e `dimLevel` e li usa entrambi.
-- **Lo sfondo va sostituito con uno neutro (`NightNeutralBackground`, R=G=B),
-  non lasciato vero.** Un cielo notturno è spesso già rosso o arancione di
-  suo (nebulose a emissione): moltiplicarlo per il rosso non lo appiattisce,
+- **Lo sfondo va sostituito con `NightNeutralBackground` (nero puro), non
+  lasciato vero.** Un cielo notturno è spesso già rosso o arancione di suo
+  (nebulose a emissione): moltiplicarlo per il rosso non lo appiattisce,
   resta la stessa foto sotto un filtro — illeggibile, e fa sembrare i cursori
   ancora meno efficaci perché il dettaglio della foto domina comunque. Vale
   per `BlurredWallpaperBackground` (parametro `neutral`, usato da cassetto,
   Concentrazione, impostazioni nascoste e dalla stessa schermata della
-  modalità rossa) tanto quanto per la home.
+  modalità rossa) tanto quanto per la home. Era un grigio `0xFF262626`, ora è
+  nero: su OLED il pixel nero è **spento**, quindi non emette luce da
+  attenuare — ed è così che si ottiene il "rosso su nero" delle app con tema
+  rosso nativo, che è il riferimento che l'utente ha in mano al telescopio.
+- **Il cursore "Rosso" significa due cose diverse nei due meccanismi.** Dentro
+  il launcher è il peso di un multiply, e a 1.0 dà il rosso esatto (è il
+  valore che si vuole); sull'overlay è l'opacità di un velo rosso, e a 1.0
+  darebbe uno schermo rosso opaco che copre tutto. `OVERLAY_RED_CEILING`
+  riscala il secondo. Non allineare i due usi "per coerenza": vogliono scale
+  diverse perché sono operazioni diverse.
+- **Non promettere che l'overlay possa somigliare a un tema rosso nativo.**
+  Un tema sceglie i colori pixel per pixel; un velo agisce su un'immagine già
+  composta e può solo scurire e far virare. Trasformare il bianco in rosso
+  lasciando il nero nero è esattamente il multiply, cioè la cosa che fra
+  finestre non è concessa. La risposta onesta all'utente è: usa il tema rosso
+  delle app che ce l'hanno, il velo copre il resto.
 - Il permesso di overlay si concede **solo da una schermata di sistema**, non
   con una richiesta a comparsa, e può sparire mentre siamo fuori: viene
   riletto a ogni `onResume` (`onOverlayPermissionChanged`), che è anche il
@@ -383,7 +398,8 @@ gesture di questo progetto venivano da lì.
 | `AppIcon` | `MUTED_ALPHA` (app in grigio) | 0.4 |
 | `PromptStyle` | superficie dei due popup | `#16171A` al 95% |
 | `AppRepository` | `ICON_SIZE_PX` | 128 |
-| `NightModeRepository` | `DEFAULT_RED` / `DEFAULT_DIM` | 0.55 / 0.35 |
+| `NightModeRepository` | `DEFAULT_RED` / `DEFAULT_DIM` | 0.85 / 0.35 |
+| `NightModeRepository` | `OVERLAY_RED_CEILING` (solo overlay) | 0.7 |
 | `NightModeRepository` | `MAX_DIM` (non 1, vedi sopra) | 0.85 |
 | `FocusRepository` | `PRESET_MINUTES` | 15/30/45/60/120 |
 | `FocusRepository` | `SHORTCUT_MINUTES` | 30/60/120 (il popup) |

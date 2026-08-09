@@ -161,11 +161,20 @@ fun NightModeScreen(
                 item {
                     HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     Text(
-                        text = "Cosa aspettarsi. Dentro il launcher il rosso è esatto: verde " +
-                            "e blu vengono azzerati, e su schermo OLED restano proprio " +
-                            "spenti. Sulle altre app è un velo: il blu cala molto ma non va " +
-                            "a zero, e un po' di contrasto si perde — Android non permette " +
-                            "a un'app di filtrare davvero il contenuto di un'altra.\n\n" +
+                        text = "Cosa aspettarsi. Dentro il launcher il rosso è esatto: con " +
+                            "il cursore al massimo verde e blu vengono azzerati, lo sfondo è " +
+                            "nero puro e su OLED quei pixel restano proprio spenti. È lo " +
+                            "stesso risultato delle app che hanno un tema rosso loro.\n\n" +
+                            "Sulle altre app no, ed è un limite di Android, non una " +
+                            "regolazione da trovare: un'app può solo stendere un velo sopra " +
+                            "le altre, non ridipingerne il contenuto. Un velo può scurire e " +
+                            "far virare al rosso, ma non può trasformare il bianco in rosso " +
+                            "lasciando il nero nero — per quello servirebbe il multiply, che " +
+                            "fra finestre diverse non è concesso a nessuna app senza root.\n\n" +
+                            "In pratica: dove un'app ha un suo tema rosso (o almeno un tema " +
+                            "scuro), usalo — il velo serve a coprire tutto il resto. Con le " +
+                            "app scure il risultato migliora molto abbassando Rosso e " +
+                            "alzando Attenuazione.\n\n" +
                             "Il velo non copre la schermata di blocco né alcune finestre di " +
                             "sistema, e le app bancarie possono farlo sparire di proposito " +
                             "mentre sono aperte.\n\n" +

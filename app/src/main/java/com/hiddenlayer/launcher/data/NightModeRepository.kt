@@ -41,11 +41,24 @@ class NightModeRepository(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_RED = 0.55f
+        /** Alto di proposito: dentro il launcher è a 1.0 che si ottiene il rosso su nero vero,
+         * quello delle app con tema rosso nativo. Sotto lo 0.8 il bianco diventa rosa. */
+        const val DEFAULT_RED = 0.85f
         const val DEFAULT_DIM = 0.35f
 
-        const val MIN_RED = 0.15f
-        const val MAX_RED = 0.9f
+        const val MIN_RED = 0.2f
+        const val MAX_RED = 1f
+
+        /**
+         * Il cursore "Rosso" significa due cose diverse nei due meccanismi, e solo qui si
+         * possono riconciliare.
+         *
+         * Dentro il launcher è il peso di un multiply: a 1.0 dà il rosso esatto su nero, ed è
+         * esattamente quello che si vuole. Sull'overlay di sistema è invece l'opacità di un
+         * velo rosso: a 1.0 darebbe uno schermo rosso pieno che copre tutto, inutilizzabile.
+         * Quindi fuori dal launcher il cursore viene riscalato fin qui e non oltre.
+         */
+        const val OVERLAY_RED_CEILING = 0.7f
 
         // Il massimo non arriva a 1: un velo nero opaco renderebbe lo schermo illeggibile e
         // impossibile da recuperare, visto che l'overlay non riceve tocchi. Deve restare

@@ -87,7 +87,9 @@ class RedOverlayService : Service() {
     }
 
     private fun showOrUpdateOverlay() {
-        val red = repository.getRedIntensity()
+        // Riscalato: vedi OVERLAY_RED_CEILING. Il cursore a fondo scala qui non deve dare uno
+        // schermo rosso opaco, che coprirebbe il contenuto invece di filtrarlo.
+        val red = repository.getRedIntensity() * NightModeRepository.OVERLAY_RED_CEILING
         val dim = repository.getDimLevel()
 
         val existing = overlay
