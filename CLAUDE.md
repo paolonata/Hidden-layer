@@ -185,11 +185,24 @@ Trappole già pagate in questo pezzo:
   attenuare — ed è così che si ottiene il "rosso su nero" delle app con tema
   rosso nativo, che è il riferimento che l'utente ha in mano al telescopio.
 - **Il cursore "Rosso" significa due cose diverse nei due meccanismi.** Dentro
-  il launcher è il peso di un multiply, e a 1.0 dà il rosso esatto (è il
+  il launcher pilota la matrice di colore, e a 1.0 dà il rosso esatto (è il
   valore che si vuole); sull'overlay è l'opacità di un velo rosso, e a 1.0
-  darebbe uno schermo rosso opaco che copre tutto. `OVERLAY_RED_CEILING`
+  darebbe uno schermo rosso acceso che copre tutto. `OVERLAY_RED_CEILING`
   riscala il secondo. Non allineare i due usi "per coerenza": vogliono scale
   diverse perché sono operazioni diverse.
+- **Sull'overlay le due manopole non sono indipendenti** (`overlayLevels`). Un
+  velo rosso **aggiunge** luce dove sotto c'è nero, quindi più rosso richiede
+  più attenuazione o il fondo smette di essere nero: l'attenuazione ha un
+  minimo calcolato perché il velo non emetta più di `OVERLAY_GLOW_CAP` sul
+  nero. Con `OVERLAY_RED_CEILING` a 0.7 e attenuazione libera, Rosso al
+  massimo dava un rettangolo rosso uniforme su tutto lo schermo — segnalato
+  dall'utente con screenshot.
+- **L'overlay resta comunque "un layer rosso sopra lo schermo", e l'utente lo
+  ha notato da solo.** Non spacciarlo per un filtro: le alternative vere sono
+  a livello di display e stanno nelle impostazioni di sistema (tema scuro,
+  Modalità lettura di Xiaomi, correzione colore in scala di grigi,
+  luminosità extra). Quelle non aggiungono luce perché non sovrappongono
+  niente. Vanno consigliate, non reimplementate.
 - **Non promettere che l'overlay possa somigliare a un tema rosso nativo.**
   Un tema sceglie i colori pixel per pixel; un velo agisce su un'immagine già
   composta e può solo scurire e far virare. Trasformare il bianco in rosso

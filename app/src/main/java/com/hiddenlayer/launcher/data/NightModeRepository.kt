@@ -53,12 +53,25 @@ class NightModeRepository(context: Context) {
          * Il cursore "Rosso" significa due cose diverse nei due meccanismi, e solo qui si
          * possono riconciliare.
          *
-         * Dentro il launcher è il peso di un multiply: a 1.0 dà il rosso esatto su nero, ed è
-         * esattamente quello che si vuole. Sull'overlay di sistema è invece l'opacità di un
-         * velo rosso: a 1.0 darebbe uno schermo rosso pieno che copre tutto, inutilizzabile.
-         * Quindi fuori dal launcher il cursore viene riscalato fin qui e non oltre.
+         * Dentro il launcher pilota una matrice di colore: a 1.0 dà il rosso esatto su nero,
+         * ed è esattamente quello che si vuole. Sull'overlay di sistema è invece l'opacità di
+         * un velo, e un velo **aggiunge** luce: a 1.0 darebbe uno schermo rosso acceso in cui
+         * affoga tutto il resto. Era a 0.7 ed era ancora troppo — bug reale, con Rosso al
+         * massimo lo schermo diventava un rettangolo rosso uniforme.
          */
-        const val OVERLAY_RED_CEILING = 0.7f
+        const val OVERLAY_RED_CEILING = 0.5f
+
+        /**
+         * Quanta luce può emettere il velo là dove sotto c'è **nero**, cioè quanto può
+         * "accendersi" da solo.
+         *
+         * È il numero che tiene insieme le due manopole fuori dal launcher: siccome il velo
+         * rosso illumina il nero, più rosso si vuole più bisogna scurire, altrimenti il fondo
+         * smette di essere nero. L'attenuazione ha quindi un minimo che cresce con il rosso
+         * (vedi `RedOverlayService.overlayLevels`). Non è una scelta di gusto: è l'unico modo
+         * di avere un velo saturo *e* un fondo scuro con l'alpha blending.
+         */
+        const val OVERLAY_GLOW_CAP = 0.1f
 
         // Il massimo non arriva a 1: un velo nero opaco renderebbe lo schermo illeggibile e
         // impossibile da recuperare, visto che l'overlay non riceve tocchi. Deve restare

@@ -87,10 +87,7 @@ class RedOverlayService : Service() {
     }
 
     private fun showOrUpdateOverlay() {
-        // Riscalato: vedi OVERLAY_RED_CEILING. Il cursore a fondo scala qui non deve dare uno
-        // schermo rosso opaco, che coprirebbe il contenuto invece di filtrarlo.
-        val red = repository.getRedIntensity() * NightModeRepository.OVERLAY_RED_CEILING
-        val dim = repository.getDimLevel()
+        val (red, dim) = overlayLevels(repository.getRedIntensity(), repository.getDimLevel())
 
         val existing = overlay
         if (existing is RedOverlayView) {
@@ -205,6 +202,28 @@ class RedOverlayService : Service() {
     }
 
     companion object {
+        /**
+         * Traduce le due manopole nei due strati del velo, tenendole legate.
+         *
+         * Fuori dal launcher non si filtra: si **sovrappone**. Un velo rosso su un fondo nero
+         * aggiunge luce invece di toglierla, quindi più rosso si vuole più bisogna scurire,
+         * altrimenti il nero smette di essere nero e lo schermo diventa un rettangolo rosso
+         * acceso — che è esattamente il bug segnalato con il cursore al massimo.
+         *
+         * Per questo l'attenuazione ha un **minimo che cresce con il rosso**: è calcolato
+         * perché il velo non emetta più di [NightModeRepository.OVERLAY_GLOW_CAP] là dove
+         * sotto c'è nero. Non è una scelta di gusto, è l'unico modo di avere insieme un velo
+         * saturo e un fondo scuro con l'alpha blending.
+         */
+        fun overlayLevels(redIntensity: Float, dimLevel: Float): Pair<Float, Float> {
+            val redAlpha = redIntensity.coerceIn(0f, 1f) * NightModeRepository.OVERLAY_RED_CEILING
+            val cap = NightModeRepository.OVERLAY_GLOW_CAP
+            val glowFloor = if (redAlpha > cap) 1f - cap / redAlpha else 0f
+            val dimAlpha = maxOf(dimLevel.coerceIn(0f, 1f), glowFloor)
+                .coerceAtMost(NightModeRepository.MAX_DIM)
+            return redAlpha to dimAlpha
+        }
+
         private const val CHANNEL_ID = "red_overlay"
         private const val NOTIFICATION_ID = 42
         const val ACTION_STOP = "com.hiddenlayer.launcher.STOP_RED_OVERLAY"

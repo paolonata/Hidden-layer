@@ -171,10 +171,16 @@ fun NightModeScreen(
                             "far virare al rosso, ma non può trasformare il bianco in rosso " +
                             "lasciando il nero nero — per quello servirebbe il multiply, che " +
                             "fra finestre diverse non è concesso a nessuna app senza root.\n\n" +
+                            "Fuori dal launcher il velo aggiunge luce invece di toglierla, " +
+                            "quindi alzare Rosso scurisce automaticamente lo schermo: senza, " +
+                            "il fondo nero si accenderebbe di rosso e tutto il resto ci " +
+                            "affogherebbe dentro.\n\n" +
                             "In pratica: dove un'app ha un suo tema rosso (o almeno un tema " +
-                            "scuro), usalo — il velo serve a coprire tutto il resto. Con le " +
-                            "app scure il risultato migliora molto abbassando Rosso e " +
-                            "alzando Attenuazione.\n\n" +
+                            "scuro), usalo — il velo serve a coprire tutto il resto. Per un " +
+                            "risultato migliore su tutto il telefono, attiva anche il tema " +
+                            "scuro di sistema e la Modalità lettura di Xiaomi: quelle " +
+                            "agiscono sul display, non sovrapponendo un velo, quindi non " +
+                            "aggiungono luce.\n\n" +
                             "Il velo non copre la schermata di blocco né alcune finestre di " +
                             "sistema, e le app bancarie possono farlo sparire di proposito " +
                             "mentre sono aperte.\n\n" +
