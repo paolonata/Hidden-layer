@@ -123,100 +123,6 @@ buchi**; il dock è una **griglia a slot fissi** (`DOCK_ROWS × DOCK_COLUMNS`,
 con `null` dove è vuoto) — serve a far atterrare un drop nella riga giusta.
 Un'app sta **o nel dock o nella home, mai in entrambi**.
 
-### Modalità rossa: due meccanismi diversi, non uno
-
-Sono due implementazioni separate perché Android non ne permette una sola.
-
-- **Dentro il launcher** (`redFilter` in `RedFilter.kt`): una **matrice di
-  colore luminanza → rosso**, applicata con `saveLayer` + `ColorFilter`
-  (funziona da API 26, a differenza di `RenderEffect`).
-
-  **Non usare un multiply qui, è già stato provato e sbagliato.** Moltiplicare
-  per un rosso puro tiene solo il canale rosso e butta via gli altri due:
-  tutto ciò che differiva solo per verde e blu collassa sullo stesso valore.
-  Conseguenze reali viste dall'utente: bianco `(1,1,1)` e rosso acceso
-  `(0.9,0.3,0.1)` finivano a 1.00 e 0.90 — la scritta bianca sull'icona
-  ASIAIR spariva dentro il suo stesso sfondo; e le icone **blu andavano a
-  0.00**, cioè nero pieno (Telegram, Spotify: invisibili). Passando per la
-  luminanza (`0.2126·R + 0.7152·G + 0.0722·B`, pesi Rec. 709) gli stessi tre
-  casi danno 1.00 / 0.41 / 0.28: il contrasto originale sopravvive tradotto in
-  tonalità di rosso. Il blu in uscita resta comunque **zero**, che è l'unica
-  cosa che conta per l'adattamento al buio.
-- **Fuori dal launcher** (`RedOverlayService`): finestra
-  `TYPE_APPLICATION_OVERLAY` in un servizio in foreground. Qui il multiply
-  **non è ottenibile**: la composizione fra finestre la fa SurfaceFlinger con
-  alpha blending, e un'app non può chiedere altro. Resta un velo — blu
-  smorzato, non azzerato. Non riproporre "usa PorterDuff.MULTIPLY
-  sull'overlay": il blend mode di un `Paint` vale solo dentro la superficie
-  che stai disegnando, non contro le finestre sotto.
-
-Trappole già pagate in questo pezzo:
-
-- `startForeground` va chiamato **per primo in `onStartCommand`, anche sul ramo
-  che spegne**: arrivando da `startForegroundService` il sistema pretende la
-  promozione entro pochi secondi, altrimenti uccide il processo con
-  `ForegroundServiceDidNotStartInTimeException`. Per questo `stop()` dal
-  launcher usa `stopService`, che quel vincolo non ce l'ha.
-- Da `targetSdk` 34 il servizio deve dichiarare `foregroundServiceType`:
-  qui `specialUse`, con la `<property>` che lo motiva — nessuno dei tipi
-  previsti descrive "tenere in piedi un overlay".
-- **`redFilter` tinge solo ciò che Compose disegna.** La finestra del
-  launcher è trasparente (`MainActivity` la imposta così per lasciar vedere
-  lo sfondo di sistema); sulla home, senza uno sfondo esplicito disegnato da
-  noi, quello che si vede è lo sfondo di sistema vero, dietro la nostra
-  finestra — e il filtro non lo tocca affatto. **È così di proposito**, vedi
-  sotto. Bug reale trovato dall'utente durante lo sviluppo: i cursori Rosso/
-  Attenuazione sembravano non fare niente, ed era vero anche per un secondo
-  motivo — `redFilter` inizialmente prendeva solo `enabled: Boolean` e
-  ignorava del tutto i due livelli (tinta fissa, nessun velo scuro). Ora
-  `redFilter` accetta `redIntensity` e `dimLevel` e li usa entrambi.
-- **Non sostituire lo sfondo vero con un pannello neutro senza che l'utente
-  lo chieda di nuovo — è già stato fatto e tolto.** Un cielo notturno è
-  spesso già rosso o arancione di suo (nebulose a emissione): filtrarlo
-  lascia comunque leggibile tutto il dettaglio della foto sotto le icone.
-  Per questo si era introdotto un pannello nero (`NightNeutralBackground`) al
-  posto dello sfondo vero — in `BlurredWallpaperBackground` (parametro
-  `neutral`) e con un `Box` dedicato sulla home — e l'utente lo aveva persino
-  definito "perfetto" in uno screenshot. Ha comunque chiesto esplicitamente
-  di toglierlo e tornare al proprio sfondo. **Conseguenza da tenere a
-  mente**: sulla home lo sfondo resta **non filtrato** (vedi il punto sopra),
-  mentre nelle altre schermate (cassetto, Concentrazione…) lo sfondo sfocato
-  *è* filtrato, perché lì `BlurredWallpaperBackground` lo disegna dentro
-  l'albero Compose. L'asimmetria è nota e voluta, non un bug da correggere
-  d'ufficio.
-- **Il cursore "Rosso" significa due cose diverse nei due meccanismi.** Dentro
-  il launcher pilota la matrice di colore, e a 1.0 dà il rosso esatto (è il
-  valore che si vuole); sull'overlay è l'opacità di un velo rosso, e a 1.0
-  darebbe uno schermo rosso acceso che copre tutto. `OVERLAY_RED_CEILING`
-  riscala il secondo. Non allineare i due usi "per coerenza": vogliono scale
-  diverse perché sono operazioni diverse.
-- **Sull'overlay le due manopole non sono indipendenti** (`overlayLevels`). Un
-  velo rosso **aggiunge** luce dove sotto c'è nero, quindi più rosso richiede
-  più attenuazione o il fondo smette di essere nero: l'attenuazione ha un
-  minimo calcolato perché il velo non emetta più di `OVERLAY_GLOW_CAP` sul
-  nero. Con `OVERLAY_RED_CEILING` a 0.7 e attenuazione libera, Rosso al
-  massimo dava un rettangolo rosso uniforme su tutto lo schermo — segnalato
-  dall'utente con screenshot.
-- **L'overlay resta comunque "un layer rosso sopra lo schermo", e l'utente lo
-  ha notato da solo.** Non spacciarlo per un filtro: le alternative vere sono
-  a livello di display e stanno nelle impostazioni di sistema (tema scuro,
-  Modalità lettura di Xiaomi, correzione colore in scala di grigi,
-  luminosità extra). Quelle non aggiungono luce perché non sovrappongono
-  niente. Vanno consigliate, non reimplementate.
-- **Non promettere che l'overlay possa somigliare a un tema rosso nativo.**
-  Un tema sceglie i colori pixel per pixel; un velo agisce su un'immagine già
-  composta e può solo scurire e far virare. Trasformare il bianco in rosso
-  lasciando il nero nero è esattamente il multiply, cioè la cosa che fra
-  finestre non è concessa. La risposta onesta all'utente è: usa il tema rosso
-  delle app che ce l'hanno, il velo copre il resto.
-- Il permesso di overlay si concede **solo da una schermata di sistema**, non
-  con una richiesta a comparsa, e può sparire mentre siamo fuori: viene
-  riletto a ogni `onResume` (`onOverlayPermissionChanged`), che è anche il
-  punto in cui il velo riparte se MIUI ha ucciso il servizio.
-- `FLAG_NOT_TOUCHABLE` è ciò che rende il velo attraversabile; `MAX_DIM` non
-  arriva a 1 apposta, perché un velo opaco su una finestra che non riceve
-  tocchi non si potrebbe più spegnere.
-
 ---
 
 ## 4. Reattività: cosa è già stato scoperto
@@ -421,9 +327,6 @@ gesture di questo progetto venivano da lì.
 | `AppIcon` | `MUTED_ALPHA` (app in grigio) | 0.4 |
 | `PromptStyle` | superficie dei due popup | `#16171A` al 95% |
 | `AppRepository` | `ICON_SIZE_PX` | 128 |
-| `NightModeRepository` | `DEFAULT_RED` / `DEFAULT_DIM` | 0.85 / 0.35 |
-| `NightModeRepository` | `OVERLAY_RED_CEILING` (solo overlay) | 0.7 |
-| `NightModeRepository` | `MAX_DIM` (non 1, vedi sopra) | 0.85 |
 | `FocusRepository` | `PRESET_MINUTES` | 15/30/45/60/120 |
 | `FocusRepository` | `SHORTCUT_MINUTES` | 30/60/120 (il popup) |
 | `LauncherViewModel` | `FOCUS_TOAST_MILLIS` | 5000 |

@@ -2,7 +2,6 @@ package com.hiddenlayer.launcher
 
 import android.content.Intent
 import android.os.Bundle
-import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity
@@ -34,10 +33,6 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshApps()
-        // Il permesso di overlay si concede da una schermata di sistema, quindi può essere
-        // cambiato mentre eravamo fuori. È anche il punto in cui il velo rosso riparte se il
-        // risparmio energetico di MIUI ha ucciso il servizio nel frattempo.
-        viewModel.onOverlayPermissionChanged(Settings.canDrawOverlays(this))
     }
 
     /** Leaving the launcher for any reason — opening an app, screen off, task switcher —

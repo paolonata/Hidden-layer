@@ -7,16 +7,6 @@
          concesso all'installazione, non chiede niente all'utente. -->
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
 
-    <!-- Modalità rossa da astrofotografia. SYSTEM_ALERT_WINDOW non si ottiene con una
-         richiesta a comparsa: va concesso a mano da una schermata di sistema, e per questo
-         viene chiesto solo se l'utente accende davvero la modalità. Senza, il filtro resta
-         attivo dentro il launcher e basta. -->
-    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- Il velo deve sopravvivere all'uscita dal launcher: durante una sessione passi il
-         tempo dentro le app di mappe stellari, non qui. -->
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
-
     <!-- Required on Android 11+ to enumerate other apps' launcher activities
          without requesting the broad QUERY_ALL_PACKAGES permission. -->
     <queries>
@@ -40,10 +30,6 @@
         <intent>
             <action android:name="android.intent.action.SET_WALLPAPER" />
         </intent>
-        <intent>
-            <action android:name="android.settings.action.MANAGE_OVERLAY_PERMISSION" />
-            <data android:scheme="package" />
-        </intent>
     </queries>
 
     <application
@@ -66,17 +52,5 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-
-        <!-- specialUse perché da targetSdk 34 un servizio in foreground deve dichiarare un
-             tipo, e nessuno di quelli previsti (posizione, riproduzione, chiamata…) descrive
-             "tenere in piedi una finestra di overlay". -->
-        <service
-            android:name=".night.RedOverlayService"
-            android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Filtro rosso a schermo intero per la visione notturna, attivo finché l'utente non lo spegne" />
-        </service>
     </application>
 </manifest>
