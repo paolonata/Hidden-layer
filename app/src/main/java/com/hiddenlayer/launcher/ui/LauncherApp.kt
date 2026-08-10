@@ -243,6 +243,16 @@ private fun buildContextMenuActions(
         }
         MenuOrigin.HIDDEN_DRAWER -> {
             actions += MenuAction("Mostra app") { viewModel.toggleHidden(app) }
+            // Prima l'unica strada per bloccare un'app nascosta durante la Concentrazione era
+            // mostrarla, andare nella schermata Concentrazione a selezionarla, e nasconderla di
+            // nuovo. La schermata Concentrazione esclude le app nascoste dal suo elenco per la
+            // regola sulla privacy (il loro nome non deve comparire in una schermata che si
+            // apre senza sblocco), ma qui — che è già dietro lo sblocco — l'azione può stare
+            // senza violare niente: il nome dell'app non esce mai da questa schermata protetta.
+            val blocked = app.packageName in state.focusPackages
+            actions += MenuAction(
+                if (blocked) "Non bloccare durante la Concentrazione" else "Blocca durante la Concentrazione"
+            ) { viewModel.toggleFocusApp(app) }
         }
     }
 

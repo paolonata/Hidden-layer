@@ -31,7 +31,10 @@ usare lo strumento della riservatezza per fare le pulizie:
   Il cassetto contiene tutte le app installate (tranne quelle nascoste), con
   ricerca, su uno sfondo sfocato che riprende il tuo sfondo reale. La griglia
   è a **5 icone per fila**, come il dock, sia nel cassetto normale sia in
-  quello delle app nascoste.
+  quello delle app nascoste. **Durante una sessione di Concentrazione**, in
+  entrambi i cassetti le app bloccate si separano da quelle disponibili, sotto
+  un'intestazione col loro numero — invece di restare mischiate nella stessa
+  griglia in ordine alfabetico. Il dock non si riordina: resta dov'è.
 - **Solo icone, niente nomi**: sotto le icone non c'è l'etichetta, né in home
   né nel cassetto — l'icona è già il nome. I nomi restano dove servono
   davvero a identificare un'app: nel menu che si apre tenendo premuto, nella
@@ -102,7 +105,12 @@ dicono comunque le icone grigie.
 schermata Concentrazione, che si apre anche tenendo premuto su un punto vuoto
 della home. Lì scegli la durata con un tocco (15/30/45/60/120 min, più i
 pulsanti ± per regolare di 5 in 5 fino a 3 ore), selezioni le app che ti
-distraggono e avvii. Durante la sessione quelle app:
+distraggono e avvii. Le app nascoste non compaiono in quell'elenco — la
+schermata Concentrazione si apre senza sblocco, quindi il loro nome non deve
+comparire lì per nessun motivo. Per bloccarle si usa un'altra strada: dal
+cassetto delle app nascoste, tieni premuta l'app e scegli **"Blocca durante
+la Concentrazione"**. È al sicuro perché quel cassetto è già dietro lo
+sblocco quando lo richiedi. Durante la sessione quelle app:
 
 - **perdono il colore e sbiadiscono** ovunque — home, dock e cassetto. Il
   colore è metà del richiamo visivo di un'icona, ma da solo non basta: su

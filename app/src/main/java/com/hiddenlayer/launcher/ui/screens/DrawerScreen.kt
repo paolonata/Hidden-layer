@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -369,6 +370,13 @@ private fun AppGrid(
     onAppClick: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo) -> Unit
 ) {
+    // Separate solo quando serve: fuori da una sessione isMuted è sempre falso per tutti, e
+    // "bloccate" resta vuoto — niente intestazione, griglia unica come prima. Durante una
+    // sessione invece le icone bloccate finiscono in mezzo a quelle disponibili, ed è proprio
+    // lì che si vuole sapere al volo cosa si può ancora aprire.
+    val blocked = apps.filter(isMuted)
+    val available = if (blocked.isEmpty()) apps else apps.filterNot(isMuted)
+
     LazyVerticalGrid(
         state = gridState,
         // Five per row, come il dock: senza etichette sotto le icone la riga da quattro
@@ -379,7 +387,7 @@ private fun AppGrid(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         modifier = Modifier.fillMaxSize().padding(padding)
     ) {
-        items(apps, key = { it.componentName.flattenToString() }) { app ->
+        items(available, key = { it.componentName.flattenToString() }) { app ->
             AppGridTile(
                 app = app,
                 onTap = { onAppClick(app) },
@@ -387,7 +395,31 @@ private fun AppGrid(
                 grayscale = isMuted(app)
             )
         }
+
+        if (blocked.isNotEmpty()) {
+            item(span = { GridItemSpan(maxLineSpan) }, key = "blocked-section-header") {
+                SectionHeader("Bloccate durante la Concentrazione (${blocked.size})")
+            }
+            items(blocked, key = { it.componentName.flattenToString() }) { app ->
+                AppGridTile(
+                    app = app,
+                    onTap = { onAppClick(app) },
+                    onLongPress = { onAppLongPress(app) },
+                    grayscale = true
+                )
+            }
+        }
     }
+}
+
+@Composable
+private fun SectionHeader(text: String) {
+    Text(
+        text = text,
+        color = Color.White.copy(alpha = 0.6f),
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.padding(horizontal = 4.dp, vertical = 10.dp)
+    )
 }
 
 @Composable

@@ -352,6 +352,18 @@ Concentrazione le esclude sia in scrittura (`launchAnyway`) sia in lettura
 chiaro nella classifica dentro le impostazioni. Prima di aggiungere qualunque
 cosa che elenchi app per nome, chiediti da dove si raggiunge.
 
+**Bloccare un'app nascosta durante la Concentrazione** era raggiungibile solo
+mostrandola, andando in `FocusScreen` a selezionarla, e nascondendola di
+nuovo — perché `FocusScreen` esclude di proposito le app nascoste dal suo
+elenco (si apre con un doppio tap, senza sblocco). La correzione **non** è
+stata togliere quel filtro: è stata aggiungere l'azione "Blocca durante la
+Concentrazione" al menu contestuale del cassetto nascosto stesso
+(`MenuOrigin.HIDDEN_DRAWER`), che è già dietro lo sblocco quando è attivo.
+Riusa `toggleFocusApp`, la stessa funzione di `FocusScreen` — non è vincolata
+a quella schermata. La regola resta identica, cambia solo da dove si agisce:
+il nome dell'app non deve mai comparire in una schermata **non protetta**,
+ma può benissimo comparire — e ricevere azioni — in una che lo è già.
+
 ---
 
 ## 8. Limiti dichiarati (non riproporli come soluzioni)
