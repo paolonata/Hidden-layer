@@ -229,12 +229,23 @@ Le tre domande che discriminano:
 
 ### Il respiro dopo lo sblocco
 
-`onResume` fa anche una seconda cosa, indipendente da `refreshApps()`:
-`viewModel.onLauncherResumed()` decide se questo resume segue un vero
-sblocco (`ACTION_USER_PRESENT`) invece di un ritorno alla home da un'app
-chiusa — sono lo stesso `onResume` ma non lo stesso gesto, e solo il primo
-deve aprire il respiro.
+Durante la Concentrazione, il primo ritorno alla home dopo uno sblocco vero
+apre qualche secondo di respiro prima che la griglia sia toccabile.
 
+- **`onResume` e `ACTION_USER_PRESENT` arrivano in ordine imprevedibile, e il
+  primo tentativo dava per scontato il contrario.** Sbloccando, il launcher fa
+  `onResume` **dietro** la schermata di blocco — appena lo schermo si accende
+  — e il broadcast arriva solo dopo, a blocco tolto. Controllando il flag
+  dentro `onResume` non era ancora alzato, restava buono, e il respiro
+  compariva al primo `onResume` successivo: bug reale, l'utente lo vedeva
+  premendo il tasto home dalla schermata Concentrazione invece che sbloccando.
+  Ora `maybeStartUnlockPause()` è chiamata **da entrambi i lati** e parte chi
+  arriva per ultimo; `unlockedAtElapsed` (timestamp, non booleano) fa scartare
+  uno sblocco più vecchio di `UNLOCK_PAUSE_GRACE_MILLIS`, che è il caso "hai
+  sbloccato dentro un'altra app e torni alla home molto dopo".
+- Serve anche `onLauncherPaused()` da `MainActivity.onPause`: senza sapere se
+  il launcher è davvero in primo piano, il respiro partirebbe alle sue spalle
+  mentre sei in un'altra app, e sarebbe già finito quando torni.
 - `ACTION_USER_PRESENT` non è mai stato consegnabile a un receiver dichiarato
   nel manifest, nemmeno prima delle restrizioni sui broadcast impliciti di
   Android 8: va registrato a runtime (`ContextCompat.registerReceiver` con
@@ -242,15 +253,16 @@ deve aprire il respiro.
   `onCleared()`. Vive per tutta la vita del processo, non solo mentre
   l'activity è in primo piano — il launcher è quasi sempre vivo, essendo la
   home.
-- La distinzione si fa con un flag (`justUnlocked`) alzato dal receiver e
-  consumato dal primo `onLauncherResumed()` successivo, **non** con un campo
-  in `uiState`: è un evento one-shot, non qualcosa che una UI deve osservare
-  in continuo.
 - Scatta **solo se `focusActive`**: fuori da una sessione non succede niente.
   Non è un freno sempre acceso — l'utente lo vuole legato alla Concentrazione,
   non a ogni sblocco (chiesto esplicitamente, vedi `UnlockPauseOverlay.kt`).
 - `unlockPauseActive` sta invece in `uiState` (come `focusToastVisible`):
   cambia due volte per attivazione, non ticchetta.
+- **Sfondo sfocato (`BlurredWallpaperBackground`), non nero pieno.** Il nero
+  era corretto nella sostanza ma fuori dal linguaggio visivo del launcher, e
+  l'utente l'ha trovato brutto. La sfocatura nasconde la griglia esattamente
+  quanto il nero — che è il requisito vero: niente da mirare mentre l'anello
+  si riempie.
 - L'anello è disegnato a mano con `Canvas`/`drawArc`, non con
   `CircularProgressIndicator` di Material3: qui non si compila in locale
   (§2), quindi non si scommette su parametri (`gapSize` e simili) che

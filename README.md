@@ -165,8 +165,9 @@ livello di sistema.
 ### Il respiro dopo lo sblocco
 
 Durante una sessione, il primo ritorno alla home dopo uno sblocco vero (non
-un rientro da un'app che hai chiuso) apre qualche secondo di schermo nero con
-un anello che si riempie, prima che la griglia diventi toccabile. Niente
+un rientro da un'app che hai chiuso) apre qualche secondo di sfondo sfocato
+con un anello che si riempie e pulsa piano, prima che la griglia diventi
+toccabile. Niente
 testo, niente domande: non è un rimprovero, solo un momento fermo prima del
 gesto automatico "sblocco → tocco la prima cosa che vedo". Non è annullabile
 né toccando lo schermo né con il tasto indietro — un modo per saltarlo

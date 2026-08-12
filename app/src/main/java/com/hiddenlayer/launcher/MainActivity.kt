@@ -39,6 +39,13 @@ class MainActivity : FragmentActivity() {
         viewModel.onLauncherResumed()
     }
 
+    /** Sblocchi ed entri direttamente in un'altra app: il launcher non è in primo piano, e il
+     * respiro non deve partire alle sue spalle per poi essere già finito quando torni. */
+    override fun onPause() {
+        super.onPause()
+        viewModel.onLauncherPaused()
+    }
+
     /** Leaving the launcher for any reason — opening an app, screen off, task switcher —
      * closes the vault, so it is never left open behind your back and coming back always
      * lands on the home screen.
