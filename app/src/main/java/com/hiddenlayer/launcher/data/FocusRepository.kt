@@ -36,6 +36,20 @@ class FocusRepository(context: Context) {
         prefs.edit().putLong(KEY_ENDS_AT, endsAt).apply()
     }
 
+    /**
+     * Quante volte hai sbloccato il telefono da quando è iniziata la sessione in corso: è ciò
+     * che fa allungare il respiro a ogni sblocco successivo.
+     *
+     * Sta nelle preferenze e non in memoria perché una sessione dura ore e MIUI chiude
+     * volentieri il launcher in background: tenendolo in RAM, il conteggio si azzererebbe da
+     * solo proprio nelle sessioni lunghe, che sono quelle in cui serve.
+     */
+    fun getSessionUnlockCount(): Int = prefs.getInt(KEY_UNLOCKS, 0)
+
+    fun setSessionUnlockCount(count: Int) {
+        prefs.edit().putInt(KEY_UNLOCKS, count).apply()
+    }
+
     companion object {
         const val DEFAULT_DURATION_MINUTES = 25
         const val MIN_MINUTES = 5
@@ -52,5 +66,6 @@ class FocusRepository(context: Context) {
         private const val KEY_PACKAGES = "distracting_packages"
         private const val KEY_DURATION = "duration_minutes"
         private const val KEY_ENDS_AT = "session_ends_at"
+        private const val KEY_UNLOCKS = "session_unlocks"
     }
 }

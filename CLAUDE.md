@@ -260,9 +260,25 @@ apre qualche secondo di respiro prima che la griglia sia toccabile.
   cambia due volte per attivazione, non ticchetta.
 - **Sfondo sfocato (`BlurredWallpaperBackground`), non nero pieno.** Il nero
   era corretto nella sostanza ma fuori dal linguaggio visivo del launcher, e
-  l'utente l'ha trovato brutto. La sfocatura nasconde la griglia esattamente
-  quanto il nero — che è il requisito vero: niente da mirare mentre l'anello
-  si riempie.
+  l'utente l'ha trovato brutto.
+- **È un `Dialog`, non un `Box` dentro `LauncherApp`.** La finestra del
+  launcher non arriva sotto la barra di stato e quella di navigazione, quindi
+  un overlay in composizione lasciava scoperte due strisce (sfondo nitido
+  sopra e sotto, sfocato in mezzo — segnalato con screenshot). Un `Dialog` è
+  una finestra a sé e con `FLAG_LAYOUT_NO_LIMITS` copre davvero tutto.
+  L'alternativa — portare tutto il launcher edge-to-edge — cambierebbe il
+  layout di ogni schermata per un problema che riguarda solo questa.
+- **L'effetto è una macchia che si allarga** (`BlendMode.Clear` su un
+  `CompositingStrategy.Offscreen`, con un gradiente radiale per il bordo
+  sfumato), non un anello di avanzamento: scoprire lo schermo poco per volta
+  è la richiesta esplicita dell'utente. `Clear` ha bisogno del layer proprio,
+  altrimenti cancella anche ciò che sta sotto nel buffer.
+- **La durata non è una costante**: cresce a ogni sblocco della stessa
+  sessione (`UNLOCK_PAUSE_BASE/STEP/MAX_MILLIS`) e viaggia in `uiState`
+  (`unlockPauseMillis`) fino all'animazione. Il conteggio sta in
+  `FocusRepository` (non in RAM) perché una sessione dura ore e MIUI chiude
+  volentieri il launcher; si azzera in `startFocus`, altrimenti la seconda
+  sessione della giornata partirebbe già col conto della prima.
 - L'anello è disegnato a mano con `Canvas`/`drawArc`, non con
   `CircularProgressIndicator` di Material3: qui non si compila in locale
   (§2), quindi non si scommette su parametri (`gapSize` e simili) che

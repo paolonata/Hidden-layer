@@ -2,8 +2,6 @@ package com.hiddenlayer.launcher.ui
 
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -186,16 +184,13 @@ fun LauncherApp(
         )
     }
 
-    // Ultimo della pila apposta: deve coprire qualunque altra cosa fosse rimasta in
-    // composizione da prima dello sblocco (in pratica non dovrebbe esserci niente, ma se
-    // capitasse il respiro vince comunque). In dissolvenza da entrambi i lati: comparire e
-    // sparire di scatto lo faceva sembrare un errore invece di una pausa voluta.
-    AnimatedVisibility(
-        visible = state.unlockPauseActive,
-        enter = fadeIn(tween(220)),
-        exit = fadeOut(tween(420))
-    ) {
-        UnlockPauseOverlay()
+    // È una finestra a sé (vedi UnlockPauseOverlay), quindi copre tutto senza doversi
+    // preoccupare di dove sta nella pila di questa composizione. Niente AnimatedVisibility
+    // attorno: l'apertura è la macchia stessa che si allarga, e l'uscita arriva quando il
+    // cerchio ha già scoperto tutto lo schermo — una dissolvenza in più si vedrebbe come un
+    // secondo sfarfallio dopo che l'animazione è finita.
+    if (state.unlockPauseActive) {
+        UnlockPauseOverlay(durationMillis = state.unlockPauseMillis)
     }
 }
 

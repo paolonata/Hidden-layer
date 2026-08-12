@@ -57,6 +57,9 @@ data class LauncherUiState(
      * un'app), acceso solo durante la Concentrazione. Cambia due volte per attivazione, come
      * `focusToastVisible`: può stare qui senza far ricomporre nulla che ticchetti sul serio. */
     val unlockPauseActive: Boolean = false,
+    /** Quanto dura *questo* respiro: cresce a ogni sblocco della stessa sessione, quindi non
+     * è una costante e va portata fin dentro l'animazione. */
+    val unlockPauseMillis: Int = 0,
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,

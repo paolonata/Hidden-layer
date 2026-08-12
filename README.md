@@ -165,15 +165,21 @@ livello di sistema.
 ### Il respiro dopo lo sblocco
 
 Durante una sessione, il primo ritorno alla home dopo uno sblocco vero (non
-un rientro da un'app che hai chiuso) apre qualche secondo di sfondo sfocato
-con un anello che si riempie e pulsa piano, prima che la griglia diventi
-toccabile. Niente
-testo, niente domande: non è un rimprovero, solo un momento fermo prima del
-gesto automatico "sblocco → tocco la prima cosa che vedo". Non è annullabile
-né toccando lo schermo né con il tasto indietro — un modo per saltarlo
-sarebbe un modo per non farlo mai. Fuori da una sessione non succede niente:
-è pensato per il momento in cui prendi il telefono senza un motivo preciso,
-che è esattamente quando la Concentrazione è già lo strumento giusto.
+un rientro da un'app che hai chiuso) copre lo schermo con una macchia opaca
+che si allarga piano dal centro, scoprendo la home poco per volta finché non
+è tutta visibile. Niente testo, niente domande: non è un rimprovero, solo un
+momento fermo prima del gesto automatico "sblocco → tocco la prima cosa che
+vedo". Non è annullabile né toccando lo schermo né con il tasto indietro — un
+modo per saltarlo sarebbe un modo per non farlo mai. Fuori da una sessione
+non succede niente: è pensato per il momento in cui prendi il telefono senza
+un motivo preciso, che è esattamente quando la Concentrazione è già lo
+strumento giusto.
+
+**L'attesa si allunga a ogni sblocco della stessa sessione**: 3 secondi il
+primo, poi 2 in più ogni volta, fino a un massimo di 15. Il primo sblocco può
+avere un motivo — è la ripetizione a essere il sintomo, quindi è la
+ripetizione a costare. Il conteggio riparte da zero all'inizio di ogni nuova
+sessione, e sopravvive alla chiusura del launcher in background.
 
 ## Riservatezza: cosa fa e cosa non può fare
 

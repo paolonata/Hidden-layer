@@ -27,9 +27,17 @@ import kotlinx.coroutines.withContext
 /** Quanto resta accesa la pill di conferma dopo l'avvio di una sessione. */
 private const val FOCUS_TOAST_MILLIS = 5_000L
 
-/** Quanto dura il respiro dopo uno sblocco durante la Concentrazione. Breve apposta: non è
- * una domanda a cui rispondere, solo un momento fermo prima che la griglia diventi toccabile. */
-private const val UNLOCK_PAUSE_MILLIS = 3_000L
+/**
+ * Il respiro dopo uno sblocco **si allunga a ogni sblocco della stessa sessione**.
+ *
+ * Il primo costa poco: prendere il telefono una volta può avere un motivo. È la ripetizione a
+ * essere il sintomo — quella per cui "lo sblocco solo per il gusto di farlo" — e allungando
+ * l'attesa il costo cresce insieme all'abitudine invece di restare uguale. Il tetto serve a
+ * non trasformarlo in un blocco: deve restare un attrito, non una punizione.
+ */
+private const val UNLOCK_PAUSE_BASE_MILLIS = 3_000
+private const val UNLOCK_PAUSE_STEP_MILLIS = 2_000
+private const val UNLOCK_PAUSE_MAX_MILLIS = 15_000
 
 /** Oltre questo, uno sblocco non è più "appena successo" e il respiro non parte. Serve al caso
  * in cui sblocchi dentro un'altra app: tornando alla home molto dopo, il respiro sarebbe
@@ -137,10 +145,20 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         unlockedAtElapsed = 0L
         if (!_uiState.value.focusActive || _uiState.value.unlockPauseActive) return
 
+        // Il conteggio parte da 1 al primo sblocco della sessione, quindi il primo respiro
+        // dura esattamente la base e solo dal secondo in poi si allunga.
+        val unlocks = focusRepository.getSessionUnlockCount() + 1
+        focusRepository.setSessionUnlockCount(unlocks)
+        val duration = (UNLOCK_PAUSE_BASE_MILLIS + (unlocks - 1) * UNLOCK_PAUSE_STEP_MILLIS)
+            .coerceAtMost(UNLOCK_PAUSE_MAX_MILLIS)
+
         unlockPauseJob?.cancel()
-        _uiState.value = _uiState.value.copy(unlockPauseActive = true)
+        _uiState.value = _uiState.value.copy(
+            unlockPauseActive = true,
+            unlockPauseMillis = duration
+        )
         unlockPauseJob = viewModelScope.launch {
-            delay(UNLOCK_PAUSE_MILLIS)
+            delay(duration.toLong())
             _uiState.value = _uiState.value.copy(unlockPauseActive = false)
         }
     }
@@ -325,6 +343,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun startFocus() {
         val endsAt = System.currentTimeMillis() + _uiState.value.focusDurationMinutes * 60_000L
         focusRepository.setSessionEndsAt(endsAt)
+        // Il respiro cresce *dentro* una sessione, non da una sessione all'altra: senza questo
+        // azzeramento la seconda sessione della giornata partirebbe già col conto di quella
+        // prima, e l'attesa non avrebbe più niente a che vedere con quanto stai cedendo ora.
+        focusRepository.setSessionUnlockCount(0)
         focusStatsRepository.onSessionStarted(System.currentTimeMillis())
         startTicker(endsAt)
         showFocusToast()
