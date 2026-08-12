@@ -156,8 +156,23 @@ riservata.
 
 **Limite dichiarato**: un launcher non può impedire l'apertura di un'app. Le
 app restano raggiungibili da notifiche, schermate recenti e ricerca di
-sistema. Per un blocco vero serve la Modalità concentrazione di MIUI, che
-agisce a livello di sistema.
+sistema — la conferma d'apertura di cui sopra vale solo per i tocchi che
+passano dal launcher (home, dock, cassetto): una notifica consegna il tocco
+direttamente all'app di destinazione, il launcher non lo vede nemmeno. Per
+un blocco vero serve la Modalità concentrazione di MIUI, che agisce a
+livello di sistema.
+
+### Il respiro dopo lo sblocco
+
+Durante una sessione, il primo ritorno alla home dopo uno sblocco vero (non
+un rientro da un'app che hai chiuso) apre qualche secondo di schermo nero con
+un anello che si riempie, prima che la griglia diventi toccabile. Niente
+testo, niente domande: non è un rimprovero, solo un momento fermo prima del
+gesto automatico "sblocco → tocco la prima cosa che vedo". Non è annullabile
+né toccando lo schermo né con il tasto indietro — un modo per saltarlo
+sarebbe un modo per non farlo mai. Fuori da una sessione non succede niente:
+è pensato per il momento in cui prendi il telefono senza un motivo preciso,
+che è esattamente quando la Concentrazione è già lo strumento giusto.
 
 ## Riservatezza: cosa fa e cosa non può fare
 

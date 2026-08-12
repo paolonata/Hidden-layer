@@ -53,6 +53,10 @@ data class LauncherUiState(
     val unlockError: Boolean = false,
     /** Cleared every time the launcher is left, so the hidden page re-locks itself. */
     val vaultUnlocked: Boolean = false,
+    /** Il respiro di qualche secondo dopo uno sblocco vero (non un ritorno alla home da
+     * un'app), acceso solo durante la Concentrazione. Cambia due volte per attivazione, come
+     * `focusToastVisible`: può stare qui senza far ricomporre nulla che ticchetti sul serio. */
+    val unlockPauseActive: Boolean = false,
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,

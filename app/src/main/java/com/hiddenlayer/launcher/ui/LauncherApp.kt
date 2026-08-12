@@ -183,6 +183,13 @@ fun LauncherApp(
             onDismiss = { showEmptyPageMenu = false }
         )
     }
+
+    // Ultimo della pila apposta: deve coprire qualunque altra cosa fosse rimasta in
+    // composizione da prima dello sblocco (in pratica non dovrebbe esserci niente, ma se
+    // capitasse il respiro vince comunque).
+    if (state.unlockPauseActive) {
+        UnlockPauseOverlay()
+    }
 }
 
 private fun buildContextMenuActions(

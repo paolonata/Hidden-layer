@@ -227,6 +227,40 @@ Le tre domande che discriminano:
 3. lento **subito dopo essere tornato da un'app**? → `onResume` →
    `refreshApps()`, che rilegge tutte le app e ridecodifica tutte le icone.
 
+### Il respiro dopo lo sblocco
+
+`onResume` fa anche una seconda cosa, indipendente da `refreshApps()`:
+`viewModel.onLauncherResumed()` decide se questo resume segue un vero
+sblocco (`ACTION_USER_PRESENT`) invece di un ritorno alla home da un'app
+chiusa — sono lo stesso `onResume` ma non lo stesso gesto, e solo il primo
+deve aprire il respiro.
+
+- `ACTION_USER_PRESENT` non è mai stato consegnabile a un receiver dichiarato
+  nel manifest, nemmeno prima delle restrizioni sui broadcast impliciti di
+  Android 8: va registrato a runtime (`ContextCompat.registerReceiver` con
+  `RECEIVER_NOT_EXPORTED`, nell'`init` del ViewModel) e disiscritto in
+  `onCleared()`. Vive per tutta la vita del processo, non solo mentre
+  l'activity è in primo piano — il launcher è quasi sempre vivo, essendo la
+  home.
+- La distinzione si fa con un flag (`justUnlocked`) alzato dal receiver e
+  consumato dal primo `onLauncherResumed()` successivo, **non** con un campo
+  in `uiState`: è un evento one-shot, non qualcosa che una UI deve osservare
+  in continuo.
+- Scatta **solo se `focusActive`**: fuori da una sessione non succede niente.
+  Non è un freno sempre acceso — l'utente lo vuole legato alla Concentrazione,
+  non a ogni sblocco (chiesto esplicitamente, vedi `UnlockPauseOverlay.kt`).
+- `unlockPauseActive` sta invece in `uiState` (come `focusToastVisible`):
+  cambia due volte per attivazione, non ticchetta.
+- L'anello è disegnato a mano con `Canvas`/`drawArc`, non con
+  `CircularProgressIndicator` di Material3: qui non si compila in locale
+  (§2), quindi non si scommette su parametri (`gapSize` e simili) che
+  potrebbero non esistere ancora nella versione del BOM in uso. Primitive
+  stabili da sempre, zero rischio.
+- **Non annullabile**, né con un tocco né con indietro (`BackHandler {}`
+  vuoto): un modo per saltarlo sarebbe un modo per non farlo mai. Sfondo
+  nero **opaco**, non un velo sulla home sotto — vederla già lì inviterebbe
+  a partire prima che l'anello finisca.
+
 ---
 
 ## 5. Gesture: le regole imparate a caro prezzo
@@ -373,6 +407,20 @@ nascondere le app da Impostazioni, ricerca globale MIUI, Play Store, notifiche
 e statistiche; **impedire davvero** l'apertura di un'app (senza un servizio di
 accessibilità). Per un blocco vero servono la Modalità concentrazione o il
 Secondo Spazio di MIUI. Tutto questo è già stato spiegato all'utente più volte.
+
+**Le notifiche scavalcano la conferma d'apertura**, ed è lo stesso limite in
+un'altra forma: il tap su una notifica porta un `PendingIntent`, un token
+opaco che il sistema consegna diretto all'app di destinazione. Nessun'altra
+app — nemmeno con `BIND_NOTIFICATION_LISTENER_SERVICE` — può leggerne il
+contenuto o sostituirlo: è il punto stesso per cui i `PendingIntent`
+esistono. L'unica cosa fattibile sarebbe cancellare la notifica vera e
+ripubblicarne una copia nostra — ma cambierebbe il mittente visibile
+(risulterebbe da Hidden Layer, non dall'app originale) e perderebbe la
+destinazione specifica (riaprirebbe l'app in generale, non la chat/schermata
+esatta a cui puntava). Proposto e **rifiutato dall'utente**: non
+riproporlo come soluzione, il compromesso non vale il risultato. L'utente ha
+scelto di lasciare il buco documentato invece che tapparlo con qualcosa di
+fragile.
 
 Mancano di proposito: widget (`AppWidgetHost` è un sottosistema a parte),
 riordino drag & drop **dentro** la stessa pagina, cartelle, badge di notifica

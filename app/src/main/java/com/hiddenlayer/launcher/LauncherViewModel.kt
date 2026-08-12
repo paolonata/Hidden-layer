@@ -1,6 +1,11 @@
 package com.hiddenlayer.launcher
 
 import android.app.Application
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.hiddenlayer.launcher.data.AppInfo
@@ -20,6 +25,10 @@ import kotlinx.coroutines.withContext
 
 /** Quanto resta accesa la pill di conferma dopo l'avvio di una sessione. */
 private const val FOCUS_TOAST_MILLIS = 5_000L
+
+/** Quanto dura il respiro dopo uno sblocco durante la Concentrazione. Breve apposta: non è
+ * una domanda a cui rispondere, solo un momento fermo prima che la griglia diventi toccabile. */
+private const val UNLOCK_PAUSE_MILLIS = 3_000L
 
 class LauncherViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -46,10 +55,61 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private var focusTicker: Job? = null
     private var focusToastJob: Job? = null
+    private var unlockPauseJob: Job? = null
+
+    // Vero solo fra il momento in cui il telefono viene sbloccato (ACTION_USER_PRESENT) e il
+    // prossimo onResume del launcher: distingue "hai appena sbloccato il telefono" da "sei
+    // tornato alla home dopo aver chiuso un'app", che arrivano entrambi come lo stesso
+    // onResume ma non sono lo stesso gesto. Solo il primo è quello che si vuole intercettare.
+    private var justUnlocked = false
+
+    // ACTION_USER_PRESENT non si può dichiarare nel manifest (non è mai stato consegnato lì,
+    // nemmeno prima delle restrizioni sui broadcast impliciti di Android 8): va registrato a
+    // runtime, e siccome il launcher è quasi sempre vivo — è la home — resta valido per tutta
+    // la vita del processo, non solo mentre l'activity è in primo piano.
+    private val userPresentReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            justUnlocked = true
+        }
+    }
 
     init {
         refreshApps()
         restoreFocusSession()
+        ContextCompat.registerReceiver(
+            application,
+            userPresentReceiver,
+            IntentFilter(Intent.ACTION_USER_PRESENT),
+            ContextCompat.RECEIVER_NOT_EXPORTED
+        )
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        getApplication<Application>().unregisterReceiver(userPresentReceiver)
+    }
+
+    /**
+     * Chiamato da ogni `onResume` dell'activity. Se questo resume segue davvero uno sblocco
+     * (non un ritorno alla home da un'altra app) e una sessione di Concentrazione è attiva,
+     * apre il respiro di qualche secondo prima che la griglia sia toccabile.
+     *
+     * Fuori da una sessione non succede niente: il punto era "prendo in mano il telefono e mi
+     * muovo solo per il gusto di farlo", che è esattamente il momento in cui la Concentrazione
+     * è già lo strumento giusto — non un freno acceso sempre, che si userebbe anche quando
+     * sbloccare ha uno scopo preciso.
+     */
+    fun onLauncherResumed() {
+        if (!justUnlocked) return
+        justUnlocked = false
+        if (!_uiState.value.focusActive) return
+
+        unlockPauseJob?.cancel()
+        _uiState.value = _uiState.value.copy(unlockPauseActive = true)
+        unlockPauseJob = viewModelScope.launch {
+            delay(UNLOCK_PAUSE_MILLIS)
+            _uiState.value = _uiState.value.copy(unlockPauseActive = false)
+        }
     }
 
     /** Re-reads installed apps, drops uninstalled/hidden components from the layout, and

@@ -33,6 +33,10 @@ class MainActivity : FragmentActivity() {
     override fun onResume() {
         super.onResume()
         viewModel.refreshApps()
+        // Decide se questo resume segue davvero uno sblocco (non un ritorno alla home da
+        // un'altra app) e, se sei in una sessione di Concentrazione, apre il respiro breve
+        // prima che la griglia sia toccabile.
+        viewModel.onLauncherResumed()
     }
 
     /** Leaving the launcher for any reason — opening an app, screen off, task switcher —
