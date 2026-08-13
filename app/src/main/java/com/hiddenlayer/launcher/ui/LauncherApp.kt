@@ -184,13 +184,15 @@ fun LauncherApp(
         )
     }
 
-    // È una finestra a sé (vedi UnlockPauseOverlay), quindi copre tutto senza doversi
-    // preoccupare di dove sta nella pila di questa composizione. Niente AnimatedVisibility
-    // attorno: l'apertura è la macchia stessa che si allarga, e l'uscita arriva quando il
-    // cerchio ha già scoperto tutto lo schermo — una dissolvenza in più si vedrebbe come un
-    // secondo sfarfallio dopo che l'animazione è finita.
-    if (state.unlockPauseActive) {
-        UnlockPauseOverlay(durationMillis = state.unlockPauseMillis)
+    // È una finestra a sé (vedi HomeLockOverlay), quindi copre tutto e intercetta i tocchi
+    // senza doversi preoccupare di dove sta nella pila di questa composizione. Niente
+    // AnimatedVisibility attorno: l'uscita è la macchia stessa che finisce di aprirsi, e una
+    // dissolvenza in più si vedrebbe come un secondo sfarfallio a animazione già conclusa.
+    if (state.homeLockActive) {
+        HomeLockOverlay(
+            requestsSoFar = state.homeLockRequests,
+            onUnlock = viewModel::unlockHome
+        )
     }
 }
 

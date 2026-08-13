@@ -37,16 +37,19 @@ class FocusRepository(context: Context) {
     }
 
     /**
-     * Quante volte hai sbloccato il telefono da quando è iniziata la sessione in corso: è ciò
-     * che fa allungare il respiro a ogni sblocco successivo.
+     * Quante volte hai chiesto il telefono ("Mi serve il telefono") da quando è iniziata la
+     * sessione in corso.
+     *
+     * Non serve a impedire niente: viene mostrato dalla schermata di blocco perché rendere
+     * visibile la ripetizione è il punto — una volta può avere un motivo, la quinta molto meno.
      *
      * Sta nelle preferenze e non in memoria perché una sessione dura ore e MIUI chiude
      * volentieri il launcher in background: tenendolo in RAM, il conteggio si azzererebbe da
      * solo proprio nelle sessioni lunghe, che sono quelle in cui serve.
      */
-    fun getSessionUnlockCount(): Int = prefs.getInt(KEY_UNLOCKS, 0)
+    fun getSessionPhoneRequests(): Int = prefs.getInt(KEY_UNLOCKS, 0)
 
-    fun setSessionUnlockCount(count: Int) {
+    fun setSessionPhoneRequests(count: Int) {
         prefs.edit().putInt(KEY_UNLOCKS, count).apply()
     }
 

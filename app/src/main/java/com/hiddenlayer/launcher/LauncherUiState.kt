@@ -53,13 +53,13 @@ data class LauncherUiState(
     val unlockError: Boolean = false,
     /** Cleared every time the launcher is left, so the hidden page re-locks itself. */
     val vaultUnlocked: Boolean = false,
-    /** Il respiro di qualche secondo dopo uno sblocco vero (non un ritorno alla home da
-     * un'app), acceso solo durante la Concentrazione. Cambia due volte per attivazione, come
-     * `focusToastVisible`: può stare qui senza far ricomporre nulla che ticchetti sul serio. */
-    val unlockPauseActive: Boolean = false,
-    /** Quanto dura *questo* respiro: cresce a ogni sblocco della stessa sessione, quindi non
-     * è una costante e va portata fin dentro l'animazione. */
-    val unlockPauseMillis: Int = 0,
+    /** La home è chiusa dopo uno sblocco vero (non un ritorno da un'app), durante la
+     * Concentrazione: non si riapre da sola, serve chiedere il telefono. Cambia due volte per
+     * attivazione, come `focusToastVisible`, quindi non fa ricomporre niente di continuo. */
+    val homeLockActive: Boolean = false,
+    /** Quante volte hai chiesto il telefono in questa sessione. Mostrato sulla schermata di
+     * blocco dalla seconda in poi: è la ripetizione il sintomo, non la singola volta. */
+    val homeLockRequests: Int = 0,
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,

@@ -162,24 +162,29 @@ direttamente all'app di destinazione, il launcher non lo vede nemmeno. Per
 un blocco vero serve la Modalità concentrazione di MIUI, che agisce a
 livello di sistema.
 
-### Il respiro dopo lo sblocco
+### La home chiusa dopo lo sblocco
 
 Durante una sessione, il primo ritorno alla home dopo uno sblocco vero (non
-un rientro da un'app che hai chiuso) copre lo schermo con una macchia opaca
-che si allarga piano dal centro, scoprendo la home poco per volta finché non
-è tutta visibile. Niente testo, niente domande: non è un rimprovero, solo un
-momento fermo prima del gesto automatico "sblocco → tocco la prima cosa che
-vedo". Non è annullabile né toccando lo schermo né con il tasto indietro — un
-modo per saltarlo sarebbe un modo per non farlo mai. Fuori da una sessione
-non succede niente: è pensato per il momento in cui prendi il telefono senza
-un motivo preciso, che è esattamente quando la Concentrazione è già lo
-strumento giusto.
+un rientro da un'app che hai chiuso) la trova **chiusa**: lo schermo è
+coperto e la griglia non risponde. Non si riapre da sola — per usare il
+telefono devi chiederlo, toccando **"Mi serve il telefono"**. Allora una
+macchia si allarga dal centro e scopre la home.
 
-**L'attesa si allunga a ogni sblocco della stessa sessione**: 3 secondi il
-primo, poi 2 in più ogni volta, fino a un massimo di 15. Il primo sblocco può
-avere un motivo — è la ripetizione a essere il sintomo, quindi è la
-ripetizione a costare. Il conteggio riparte da zero all'inizio di ogni nuova
-sessione, e sopravvive alla chiusura del launcher in background.
+Prima era un'attesa di qualche secondo, e non funzionava: un ritardo passivo
+non interrompe l'impulso, lo rimanda — guardi lo schermo pensando all'app che
+volevi aprire e poi la apri lo stesso. Chiedere è una decisione, aspettare no.
+
+**La via d'uscita c'è sempre**, di proposito: a differenza delle app che
+bloccano il telefono davvero, qui puoi passare quando ti serve. Quello che
+cambia è che passare costa un gesto intenzionale e lascia un segno — dalla
+seconda volta in poi la schermata ti dice **quante volte l'hai già chiesto in
+questa sessione**. Non è un rimprovero e non blocca niente: rendere visibile
+la ripetizione è l'unica cosa che sposta l'abitudine, ed è la stessa idea
+dello storico più sotto.
+
+Il conteggio riparte da zero a ogni nuova sessione e sopravvive alla chiusura
+del launcher in background. Se la sessione scade mentre la home è chiusa, il
+blocco cade con lei. Fuori da una sessione non succede niente.
 
 ## Riservatezza: cosa fa e cosa non può fare
 

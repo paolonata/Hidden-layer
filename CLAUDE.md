@@ -227,25 +227,37 @@ Le tre domande che discriminano:
 3. lento **subito dopo essere tornato da un'app**? → `onResume` →
    `refreshApps()`, che rilegge tutte le app e ridecodifica tutte le icone.
 
-### Il respiro dopo lo sblocco
+### La home chiusa dopo lo sblocco (`HomeLockOverlay`)
 
 Durante la Concentrazione, il primo ritorno alla home dopo uno sblocco vero
-apre qualche secondo di respiro prima che la griglia sia toccabile.
+la trova chiusa: si riapre **solo** chiedendo il telefono.
 
+- **Un'attesa passiva non funziona, ed è già stata provata e scartata.** La
+  prima versione era un respiro di N secondi che si apriva da solo, con la
+  durata che cresceva a ogni sblocco. L'utente l'ha bocciata: *"aspettare non
+  causa che io non prenda il telefono"* — un ritardo rimanda l'impulso invece
+  di interromperlo, perché guardi lo schermo pensando già all'app che volevi.
+  Ora la home resta chiusa finché non tocchi "Mi serve il telefono", che è una
+  **decisione** invece che un'attesa. Non riproporre il timer.
+- **La via d'uscita deve restare sempre disponibile.** Richiesta esplicita:
+  *"altre app che bloccano il telefono lo bloccano realmente ma io voglio
+  essere in grado di usarlo comunque se mi serve"*. Il costo è il gesto
+  intenzionale e il conteggio visibile (`homeLockRequests`, mostrato dalla
+  seconda volta in poi), non l'impossibilità di passare.
 - **`onResume` e `ACTION_USER_PRESENT` arrivano in ordine imprevedibile, e il
   primo tentativo dava per scontato il contrario.** Sbloccando, il launcher fa
   `onResume` **dietro** la schermata di blocco — appena lo schermo si accende
   — e il broadcast arriva solo dopo, a blocco tolto. Controllando il flag
-  dentro `onResume` non era ancora alzato, restava buono, e il respiro
+  dentro `onResume` non era ancora alzato, restava buono, e il blocco
   compariva al primo `onResume` successivo: bug reale, l'utente lo vedeva
   premendo il tasto home dalla schermata Concentrazione invece che sbloccando.
-  Ora `maybeStartUnlockPause()` è chiamata **da entrambi i lati** e parte chi
-  arriva per ultimo; `unlockedAtElapsed` (timestamp, non booleano) fa scartare
-  uno sblocco più vecchio di `UNLOCK_PAUSE_GRACE_MILLIS`, che è il caso "hai
+  Ora `maybeLockHome()` è chiamata **da entrambi i lati** e scatta chi arriva
+  per ultimo; `unlockedAtElapsed` (timestamp, non booleano) fa scartare uno
+  sblocco più vecchio di `HOME_LOCK_GRACE_MILLIS`, che è il caso "hai
   sbloccato dentro un'altra app e torni alla home molto dopo".
 - Serve anche `onLauncherPaused()` da `MainActivity.onPause`: senza sapere se
-  il launcher è davvero in primo piano, il respiro partirebbe alle sue spalle
-  mentre sei in un'altra app, e sarebbe già finito quando torni.
+  il launcher è davvero in primo piano, il blocco scatterebbe alle sue spalle
+  mentre sei in un'altra app.
 - `ACTION_USER_PRESENT` non è mai stato consegnabile a un receiver dichiarato
   nel manifest, nemmeno prima delle restrizioni sui broadcast impliciti di
   Android 8: va registrato a runtime (`ContextCompat.registerReceiver` con
@@ -254,40 +266,34 @@ apre qualche secondo di respiro prima che la griglia sia toccabile.
   l'activity è in primo piano — il launcher è quasi sempre vivo, essendo la
   home.
 - Scatta **solo se `focusActive`**: fuori da una sessione non succede niente.
-  Non è un freno sempre acceso — l'utente lo vuole legato alla Concentrazione,
-  non a ogni sblocco (chiesto esplicitamente, vedi `UnlockPauseOverlay.kt`).
-- `unlockPauseActive` sta invece in `uiState` (come `focusToastVisible`):
-  cambia due volte per attivazione, non ticchetta.
-- **Sfondo sfocato (`BlurredWallpaperBackground`), non nero pieno.** Il nero
-  era corretto nella sostanza ma fuori dal linguaggio visivo del launcher, e
-  l'utente l'ha trovato brutto.
+  Non è un freno sempre acceso — l'utente lo vuole legato alla Concentrazione
+  (chiesto esplicitamente). E `endSession` azzera `homeLockActive`: se la
+  sessione scade a home chiusa, altrimenti resteresti davanti a una schermata
+  che chiede il telefono per una sessione che non esiste più.
+- `homeLockActive` sta in `uiState` (come `focusToastVisible`): cambia due
+  volte per attivazione, non ticchetta.
 - **È un `Dialog`, non un `Box` dentro `LauncherApp`.** La finestra del
   launcher non arriva sotto la barra di stato e quella di navigazione, quindi
-  un overlay in composizione lasciava scoperte due strisce (sfondo nitido
-  sopra e sotto, sfocato in mezzo — segnalato con screenshot). Un `Dialog` è
-  una finestra a sé e con `FLAG_LAYOUT_NO_LIMITS` copre davvero tutto.
+  un overlay in composizione lasciava scoperte due strisce (segnalato con
+  screenshot). Servono **due** cose insieme: `FLAG_LAYOUT_NO_LIMITS` **e**
+  `layoutInDisplayCutoutMode` — con il solo primo il sistema tiene comunque la
+  finestra sotto il notch, e restava scoperto il bordo superiore mentre quello
+  inferiore era a posto (secondo screenshot). Essendo una finestra a sé blocca
+  anche i tocchi alla griglia sotto, senza doverla disabilitare a mano.
   L'alternativa — portare tutto il launcher edge-to-edge — cambierebbe il
   layout di ogni schermata per un problema che riguarda solo questa.
-- **L'effetto è una macchia che si allarga** (`BlendMode.Clear` su un
+- **L'apertura è una macchia che si allarga** (`BlendMode.Clear` su un
   `CompositingStrategy.Offscreen`, con un gradiente radiale per il bordo
-  sfumato), non un anello di avanzamento: scoprire lo schermo poco per volta
-  è la richiesta esplicita dell'utente. `Clear` ha bisogno del layer proprio,
+  sfumato): richiesta esplicita dell'utente, al posto dell'anello di
+  avanzamento che c'era prima. `Clear` ha bisogno del layer proprio,
   altrimenti cancella anche ciò che sta sotto nel buffer.
-- **La durata non è una costante**: cresce a ogni sblocco della stessa
-  sessione (`UNLOCK_PAUSE_BASE/STEP/MAX_MILLIS`) e viaggia in `uiState`
-  (`unlockPauseMillis`) fino all'animazione. Il conteggio sta in
-  `FocusRepository` (non in RAM) perché una sessione dura ore e MIUI chiude
-  volentieri il launcher; si azzera in `startFocus`, altrimenti la seconda
-  sessione della giornata partirebbe già col conto della prima.
-- L'anello è disegnato a mano con `Canvas`/`drawArc`, non con
-  `CircularProgressIndicator` di Material3: qui non si compila in locale
-  (§2), quindi non si scommette su parametri (`gapSize` e simili) che
-  potrebbero non esistere ancora nella versione del BOM in uso. Primitive
-  stabili da sempre, zero rischio.
-- **Non annullabile**, né con un tocco né con indietro (`BackHandler {}`
-  vuoto): un modo per saltarlo sarebbe un modo per non farlo mai. Sfondo
-  nero **opaco**, non un velo sulla home sotto — vederla già lì inviterebbe
-  a partire prima che l'anello finisca.
+- Il conteggio sta in `FocusRepository` (non in RAM) perché una sessione dura
+  ore e MIUI chiude volentieri il launcher; si azzera in `startFocus`,
+  altrimenti la seconda sessione della giornata partirebbe col conto della
+  prima.
+- **Niente scorciatoie per uscire**: `dismissOnBackPress` e
+  `dismissOnClickOutside` a false. Un modo per saltare la richiesta sarebbe un
+  modo per non farla mai.
 
 ---
 
