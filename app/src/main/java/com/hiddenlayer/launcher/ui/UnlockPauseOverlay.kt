@@ -1,5 +1,6 @@
 package com.hiddenlayer.launcher.ui
 
+import android.os.Build
 import android.view.WindowManager
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -67,6 +68,21 @@ fun UnlockPauseOverlay(durationMillis: Int) {
                 // macchia, e un dim aggiuntivo la renderebbe grigia invece che pulita.
                 setDimAmount(0f)
                 addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
+                // FLAG_LAYOUT_NO_LIMITS da solo non basta: senza dichiarare anche la modalità
+                // per il ritaglio del display, il sistema tiene comunque la finestra **sotto**
+                // il notch, e in cima resta una striscia scoperta — era il caso segnalato,
+                // col bordo inferiore coperto e quello superiore no.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    attributes = attributes.apply {
+                        layoutInDisplayCutoutMode =
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
+                            } else {
+                                WindowManager.LayoutParams
+                                    .LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                            }
+                    }
+                }
             }
         }
 
