@@ -140,6 +140,16 @@ questo file o se ne scrive un altro simile:
 - **`FLAG_LAYOUT_NO_LIMITS` da solo non copre il notch**: serve anche
   `layoutInDisplayCutoutMode`, altrimenti resta una striscia non attenuata in
   cima. Stesso bug già visto e corretto su `HomeLockOverlay`.
+- **`MATCH_PARENT` su questa finestra non è "tutto lo schermo".** A differenza
+  di `HomeLockOverlay` — un `Dialog`, legato al token della finestra del
+  launcher — questo è un `TYPE_APPLICATION_OVERLAY` a sé, e su MIUI/HyperOS
+  quel tipo di finestra viene ridimensionato per stare sotto le barre di
+  sistema anche con `FLAG_LAYOUT_NO_LIMITS`: restavano due strisce a piena
+  luminosità in cima e in fondo, segnalato dall'utente con screenshot. La
+  correzione chiede i pixel **fisici** reali (`Display.getRealSize`, deprecato
+  ma l'unico modo fino a `minSdk` 26) e li passa come larghezza/altezza
+  esplicite invece di `MATCH_PARENT`. Se si tocca di nuovo questo file, non
+  tornare a `MATCH_PARENT` "perché è più pulito": è quello che causava il bug.
 - `FLAG_NOT_TOUCHABLE` è ciò che rende il velo attraversabile. Di conseguenza
   `MAX_LEVEL` non arriva a 1: un velo opaco su una finestra che non riceve
   tocchi lascerebbe uno schermo nero senza modo di vedere dove premere per

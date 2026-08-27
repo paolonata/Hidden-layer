@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.PixelFormat
+import android.graphics.Point
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
@@ -90,15 +91,23 @@ class ScreenDimService : Service() {
             return
         }
 
+        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val screenSize = realScreenSize(windowManager)
+
         val view = View(this).apply { setBackgroundColor(veil) }
         val params = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
+            // Dimensioni reali esplicite, non MATCH_PARENT: questa è una finestra di overlay
+            // indipendente (TYPE_APPLICATION_OVERLAY), non legata al token della finestra del
+            // launcher come lo è invece HomeLockOverlay (un Dialog). Per questo tipo di
+            // finestra MIUI/HyperOS interpreta MATCH_PARENT come "l'area sotto le barre di
+            // sistema", anche con FLAG_LAYOUT_NO_LIMITS — restavano due strisce a piena
+            // luminosità in cima e in fondo, segnalato dall'utente. Chiedere esplicitamente i
+            // pixel reali dello schermo intero bypassa quella reinterpretazione.
+            screenSize.x,
+            screenSize.y,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             // NOT_TOUCHABLE è ciò che rende il velo attraversabile: i tocchi arrivano all'app
             // sotto come se non ci fosse. NOT_FOCUSABLE evita che rubi la tastiera.
-            // LAYOUT_NO_LIMITS lo fa arrivare sotto la barra di stato e quella di navigazione,
-            // altrimenti resterebbero due strisce a piena luminosità in cima e in fondo.
             WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                 WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
@@ -106,10 +115,11 @@ class ScreenDimService : Service() {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            // LAYOUT_NO_LIMITS da solo non basta: senza dichiarare anche la modalità per il
-            // ritaglio del display il sistema tiene la finestra **sotto** il notch, e in cima
-            // resta una striscia non attenuata. Trappola già pagata con la schermata di blocco
-            // della Concentrazione.
+            x = 0
+            y = 0
+            // LAYOUT_NO_LIMITS da solo non basta neanche per il notch: senza dichiarare anche
+            // la modalità per il ritaglio del display il sistema tiene la finestra **sotto**
+            // il notch. Trappola già pagata con la schermata di blocco della Concentrazione.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 layoutInDisplayCutoutMode =
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -120,7 +130,6 @@ class ScreenDimService : Service() {
             }
         }
 
-        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         // Se il sistema rifiuta comunque (ROM che revoca il permesso di fatto, come sa fare
         // MIUI), si spegne in modo pulito invece di far cadere il processo.
         runCatching { windowManager.addView(view, params) }
@@ -129,6 +138,17 @@ class ScreenDimService : Service() {
                 repository.setEnabled(false)
                 stopSelf()
             }
+    }
+
+    /** `getRealSize` è deprecato dall'API 30 ma resta l'unico modo, fino a `minSdk` 26, di
+     * avere i pixel **fisici** dello schermo intero — barre di sistema comprese — invece
+     * dell'area disponibile per una finestra "normale", che è quello che tornerebbero le
+     * alternative moderne se chiamate da un Service senza una finestra propria. */
+    @Suppress("DEPRECATION")
+    private fun realScreenSize(windowManager: WindowManager): Point {
+        val point = Point()
+        windowManager.defaultDisplay.getRealSize(point)
+        return point
     }
 
     private fun removeOverlay() {
