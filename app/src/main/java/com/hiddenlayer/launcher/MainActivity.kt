@@ -2,6 +2,7 @@ package com.hiddenlayer.launcher
 
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.fragment.app.FragmentActivity
@@ -37,6 +38,10 @@ class MainActivity : FragmentActivity() {
         // un'altra app) e, se sei in una sessione di Concentrazione, apre il respiro breve
         // prima che la griglia sia toccabile.
         viewModel.onLauncherResumed()
+        // Il permesso di overlay si concede da una schermata di sistema, quindi può essere
+        // cambiato mentre eravamo fuori. È anche il punto in cui il velo riparte se il
+        // risparmio energetico di MIUI ha ucciso il servizio nel frattempo.
+        viewModel.onOverlayPermissionChanged(Settings.canDrawOverlays(this))
     }
 
     /** Sblocchi ed entri direttamente in un'altra app: il launcher non è in primo piano, e il

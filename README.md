@@ -186,6 +186,41 @@ Il conteggio riparte da zero a ogni nuova sessione e sopravvive alla chiusura
 del launcher in background. Se la sessione scade mentre la home è chiusa, il
 blocco cade con lei. Fuori da una sessione non succede niente.
 
+## Luminosità extra
+
+Per scendere **sotto la luminosità minima di sistema**, quando anche il minimo
+è troppo — di notte, a letto, al buio. Si accende da **tocco lungo su un punto
+vuoto della home → "Luminosità extra"**, dove c'è anche il cursore
+dell'intensità. Vale su tutto il telefono, non solo sul launcher.
+
+Tecnicamente è un velo nero sovrapposto a tutto. È l'unica cosa che un
+overlay sa fare *bene*: sovrapporre del nero riduce la luce in modo esatto,
+senza gli effetti collaterali che avrebbe un velo colorato. Per questo c'è un
+cursore solo e nessuna tinta.
+
+Serve il permesso **"Visualizza sopra altre app"**, che si concede solo da una
+schermata di sistema: te la apre il pulsante nella schermata, e viene chiesto
+**solo se accendi l'attenuazione**. Senza permesso non succede niente, e la
+schermata te lo dice invece di far finta di funzionare.
+
+**Il cursore non arriva al 100% di proposito**: il velo non riceve i tocchi,
+quindi con uno schermo completamente nero non vedresti più dove premere per
+riaccenderlo. Per spegnerla da qualunque app c'è il pulsante **"Spegni"**
+sulla notifica — con lo schermo molto scuro, tornare alla home a cercare un
+interruttore è scomodo.
+
+Limiti dichiarati: non copre la schermata di blocco né alcune finestre di
+sistema, e le app che dichiarano `HIDE_OVERLAY_WINDOWS` (tipicamente quelle
+bancarie) la fanno sparire di proposito mentre sono in primo piano. **Su
+MIUI/HyperOS** il velo vive in un servizio in foreground con notifica
+persistente, e il risparmio energetico lo chiude volentieri: se l'attenuazione
+sparisce da sola è quello, e va messo Hidden Layer tra le app **senza
+restrizioni di batteria**. Rientrando nel launcher riparte comunque da sé.
+
+**Se il tuo Android ha già "Luminosità extra" tra le impostazioni di
+accessibilità, usa quella**: agisce sul display invece di sovrapporre un velo,
+quindi non ha nessuno di questi limiti.
+
 ## Riservatezza: cosa fa e cosa non può fare
 
 **Cosa fa.** Le app nascoste spariscono da home, cassetto e ricerca del

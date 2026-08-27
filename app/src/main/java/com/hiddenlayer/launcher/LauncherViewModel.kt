@@ -11,10 +11,12 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.AppRepository
+import com.hiddenlayer.launcher.data.DimRepository
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.FocusStatsRepository
 import com.hiddenlayer.launcher.data.HiddenAppsRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
+import com.hiddenlayer.launcher.dim.ScreenDimService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -39,6 +41,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val homeLayoutRepository = HomeLayoutRepository(application)
     private val focusRepository = FocusRepository(application)
     private val focusStatsRepository = FocusStatsRepository(application)
+    private val dimRepository = DimRepository(application)
 
     private val _uiState = MutableStateFlow(LauncherUiState())
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
@@ -89,6 +92,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     init {
         refreshApps()
         restoreFocusSession()
+        restoreDim()
         ContextCompat.registerReceiver(
             application,
             userPresentReceiver,
@@ -105,6 +109,49 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     fun onLauncherResumed() {
         launcherResumed = true
         maybeLockHome()
+    }
+
+    // ----- Luminosità extra -----
+
+    private fun restoreDim() {
+        _uiState.value = _uiState.value.copy(
+            dimEnabled = dimRepository.isEnabled(),
+            dimLevel = dimRepository.getLevel()
+        )
+    }
+
+    fun setDimEnabled(enabled: Boolean) {
+        dimRepository.setEnabled(enabled)
+        _uiState.value = _uiState.value.copy(dimEnabled = enabled)
+        applyDim(enabled && _uiState.value.dimOverlayAllowed)
+    }
+
+    fun setDimLevel(value: Float) {
+        dimRepository.setLevel(value)
+        _uiState.value = _uiState.value.copy(dimLevel = dimRepository.getLevel())
+        val current = _uiState.value
+        if (current.dimEnabled && current.dimOverlayAllowed) applyDim(true)
+    }
+
+    /** Richiamato a ogni rientro nel launcher: il permesso si concede da una schermata di
+     * sistema, quindi può essere cambiato mentre eravamo fuori. È anche il punto in cui il
+     * velo riparte da solo se il risparmio energetico di MIUI ha ucciso il servizio. */
+    fun onOverlayPermissionChanged(canDrawOverlays: Boolean) {
+        _uiState.value = _uiState.value.copy(dimOverlayAllowed = canDrawOverlays)
+        if (_uiState.value.dimEnabled && canDrawOverlays) applyDim(true)
+    }
+
+    /** False quando il sistema non espone la schermata del permesso: chi chiama lo dice
+     * all'utente invece di lasciare il pulsante senza effetto. */
+    fun openOverlayPermissionSettings(): Boolean = appRepository.openOverlayPermissionSettings()
+
+    fun openDim() {
+        _uiState.value = _uiState.value.copy(screen = Screen.DIM)
+    }
+
+    private fun applyDim(show: Boolean) {
+        val context = getApplication<Application>()
+        if (show) ScreenDimService.start(context) else ScreenDimService.stop(context)
     }
 
     fun onLauncherPaused() {
@@ -639,7 +686,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         // Si torna sempre alla home, anche dal cassetto normale: riaccendendo lo schermo su una
         // schermata aperta prima di andarsene si perde il senso di dove si è, e per le nascoste
         // sarebbe anche un'anteprima gratis di cosa c'era dentro.
-        val leavingVault = current.screen != Screen.HOME && current.screen != Screen.FOCUS
+        // DIM è esclusa come FOCUS, e qui non è solo coerenza: da quella schermata si apre la
+        // schermata di sistema del permesso di overlay, il che fa passare il launcher da
+        // onStop. Mandandolo alla home, al ritorno ti ritroveresti altrove e non vedresti
+        // l'avviso sparire — cioè proprio la conferma che il permesso è stato concesso.
+        val leavingVault = current.screen != Screen.HOME &&
+            current.screen != Screen.FOCUS &&
+            current.screen != Screen.DIM
         _uiState.value = current.copy(
             vaultUnlocked = false,
             unlockError = false,

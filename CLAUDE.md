@@ -123,6 +123,41 @@ buchi**; il dock è una **griglia a slot fissi** (`DOCK_ROWS × DOCK_COLUMNS`,
 con `null` dove è vuoto) — serve a far atterrare un drop nella riga giusta.
 Un'app sta **o nel dock o nella home, mai in entrambi**.
 
+### Luminosità extra (`ScreenDimService`)
+
+Un velo nero in una finestra `TYPE_APPLICATION_OVERLAY`, tenuta in piedi da un
+servizio in foreground. Trappole già pagate, tutte da rispettare se si tocca
+questo file o se ne scrive un altro simile:
+
+- `startForeground` va chiamato **per primo in `onStartCommand`, anche sul
+  ramo che spegne**: arrivando da `startForegroundService` il sistema pretende
+  la promozione entro pochi secondi, altrimenti uccide il processo con
+  `ForegroundServiceDidNotStartInTimeException`. Per questo `stop()` dal
+  launcher usa `stopService`, che quel vincolo non ce l'ha.
+- Da `targetSdk` 34 il servizio deve dichiarare `foregroundServiceType`: qui
+  `specialUse` con la `<property>` che lo motiva, perché nessuno dei tipi
+  previsti descrive "tenere in piedi un overlay".
+- **`FLAG_LAYOUT_NO_LIMITS` da solo non copre il notch**: serve anche
+  `layoutInDisplayCutoutMode`, altrimenti resta una striscia non attenuata in
+  cima. Stesso bug già visto e corretto su `HomeLockOverlay`.
+- `FLAG_NOT_TOUCHABLE` è ciò che rende il velo attraversabile. Di conseguenza
+  `MAX_LEVEL` non arriva a 1: un velo opaco su una finestra che non riceve
+  tocchi lascerebbe uno schermo nero senza modo di vedere dove premere per
+  spegnerlo.
+- Il permesso di overlay si concede **solo da una schermata di sistema** e può
+  sparire mentre siamo fuori: viene riletto a ogni `onResume`
+  (`onOverlayPermissionChanged`), che è anche il punto in cui il velo riparte
+  se MIUI ha ucciso il servizio.
+- `Screen.DIM` è **escluso da `lockVault`** come `FOCUS`: da lì si apre la
+  schermata di sistema del permesso, quindi il launcher passa da `onStop` —
+  mandandolo alla home, al ritorno l'utente non vedrebbe sparire l'avviso, che
+  è la conferma che il permesso è stato concesso.
+
+Attenuare è l'unica cosa che un overlay sa fare bene: sovrapporre del nero
+riduce la luce in modo esatto. **Non aggiungere una tinta qui** — un velo
+colorato *aggiunge* luce sul nero e appiattisce il contrasto (§ storia della
+modalità rossa, provata e rimossa su richiesta dell'utente).
+
 ---
 
 ## 4. Reattività: cosa è già stato scoperto

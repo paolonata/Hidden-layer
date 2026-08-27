@@ -78,6 +78,15 @@ class AppRepository(private val context: Context) {
         Intent(Intent.ACTION_SET_WALLPAPER).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK }
     )
 
+    /** La schermata di sistema per "Visualizza sopra altre app": è l'unico modo di concedere
+     * SYSTEM_ALERT_WINDOW, non esiste una richiesta a comparsa. */
+    fun openOverlayPermissionSettings(): Boolean = start(
+        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+            data = Uri.fromParts("package", context.packageName, null)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+    )
+
     /** startActivity senza far cadere il launcher: un'eccezione qui è un crash del processo
      * home, che il sistema riavvia subito — da fuori sembra che il menu non abbia fatto
      * niente, ed è esattamente il modo in cui questo bug si era presentato. */

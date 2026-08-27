@@ -22,6 +22,7 @@ import com.hiddenlayer.launcher.Screen
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
+import com.hiddenlayer.launcher.ui.screens.DimScreen
 import com.hiddenlayer.launcher.ui.screens.DrawerScreen
 import com.hiddenlayer.launcher.ui.screens.FocusScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenManagerScreen
@@ -32,7 +33,7 @@ import com.hiddenlayer.launcher.ui.screens.HomeScreen
  * (slides up) — e.g. HIDDEN_MANAGER is nested one level under the drawer. */
 private fun screenDepth(screen: Screen): Int = when (screen) {
     Screen.HOME -> 0
-    Screen.DRAWER, Screen.HIDDEN_DRAWER, Screen.FOCUS -> 1
+    Screen.DRAWER, Screen.HIDDEN_DRAWER, Screen.FOCUS, Screen.DIM -> 1
     Screen.HIDDEN_MANAGER -> 2
 }
 
@@ -116,6 +117,24 @@ fun LauncherApp(
                 onDone = viewModel::backToHome
             )
 
+            Screen.DIM -> DimScreen(
+                state = state,
+                onToggle = viewModel::setDimEnabled,
+                onLevelChange = viewModel::setDimLevel,
+                onRequestOverlayPermission = {
+                    // Non è un permesso che si chiede con una richiesta a comparsa: si
+                    // concede solo da questa schermata di sistema.
+                    if (!viewModel.openOverlayPermissionSettings()) {
+                        Toast.makeText(
+                            context,
+                            "Questo sistema non espone la schermata del permesso. Cercalo a mano: Impostazioni → App → Hidden Layer → Visualizza sopra altre app.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                },
+                onDone = viewModel::backToHome
+            )
+
             Screen.HIDDEN_MANAGER -> HiddenManagerScreen(
                 state = state,
                 onToggleHidden = viewModel::toggleHidden,
@@ -178,6 +197,12 @@ fun LauncherApp(
                 ) {
                     showEmptyPageMenu = false
                     viewModel.openFocus()
+                },
+                MenuAction(
+                    if (state.dimEnabled) "Luminosità extra (attiva)" else "Luminosità extra"
+                ) {
+                    showEmptyPageMenu = false
+                    viewModel.openDim()
                 }
             ),
             onDismiss = { showEmptyPageMenu = false }

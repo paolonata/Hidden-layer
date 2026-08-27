@@ -2,6 +2,7 @@ package com.hiddenlayer.launcher
 
 import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
+import com.hiddenlayer.launcher.data.DimRepository
 import com.hiddenlayer.launcher.data.FocusBreak
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
@@ -18,7 +19,7 @@ import com.hiddenlayer.launcher.data.HomeLayoutRepository
  * rivalutato e si riapriva il cassetto normale. Due valori distinti dell'enum sono due voci
  * distinte per `AnimatedContent`, quindi la schermata giusta viene composta da zero.
  */
-enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER, FOCUS }
+enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER, FOCUS, DIM }
 
 enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
 
@@ -60,6 +61,14 @@ data class LauncherUiState(
     /** Quante volte hai chiesto il telefono in questa sessione. Mostrato sulla schermata di
      * blocco dalla seconda in poi: è la ripetizione il sintomo, non la singola volta. */
     val homeLockRequests: Int = 0,
+    // --- Luminosità extra ---
+    /** Cambia solo quando la accendi o la spegni: può stare qui senza costare niente. */
+    val dimEnabled: Boolean = false,
+    val dimLevel: Float = DimRepository.DEFAULT_LEVEL,
+    /** Se il permesso "Visualizza sopra altre app" è concesso. Senza, il velo non può esistere
+     * e va detto, invece di lasciar credere che sia rotto. Riletto a ogni rientro nel launcher,
+     * perché si concede da una schermata di sistema. */
+    val dimOverlayAllowed: Boolean = false,
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,
