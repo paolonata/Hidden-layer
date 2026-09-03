@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -351,7 +352,14 @@ fun HomeScreen(
                     )
                 }
         ) {
-            BoxWithConstraints(modifier = Modifier.weight(1f)) {
+            // La barra di stato la paga **solo la griglia**, non la Column che la contiene.
+            // Sembra un dettaglio ed è la differenza fra funzionare e no: il tracker dei gesti
+            // di questa Column confronta `offset.y` (coordinate della Column) con `dockZoneTop`
+            // (coordinate della radice), e i due coincidono solo finché la Column parte
+            // esattamente dove parte la radice. Spostando il padding qui dentro, il dock e il
+            // pannello sfumato continuano a riempire il bordo inferiore e le coordinate dei
+            // gesti restano quelle di prima.
+            BoxWithConstraints(modifier = Modifier.weight(1f).statusBarsPadding()) {
                 // As many rows as physically fit the screen, so a page fills up instead of
                 // stopping at a hardcoded row count.
                 val rowsPerPage = remember(maxHeight) {

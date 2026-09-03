@@ -3,9 +3,11 @@ package com.hiddenlayer.launcher.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -75,9 +77,14 @@ fun HiddenManagerScreen(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                Column {
+                // La barra di stato la paga la Column, non la TopAppBar: sopra di essa
+                // c'e' la maniglia, che altrimenti finirebbe sotto l'orologio di sistema.
+                // Per questo gli inset della TopAppBar sono azzerati — sommati a questi
+                // lascerebbero un buco alto quanto la barra.
+                Column(modifier = Modifier.statusBarsPadding()) {
                     DragHandle(onClose = onDone)
                     TopAppBar(
+                        windowInsets = WindowInsets(0, 0, 0, 0),
                         colors = TopAppBarDefaults.topAppBarColors(
                             containerColor = Color.Transparent,
                             titleContentColor = Color.White

@@ -5,6 +5,8 @@ import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.FragmentActivity
 import com.hiddenlayer.launcher.auth.BiometricHelper
 import com.hiddenlayer.launcher.ui.LauncherApp
@@ -17,6 +19,26 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.setBackgroundDrawableResource(android.R.color.transparent)
+
+        // **Edge-to-edge: la finestra arriva sotto la barra di stato e sotto quella di
+        // navigazione.** Senza questa riga il sistema rimpicciolisce la finestra per stare fra
+        // le due barre, e quelle due strisce non appartengono al launcher: sulla home ci si
+        // vedeva lo sfondo di sistema al posto della griglia, e in DUMB restavano fuori dal
+        // fondo nero — due bande chiare in cima e in fondo a una schermata che deve essere
+        // tutta spenta.
+        //
+        // Da qui in poi **le barre non sono più padding gratuito**: ogni schermata deve
+        // chiedersi i propri inset, o il contenuto ci finisce sotto. Il punto fisso è che
+        // sfondi e superfici (lo sfondo sfocato, il pannello del dock, il nero di DUMB)
+        // riempiono tutto lo schermo, mentre il contenuto toccabile si tiene dentro
+        // `statusBarsPadding` / `navigationBarsPadding`.
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // Il launcher è scuro ovunque: le icone di sistema restano chiare in entrambe le
+        // barre. Senza dirlo, su una ROM in tema chiaro diventerebbero nere su nero.
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            isAppearanceLightStatusBars = false
+            isAppearanceLightNavigationBars = false
+        }
 
         setContent {
             HiddenLayerTheme {

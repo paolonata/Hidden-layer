@@ -218,6 +218,38 @@ prese per una ragione precisa:
   conferma sarebbe solo un ostacolo. E `maybeLockHome` non scatta in DUMB: due
   conferme per fare una telefonata.
 
+### Edge-to-edge: la finestra arriva sotto le barre di sistema
+
+`MainActivity` chiama `WindowCompat.setDecorFitsSystemWindows(window, false)`.
+Senza, il sistema rimpicciolisce la finestra per stare **fra** la barra di
+stato e quella di navigazione, e quelle due strisce non appartengono al
+launcher: si vedeva lo sfondo di sistema al posto della griglia, e in DUMB
+restavano due bande chiare in cima e in fondo a una schermata che deve essere
+tutta spenta. Segnalato dall'utente per entrambe le modalità.
+
+Le regole che ne discendono, da rispettare in ogni schermata nuova:
+
+- **Sfondi e superfici riempiono tutto**, il contenuto toccabile si tiene
+  dentro `statusBarsPadding` / `navigationBarsPadding` / `systemBarsPadding`.
+  È tutto il punto: `BlurredWallpaperBackground`, il pannello del dock e il
+  nero di `DumbScreen` devono arrivare ai bordi fisici.
+- Le barre di sistema sono già trasparenti da `themes.xml`; le icone sono
+  forzate chiare (`isAppearanceLight*Bars = false`), perché il launcher è
+  scuro ovunque e su una ROM in tema chiaro diventerebbero nere su nero.
+- **Il padding va alla `Column` che contiene maniglia + `TopAppBar`, e gli
+  inset della `TopAppBar` vanno azzerati** (`windowInsets = WindowInsets(0,
+  0, 0, 0)`). La `TopAppBar` di Material3 si paga da sola la barra di stato:
+  lasciandola fare, la maniglia sopra di lei finisce sotto l'orologio; se si
+  paddano entrambe resta un buco alto quanto la barra.
+- **In `HomeScreen` il padding sta sulla griglia, non sulla `Column`.** Sembra
+  un dettaglio ed è la differenza fra funzionare e no: il tracker dei gesti
+  della `Column` confronta `offset.y` (coordinate della `Column`) con
+  `dockZoneTop` (coordinate della radice, via `positionInRoot`), e i due
+  coincidono solo finché la `Column` parte dove parte la radice. Paddando la
+  `Column` si sposterebbero le zone di swipe di tutta l'altezza della barra.
+  Il dock si paga la sua barra di navigazione dentro `DockRow(0)`, così il
+  pannello traslucido arriva comunque al bordo.
+
 ---
 
 ## 4. Reattività: cosa è già stato scoperto
@@ -367,16 +399,16 @@ la trova chiusa: si riapre **solo** chiedendo il telefono.
   che chiede il telefono per una sessione che non esiste più.
 - `homeLockActive` sta in `uiState` (come `focusToastVisible`): cambia due
   volte per attivazione, non ticchetta.
-- **È un `Dialog`, non un `Box` dentro `LauncherApp`.** La finestra del
-  launcher non arriva sotto la barra di stato e quella di navigazione, quindi
-  un overlay in composizione lasciava scoperte due strisce (segnalato con
-  screenshot). Servono **due** cose insieme: `FLAG_LAYOUT_NO_LIMITS` **e**
+- **È un `Dialog`, non un `Box` dentro `LauncherApp`.** All'epoca la finestra
+  del launcher non arrivava sotto la barra di stato e quella di navigazione,
+  quindi un overlay in composizione lasciava scoperte due strisce (segnalato
+  con screenshot). Servono **due** cose insieme: `FLAG_LAYOUT_NO_LIMITS` **e**
   `layoutInDisplayCutoutMode` — con il solo primo il sistema tiene comunque la
   finestra sotto il notch, e restava scoperto il bordo superiore mentre quello
-  inferiore era a posto (secondo screenshot). Essendo una finestra a sé blocca
-  anche i tocchi alla griglia sotto, senza doverla disabilitare a mano.
-  L'alternativa — portare tutto il launcher edge-to-edge — cambierebbe il
-  layout di ogni schermata per un problema che riguarda solo questa.
+  inferiore era a posto (secondo screenshot). Da quando il launcher è
+  edge-to-edge (§ sotto) un `Box` basterebbe, ma resta un `Dialog`: essendo una
+  finestra a sé blocca anche i tocchi alla griglia sotto, senza doverla
+  disabilitare a mano.
 - **L'apertura è una macchia che si allarga** (`BlendMode.Clear` su un
   `CompositingStrategy.Offscreen`, con un gradiente radiale per il bordo
   sfumato): richiesta esplicita dell'utente, al posto dell'anello di

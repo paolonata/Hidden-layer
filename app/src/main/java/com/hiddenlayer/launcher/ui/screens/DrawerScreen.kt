@@ -13,9 +13,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
@@ -188,9 +191,14 @@ private fun AllAppsPage(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                Column {
+                // La barra di stato la paga la Column, non la TopAppBar: sopra di essa
+                // c'e' la maniglia, che altrimenti finirebbe sotto l'orologio di sistema.
+                // Per questo gli inset della TopAppBar sono azzerati — sommati a questi
+                // lascerebbero un buco alto quanto la barra.
+                Column(modifier = Modifier.statusBarsPadding()) {
                     DragHandle(onClose = onClose)
                     TopAppBar(
+                        windowInsets = WindowInsets(0, 0, 0, 0),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                         title = {
                             AppSearchField(
@@ -240,9 +248,14 @@ private fun HiddenAppsPage(
         Scaffold(
             containerColor = Color.Transparent,
             topBar = {
-                Column {
+                // La barra di stato la paga la Column, non la TopAppBar: sopra di essa
+                // c'e' la maniglia, che altrimenti finirebbe sotto l'orologio di sistema.
+                // Per questo gli inset della TopAppBar sono azzerati — sommati a questi
+                // lascerebbero un buco alto quanto la barra.
+                Column(modifier = Modifier.statusBarsPadding()) {
                     DragHandle(onClose = onClose)
                     TopAppBar(
+                        windowInsets = WindowInsets(0, 0, 0, 0),
                         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
                         title = {
                             AppSearchField(
@@ -314,7 +327,9 @@ private fun UnlockPage(
     var pin by remember { mutableStateOf("") }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
+        // Il contenuto è centrato, ma con la tastiera del PIN aperta la riga dei pulsanti
+        // scorre verso l'alto: senza gli inset finirebbe sotto la barra di stato.
+        modifier = Modifier.fillMaxSize().systemBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
