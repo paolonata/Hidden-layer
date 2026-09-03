@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Serve dall'API 26 per poter chiedere al sistema di disinstallare un'app: senza,
@@ -15,6 +16,16 @@
          non mentre guardi la home. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+
+    <!-- Modalità DUMB: la scala di grigi su tutto il telefono passa dal daltonizzatore di
+         sistema, e scriverci richiede questo permesso. È di livello "signature", quindi il
+         sistema NON lo concede a un'app normale: va dato una volta sola da computer con
+             adb shell pm grant com.hiddenlayer.launcher android.permission.WRITE_SECURE_SETTINGS
+         Dichiararlo qui è ciò che rende possibile quel comando. Senza, la modalità DUMB
+         funziona lo stesso: il grigio resta dentro il launcher. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Required on Android 11+ to enumerate other apps' launcher activities
          without requesting the broad QUERY_ALL_PACKAGES permission. -->

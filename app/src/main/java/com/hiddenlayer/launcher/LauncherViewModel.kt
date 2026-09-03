@@ -2,6 +2,7 @@ package com.hiddenlayer.launcher
 
 import android.app.Application
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -12,11 +13,13 @@ import androidx.lifecycle.viewModelScope
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.AppRepository
 import com.hiddenlayer.launcher.data.DimRepository
+import com.hiddenlayer.launcher.data.DumbRepository
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.FocusStatsRepository
 import com.hiddenlayer.launcher.data.HiddenAppsRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.dim.ScreenDimService
+import com.hiddenlayer.launcher.dumb.SystemGrayscale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -42,6 +45,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private val focusRepository = FocusRepository(application)
     private val focusStatsRepository = FocusStatsRepository(application)
     private val dimRepository = DimRepository(application)
+    private val dumbRepository = DumbRepository(application)
 
     private val _uiState = MutableStateFlow(LauncherUiState())
     val uiState: StateFlow<LauncherUiState> = _uiState.asStateFlow()
@@ -60,6 +64,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     private var focusTicker: Job? = null
     private var focusToastJob: Job? = null
+
+    /** Aspetta la scadenza della sessione DUMB. Non è un countdown: non c'è niente da mostrare
+     * ogni secondo, la schermata dice solo fino a che ora. Un solo `delay` fino alla fine. */
+    private var dumbTimer: Job? = null
 
     /**
      * Quando è arrivato l'ultimo sblocco vero, o 0 se è già stato consumato.
@@ -93,6 +101,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         refreshApps()
         restoreFocusSession()
         restoreDim()
+        restoreDumbSession()
         ContextCompat.registerReceiver(
             application,
             userPresentReceiver,
@@ -108,6 +117,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
 
     fun onLauncherResumed() {
         launcherResumed = true
+        // Il `delay` che chiude la sessione DUMB non scorre mentre il telefono dorme: se la
+        // scadenza è passata a schermo spento, va constatata adesso invece di aspettare che
+        // il timer si svegli con ore di ritardo.
+        syncDumbExpiry()
         maybeLockHome()
     }
 
@@ -184,6 +197,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             return
         }
         unlockedAtElapsed = 0L
+        // In DUMB non serve: quella schermata è già la risposta a "l'ho preso in mano senza
+        // motivo", e sovrapporle un secondo blocco vorrebbe dire due conferme per fare una
+        // telefonata.
+        if (_uiState.value.dumbActive) return
         if (!_uiState.value.focusActive || _uiState.value.homeLockActive) return
 
         _uiState.value = _uiState.value.copy(homeLockActive = true)
@@ -252,11 +269,18 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 homeLayoutRepository.markSeeded()
             }
 
+            if (apps.isNotEmpty()) seedDumbChosen(apps, hidden)
+
             _uiState.value = _uiState.value.copy(
                 allApps = apps,
                 hiddenPackages = hidden,
                 homeComponents = home,
                 dockComponents = dock,
+                dumbFixed = resolveDumbFixed(apps),
+                dumbChosen = dumbRepository.getChosen().orEmpty(),
+                dumbDurationMinutes = dumbRepository.getDurationMinutes(),
+                dumbEarlyExits = dumbRepository.getEarlyExits(),
+                dumbGrayscaleAvailable = SystemGrayscale.isAvailable(getApplication<Application>()),
                 unlockRequired = hiddenAppsRepository.isUnlockRequired(),
                 vaultUnavailable = hiddenAppsRepository.isUnavailable(),
                 focusPackages = focusRepository.getDistractingPackages(),
@@ -284,6 +308,13 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     /** Every launch goes through here, so a muted app can be intercepted wherever it is
      * tapped from — home, dock or drawer — rather than only in one of them. */
     fun launchApp(app: AppInfo) {
+        // In DUMB le uniche app raggiungibili sono le cinque che hai scelto proprio per essere
+        // raggiungibili: la conferma della Concentrazione qui sarebbe un ostacolo messo davanti
+        // a una decisione già presa.
+        if (_uiState.value.dumbActive) {
+            appRepository.launch(app.componentName)
+            return
+        }
         if (_uiState.value.isMuted(app)) {
             _uiState.value = _uiState.value.copy(
                 frictionApp = app,
@@ -473,6 +504,175 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    // --- Modalità DUMB ------------------------------------------------------------------
+    //
+    // La Concentrazione mette in grigio le app che *tu* hai segnato e chiede conferma prima di
+    // aprirle: è un freno, e il telefono resta un telefono. DUMB è l'altra cosa: per il tempo
+    // che scegli il launcher smette di essere un launcher e diventa un elenco di cinque nomi.
+    // Niente icone, niente cassetto, niente ricerca, niente sfondo. Non è che le altre app
+    // siano "vietate" — semplicemente da qui non c'è più niente da toccare per arrivarci.
+
+    /**
+     * Telefono e messaggi, ripescati dall'elenco già caricato a partire dai package predefiniti
+     * di sistema. Se il dialer predefinito non ha un'icona nel launcher (capita con certe app
+     * di sistema) la posizione resta vuota invece di riempirsi con qualcosa a caso.
+     */
+    private fun resolveDumbFixed(apps: List<AppInfo>): List<ComponentName> =
+        listOfNotNull(appRepository.defaultDialerPackage(), appRepository.defaultSmsPackage())
+            .distinct()
+            .mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg }?.componentName }
+
+    /**
+     * La prima volta riempie le tre posizioni libere col default chiesto — WhatsApp, Amazon
+     * Music, Fotocamera — saltando quello che non è installato.
+     *
+     * Solo la prima volta, e la differenza è tutta in `getChosen() == null`: dopo, un elenco
+     * vuoto vuol dire che hai tolto tutto di proposito, e riseminarlo ti rimetterebbe in mano
+     * proprio le app da cui volevi stare lontano.
+     */
+    private fun seedDumbChosen(apps: List<AppInfo>, hidden: Set<String>) {
+        if (dumbRepository.getChosen() != null) return
+        val visible = apps.filter { it.packageName !in hidden }
+        val byDefaults = DumbRepository.DEFAULT_PACKAGES.mapNotNull { pkg ->
+            visible.firstOrNull { it.packageName == pkg }?.componentName
+        }
+        // La fotocamera cambia package su ogni ROM (com.android.camera, com.miui.camera,
+        // com.google.android.GoogleCamera…), quindi si cerca per sottostringa.
+        val camera = visible
+            .firstOrNull { it.packageName.contains(DumbRepository.CAMERA_HINT, ignoreCase = true) }
+            ?.componentName
+        dumbRepository.setChosen((byDefaults + listOfNotNull(camera)).take(DumbRepository.CHOSEN_SLOTS))
+    }
+
+    fun openDumbSettings() {
+        _uiState.value = _uiState.value.copy(screen = Screen.DUMB_SETTINGS)
+    }
+
+    fun setDumbDuration(minutes: Int) {
+        dumbRepository.setDurationMinutes(minutes)
+        _uiState.value = _uiState.value.copy(dumbDurationMinutes = dumbRepository.getDurationMinutes())
+    }
+
+    /** Apre il cassetto per riempire una delle tre posizioni libere. Il cassetto in modalità
+     * scelta mostra solo le app visibili, quindi una nascosta non può finire qui — e non
+     * comparirebbe comunque in una schermata non protetta. */
+    fun openDrawerForDumbPick(slot: Int) {
+        _uiState.value = _uiState.value.copy(
+            screen = Screen.DRAWER,
+            drawerMode = DrawerMode.PICK_FOR_DUMB,
+            pendingDumbSlot = slot,
+            query = ""
+        )
+    }
+
+    private fun setDumbSlot(slot: Int, component: ComponentName?) {
+        val slots = MutableList<ComponentName?>(DumbRepository.CHOSEN_SLOTS) { index ->
+            _uiState.value.dumbChosen.getOrNull(index)
+        }
+        if (slot !in slots.indices) return
+        slots[slot] = component
+        // La stessa app in due posizioni sarebbe solo una riga sprecata su cinque.
+        if (component != null) {
+            slots.forEachIndexed { index, existing ->
+                if (index != slot && existing == component) slots[index] = null
+            }
+        }
+        val chosen = slots.filterNotNull()
+        dumbRepository.setChosen(chosen)
+        _uiState.value = _uiState.value.copy(dumbChosen = chosen)
+    }
+
+    fun clearDumbSlot(slot: Int) = setDumbSlot(slot, null)
+
+    /**
+     * Avvia la sessione. La scadenza è un orario assoluto salvato su disco: MIUI chiude
+     * volentieri il launcher, e con un contatore in memoria per uscire dalla modalità
+     * basterebbe aspettare che il sistema faccia pulizia.
+     */
+    fun startDumb() {
+        val endsAt = System.currentTimeMillis() + _uiState.value.dumbDurationMinutes * 60_000L
+        dumbRepository.setEndsAt(endsAt)
+        startDumbTimer(endsAt)
+    }
+
+    private fun startDumbTimer(endsAt: Long) {
+        dumbTimer?.cancel()
+        SystemGrayscale.enable(getApplication<Application>())
+        _uiState.value = _uiState.value.copy(
+            dumbActive = true,
+            dumbEndsAt = endsAt,
+            // Entrando si chiude tutto quello che potrebbe restare aperto sopra: un menu
+            // contestuale o una richiesta di conferma sopravvissuti mostrerebbero il nome di
+            // un'app che in DUMB non deve esistere.
+            contextMenu = null,
+            frictionApp = null,
+            focusPickerVisible = false,
+            dumbExitPromptVisible = false
+        )
+        dumbTimer = viewModelScope.launch {
+            while (true) {
+                val remaining = endsAt - System.currentTimeMillis()
+                if (remaining <= 0) {
+                    endDumb()
+                    break
+                }
+                delay(remaining.coerceAtMost(60_000L))
+            }
+        }
+    }
+
+    /** Scadenza naturale: la sessione finisce e basta, non viene contata da nessuna parte. */
+    private fun endDumb() {
+        dumbTimer?.cancel()
+        dumbTimer = null
+        dumbRepository.setEndsAt(0L)
+        SystemGrayscale.disable(getApplication<Application>())
+        _uiState.value = _uiState.value.copy(
+            dumbActive = false,
+            dumbEndsAt = 0L,
+            dumbExitPromptVisible = false,
+            screen = Screen.HOME
+        )
+    }
+
+    /** Al ritorno in primo piano: il `delay` non scorre a telefono addormentato. */
+    private fun syncDumbExpiry() {
+        if (!_uiState.value.dumbActive) return
+        if (dumbRepository.getEndsAt() <= System.currentTimeMillis()) endDumb()
+    }
+
+    private fun restoreDumbSession() {
+        val endsAt = dumbRepository.getEndsAt()
+        if (endsAt > System.currentTimeMillis()) {
+            startDumbTimer(endsAt)
+        } else {
+            dumbRepository.setEndsAt(0L)
+            // Scaduta mentre il launcher era chiuso: il grigio di sistema è rimasto acceso,
+            // perché a spegnerlo è questo processo. Va tolto anche qui, o resterebbe finché
+            // non entri in DUMB un'altra volta.
+            SystemGrayscale.disable(getApplication<Application>())
+        }
+    }
+
+    fun requestDumbExit() {
+        _uiState.value = _uiState.value.copy(dumbExitPromptVisible = true)
+    }
+
+    fun dismissDumbExit() {
+        _uiState.value = _uiState.value.copy(dumbExitPromptVisible = false)
+    }
+
+    /**
+     * L'uscita anticipata c'è, ed è voluta: una modalità da cui non si esce viene disinstallata
+     * al primo imprevisto. Ma costa una conferma e **viene contata**, per sempre — è la stessa
+     * idea dello storico della Concentrazione: non impedire, rendere visibile la ripetizione.
+     */
+    fun confirmDumbExit() {
+        dumbRepository.setEarlyExits(dumbRepository.getEarlyExits() + 1)
+        _uiState.value = _uiState.value.copy(dumbEarlyExits = dumbRepository.getEarlyExits())
+        endDumb()
+    }
+
     fun openDrawer() {
         _uiState.value = _uiState.value.copy(
             screen = Screen.DRAWER,
@@ -523,6 +723,35 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 syncLayout()
                 backToHome()
             }
+            DrawerMode.PICK_FOR_DUMB -> {
+                setDumbSlot(_uiState.value.pendingDumbSlot, app.componentName)
+                // Si torna alle impostazioni DUMB, non alla home: le posizioni si riempiono
+                // quasi sempre più di una alla volta.
+                _uiState.value = _uiState.value.copy(
+                    screen = Screen.DUMB_SETTINGS,
+                    drawerMode = DrawerMode.BROWSE,
+                    pendingDumbSlot = -1,
+                    query = "",
+                    contextMenu = null
+                )
+            }
+        }
+    }
+
+    /** La chiusura del cassetto. Annullando la scelta di un'app per DUMB si torna alle sue
+     * impostazioni, non alla home: da lì eri partito, e ributtarti in home vorrebbe dire
+     * rifare tutto il giro per riempire la posizione successiva. */
+    fun closeDrawer() {
+        if (_uiState.value.drawerMode == DrawerMode.PICK_FOR_DUMB) {
+            _uiState.value = _uiState.value.copy(
+                screen = Screen.DUMB_SETTINGS,
+                drawerMode = DrawerMode.BROWSE,
+                pendingDumbSlot = -1,
+                query = "",
+                contextMenu = null
+            )
+        } else {
+            backToHome()
         }
     }
 
@@ -531,6 +760,7 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
             screen = Screen.HOME,
             drawerMode = DrawerMode.BROWSE,
             pendingDockSlot = -1,
+            pendingDumbSlot = -1,
             query = "",
             contextMenu = null
         )

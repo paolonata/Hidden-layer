@@ -221,6 +221,74 @@ restrizioni di batteria**. Rientrando nel launcher riparte comunque da sé.
 accessibilità, usa quella**: agisce sul display invece di sovrapporre un velo,
 quindi non ha nessuno di questi limiti.
 
+## Modalità DUMB
+
+La Concentrazione è un freno: mette in grigio le app che hai segnato e chiede
+conferma prima di aprirle, ma il telefono resta un telefono. **DUMB è l'altra
+cosa.** Per il tempo che scegli il launcher smette di essere un launcher e
+diventa un elenco di cinque nomi su fondo nero.
+
+Si prepara da **tocco lungo su un punto vuoto della home → "Modalità DUMB"**.
+
+**Cinque app, di cui due fisse.** Telefono e messaggi ci sono sempre e non si
+tolgono: sono la ragione per cui la modalità è usabile e non un esperimento.
+Non sono nemmeno salvate — vengono lette dal **dialer e dall'app SMS
+predefiniti di sistema**, così seguono l'app che usi davvero invece di
+diventare sbagliate il giorno che ne cambi una. Le altre tre le scegli tu; la
+prima volta sono già riempite con WhatsApp, Amazon Music e la fotocamera.
+
+**Niente icone.** Un'icona è un logo, cioè la cosa progettata apposta per
+farsi notare da mezzo metro. Cinque nomi scritti in grigio chiaro si leggono
+solo se li stai cercando. Sopra c'è l'ora, grande e spenta, e sotto un
+"fino alle 18:30" — un orario di fine, non un conto alla rovescia: sapere che
+"mancano 47 minuti" invita a ricontrollare, un'ora fissa la leggi una volta.
+
+**Non è la home con meno roba: è al posto della home.** Mentre DUMB è attiva
+il launcher non disegna nient'altro — niente dock, niente cassetto, niente
+sfondo, e nemmeno i rilevatori dei gesti che li aprirebbero. Non c'è uno
+swipe che "non funziona": non esiste proprio più niente da toccare. Un gesto
+che non fa niente lo scopri in due minuti di dita che scorrono per abitudine.
+
+**La scadenza è un orario assoluto salvato su disco**, non un contatore in
+memoria: MIUI chiude volentieri il launcher, e altrimenti per uscire dalla
+modalità basterebbe aspettare che il sistema faccia pulizia.
+
+**Uscire prima si può, ed è voluto** — una modalità da cui non si esce la
+disinstalli al primo imprevisto, ed è lo stesso motivo per cui la home chiusa
+durante la Concentrazione ha sempre un "Mi serve il telefono". Ma costa una
+conferma, e **viene contata per sempre**: il numero compare in fondo alla
+schermata DUMB e nelle sue impostazioni. Non serve a impedire niente — è la
+stessa idea dello storico della Concentrazione: rendere visibile la
+ripetizione, che è il sintomo vero.
+
+### Scala di grigi su tutto il telefono
+
+Opzionale, e vale la pena. Una schermata DUMB grigia dura quanto ci metti ad
+aprire WhatsApp: dentro l'app torna tutto a colori. Il colore è metà del
+motivo per cui il telefono attira.
+
+Entrando in DUMB il launcher prova a mettere in bianco e nero **l'intero
+telefono**, passando dal daltonizzatore di sistema in modalità monocromatica
+— la stessa cosa che fa l'accessibilità — e a rimetterlo com'era all'uscita.
+Serve `WRITE_SECURE_SETTINGS`, che Android **non concede a un'app normale**:
+si dà una volta sola, da computer col telefono collegato:
+
+```bash
+adb shell pm grant com.hiddenlayer.launcher android.permission.WRITE_SECURE_SETTINGS
+```
+
+Senza quel comando non succede niente e non è un errore: DUMB funziona lo
+stesso, il grigio resta dentro il launcher. Le impostazioni della modalità
+dicono quale dei due casi è il tuo, invece di lasciarti credere che sia rotto.
+
+### Cosa DUMB non può fare
+
+Le stesse cose che non può fare la Concentrazione, per lo stesso motivo — un
+launcher senza root non intercetta l'avvio delle app. **Le notifiche
+continuano ad arrivare e toccarle apre l'app.** Restano raggiungibili anche
+le app recenti e la ricerca di sistema. DUMB toglie la strada normale, quella
+che percorri senza accorgertene; non tutte le strade.
+
 ## Riservatezza: cosa fa e cosa non può fare
 
 **Cosa fa.** Le app nascoste spariscono da home, cassetto e ricerca del

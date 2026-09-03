@@ -168,6 +168,56 @@ riduce la luce in modo esatto. **Non aggiungere una tinta qui** — un velo
 colorato *aggiunge* luce sul nero e appiattisce il contrasto (§ storia della
 modalità rossa, provata e rimossa su richiesta dell'utente).
 
+### Modalità DUMB (`DumbScreen`, `DumbRepository`, `SystemGrayscale`)
+
+Cinque app e basta, per il tempo scelto. Le decisioni di struttura, tutte
+prese per una ragione precisa:
+
+- **`dumbActive` non è uno `Screen`, è un ramo prima dell'`AnimatedContent`.**
+  `LauncherApp` fa `return` dopo aver composto `DumbScreen`: mentre la modalità
+  è attiva non esiste nessun altro composable, quindi non esistono nemmeno i
+  rilevatori di gesto di home e cassetto (swipe su, swipe su a due dita,
+  doppio tap). Disabilitarli sarebbe stato equivalente sulla carta e diverso
+  nei fatti: un gesto che "non fa niente" si scopre in due minuti di dita che
+  scorrono per abitudine. Non spostare DUMB dentro l'enum `Screen`.
+- **Telefono e messaggi non si salvano.** Sono risolti a runtime da
+  `TelecomManager.getDefaultDialerPackage()` e
+  `Telephony.Sms.getDefaultSmsPackage()` (nessun permesso, nessuna voce
+  `<queries>`: tornano un package, e la componente si ripesca dall'elenco già
+  caricato). Salvarli vorrebbe dire che cambiando app predefinita ti ritrovi
+  una modalità di autodisciplina che non ti fa più chiamare nessuno.
+- **`endsAt` è un orario assoluto su disco**, come per la Concentrazione: con
+  un contatore in memoria, per uscire dalla modalità basterebbe aspettare che
+  MIUI chiuda il launcher. Il `delay` che chiude la sessione **non scorre a
+  telefono addormentato**, quindi `onLauncherResumed` richiama
+  `syncDumbExpiry()`.
+- **Nessuna icona in `DumbScreen`.** Non è estetica: un'icona è un logo, cioè
+  la cosa progettata per farsi notare da mezzo metro. Se qualcuno propone di
+  "renderla più usabile" aggiungendole, sta annullando la funzione.
+- **Orario di fine, non conto alla rovescia.** Guardare i minuti scendere è
+  già stare al telefono, e "mancano 47 minuti" invita a ricontrollare. Per lo
+  stesso motivo l'orologio si aggiorna ogni 20 s e non ogni secondo.
+- **L'uscita anticipata esiste e viene contata** (`getEarlyExits`). La via
+  d'uscita è obbligatoria — l'utente ha già respinto una volta l'idea del
+  blocco vero: *"altre app bloccano il telefono realmente ma io voglio essere
+  in grado di usarlo comunque se mi serve"*. Il conteggio è la stessa idea
+  dello storico della Concentrazione: rendere visibile la ripetizione.
+- **`SystemGrayscale` fallisce in silenzio ed è corretto così.** Il grigio su
+  tutto il telefono passa dal daltonizzatore di sistema
+  (`accessibility_display_daltonizer*` in `Settings.Secure`) e richiede
+  `WRITE_SECURE_SETTINGS`, permesso `signature` che si concede solo via ADB.
+  Il manifest lo dichiara (con `tools:ignore="ProtectedPermissions"`) perché è
+  quello che rende possibile il comando. `dumbGrayscaleAvailable` serve a
+  **dirlo** nelle impostazioni: senza, sembrerebbe rotto. Lo stato precedente
+  del daltonizzatore viene salvato e ripristinato — qualcuno potrebbe usarlo
+  davvero per daltonismo — e il salvataggio avviene solo se non c'è già,
+  altrimenti riavviare il launcher a sessione in corso registrerebbe il grigio
+  come "stato precedente" e resterebbe grigio per sempre.
+- La sessione DUMB **scavalca la conferma della Concentrazione**
+  (`launchApp`): le cinque app sono già una decisione presa, una seconda
+  conferma sarebbe solo un ostacolo. E `maybeLockHome` non scatta in DUMB: due
+  conferme per fare una telefonata.
+
 ---
 
 ## 4. Reattività: cosa è già stato scoperto

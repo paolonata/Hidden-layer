@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
+import android.provider.Telephony
+import android.telecom.TelecomManager
 import androidx.core.graphics.drawable.toBitmap
 
 class AppRepository(private val context: Context) {
@@ -34,6 +36,28 @@ class AppRepository(private val context: Context) {
             .distinctBy { it.componentName.flattenToString() }
             .sortedBy { it.label.lowercase() }
     }
+
+    /**
+     * Il package del dialer e quello dell'app SMS predefiniti, per la modalità DUMB.
+     *
+     * Sono **letti dal sistema, non scelti né salvati**: le due posizioni fisse devono seguire
+     * l'app che usi davvero. Salvarle vorrebbe dire che cambiando app di messaggistica
+     * predefinita ti ritrovi una modalità di autodisciplina che non ti fa più scrivere a
+     * nessuno, e l'unico modo di accorgertene è entrarci.
+     *
+     * Nessuna delle due richiede permessi né una voce in `<queries>`: tornano un nome di
+     * package, e la componente da lanciare viene poi ripescata dall'elenco già caricato con
+     * MAIN/LAUNCHER. Null su un dispositivo senza telefonia (tablet Wi-Fi), dove la posizione
+     * resta semplicemente vuota.
+     */
+    fun defaultDialerPackage(): String? = runCatching {
+        val telecom = context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager
+        telecom?.defaultDialerPackage
+    }.getOrNull()
+
+    fun defaultSmsPackage(): String? = runCatching {
+        Telephony.Sms.getDefaultSmsPackage(context)
+    }.getOrNull()
 
     fun launch(component: ComponentName) {
         val intent = Intent(Intent.ACTION_MAIN).apply {

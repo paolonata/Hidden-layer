@@ -3,6 +3,7 @@ package com.hiddenlayer.launcher
 import android.content.ComponentName
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.DimRepository
+import com.hiddenlayer.launcher.data.DumbRepository
 import com.hiddenlayer.launcher.data.FocusBreak
 import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
@@ -19,9 +20,9 @@ import com.hiddenlayer.launcher.data.HomeLayoutRepository
  * rivalutato e si riapriva il cassetto normale. Due valori distinti dell'enum sono due voci
  * distinte per `AnimatedContent`, quindi la schermata giusta viene composta da zero.
  */
-enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER, FOCUS, DIM }
+enum class Screen { HOME, DRAWER, HIDDEN_DRAWER, HIDDEN_MANAGER, FOCUS, DIM, DUMB_SETTINGS }
 
-enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK }
+enum class DrawerMode { BROWSE, PICK_FOR_HOME, PICK_FOR_DOCK, PICK_FOR_DUMB }
 
 enum class MenuOrigin { HOME, DOCK, DRAWER, HIDDEN_DRAWER }
 
@@ -41,6 +42,7 @@ data class LauncherUiState(
     val screen: Screen = Screen.HOME,
     val drawerMode: DrawerMode = DrawerMode.BROWSE,
     val pendingDockSlot: Int = -1,
+    val pendingDumbSlot: Int = -1,
     val query: String = "",
     val contextMenu: ContextMenuState? = null,
     /** How many icons fit on one home page, measured from the real screen height by
@@ -69,6 +71,28 @@ data class LauncherUiState(
      * e va detto, invece di lasciar credere che sia rotto. Riletto a ogni rientro nel launcher,
      * perché si concede da una schermata di sistema. */
     val dimOverlayAllowed: Boolean = false,
+    // --- Modalità DUMB ---
+    /** Se una sessione DUMB è in corso. Quando è true il launcher non compone nient'altro:
+     * niente cassetto, niente dock, niente gesti. Non è "nascosto", è proprio assente. */
+    val dumbActive: Boolean = false,
+    /** Orario di fine, epoch millis. Mostrato come "fino alle HH:mm", non come conto alla
+     * rovescia: guardare i minuti scendere è già un modo di stare al telefono. */
+    val dumbEndsAt: Long = 0L,
+    val dumbDurationMinutes: Int = DumbRepository.DEFAULT_DURATION_MINUTES,
+    /** Telefono e messaggi, risolti dal dialer e dall'app SMS predefiniti di sistema e non
+     * modificabili: sono la ragione per cui questa modalità è utilizzabile e non un
+     * esperimento. Ricalcolati a ogni avvio, non salvati. */
+    val dumbFixed: List<ComponentName> = emptyList(),
+    /** Le tre posizioni scelte da te. Una posizione può restare vuota. */
+    val dumbChosen: List<ComponentName> = emptyList(),
+    /** Quante volte hai chiuso una sessione prima della scadenza, da sempre. */
+    val dumbEarlyExits: Int = 0,
+    /** L'uscita anticipata chiede conferma. */
+    val dumbExitPromptVisible: Boolean = false,
+    /** Se il grigio si può estendere a tutto il telefono (permesso di sistema concesso via
+     * ADB) o resta dentro il launcher. Serve a dirlo nelle impostazioni: senza, sembrerebbe
+     * semplicemente che non funzioni. */
+    val dumbGrayscaleAvailable: Boolean = false,
     // --- Focus sessions ---
     val focusPackages: Set<String> = emptySet(),
     val focusDurationMinutes: Int = FocusRepository.DEFAULT_DURATION_MINUTES,
@@ -98,6 +122,18 @@ data class LauncherUiState(
     /** True for an app that is muted by the running session: greyed out everywhere, and
      * asks for confirmation before it will open. */
     fun isMuted(app: AppInfo): Boolean = focusActive && app.packageName in focusPackages
+
+    /** Le cinque (o meno) app raggiungibili in DUMB: prima le due fisse, poi le tue.
+     * Le nascoste sono escluse per costruzione — non sono mai in `dumbChosen`, e la regola
+     * vale anche qui: nessuna schermata non protetta le mostra. */
+    val dumbApps: List<AppInfo>
+        get() {
+            val byComponent = allApps.associateBy { it.componentName }
+            return (dumbFixed + dumbChosen)
+                .distinct()
+                .mapNotNull { byComponent[it] }
+                .filter { it.packageName !in hiddenPackages }
+        }
 
     val homeApps: List<AppInfo>
         get() {

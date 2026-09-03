@@ -24,6 +24,8 @@ import com.hiddenlayer.launcher.data.FocusRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.screens.DimScreen
 import com.hiddenlayer.launcher.ui.screens.DrawerScreen
+import com.hiddenlayer.launcher.ui.screens.DumbScreen
+import com.hiddenlayer.launcher.ui.screens.DumbSettingsScreen
 import com.hiddenlayer.launcher.ui.screens.FocusScreen
 import com.hiddenlayer.launcher.ui.screens.HiddenManagerScreen
 import com.hiddenlayer.launcher.ui.screens.HomeScreen
@@ -33,7 +35,7 @@ import com.hiddenlayer.launcher.ui.screens.HomeScreen
  * (slides up) — e.g. HIDDEN_MANAGER is nested one level under the drawer. */
 private fun screenDepth(screen: Screen): Int = when (screen) {
     Screen.HOME -> 0
-    Screen.DRAWER, Screen.HIDDEN_DRAWER, Screen.FOCUS, Screen.DIM -> 1
+    Screen.DRAWER, Screen.HIDDEN_DRAWER, Screen.FOCUS, Screen.DIM, Screen.DUMB_SETTINGS -> 1
     Screen.HIDDEN_MANAGER -> 2
 }
 
@@ -47,6 +49,28 @@ fun LauncherApp(
     val context = LocalContext.current
 
     var showEmptyPageMenu by remember { mutableStateOf(false) }
+
+    // La modalità DUMB **sostituisce** tutta l'interfaccia, non si limita a nasconderla.
+    //
+    // Non è pignoleria: home, cassetto e schermata nascosta si aprono con dei gesti (swipe su,
+    // swipe su a due dita, doppio tap), e un gesto che non fa niente si scopre in due minuti
+    // di dita che scorrono per abitudine. Non componendo nemmeno i rilevatori, quei gesti non
+    // esistono — e non c'è niente da ricordarsi di disattivare qui dentro.
+    if (state.dumbActive) {
+        DumbScreen(
+            state = state,
+            onAppTap = viewModel::launchApp,
+            onRequestExit = viewModel::requestDumbExit
+        )
+        if (state.dumbExitPromptVisible) {
+            DumbExitPrompt(
+                earlyExits = state.dumbEarlyExits,
+                onConfirmExit = viewModel::confirmDumbExit,
+                onDismiss = viewModel::dismissDumbExit
+            )
+        }
+        return
+    }
 
     AnimatedContent(
         targetState = state.screen,
@@ -103,7 +127,7 @@ fun LauncherApp(
                 onClearUnlockError = viewModel::clearUnlockError,
                 onOpenSettings = viewModel::openHiddenSettings,
                 onRelock = viewModel::relockVault,
-                onClose = viewModel::backToHome
+                onClose = viewModel::closeDrawer
             )
 
             Screen.FOCUS -> FocusScreen(
@@ -132,6 +156,15 @@ fun LauncherApp(
                         ).show()
                     }
                 },
+                onDone = viewModel::backToHome
+            )
+
+            Screen.DUMB_SETTINGS -> DumbSettingsScreen(
+                state = state,
+                onSetDuration = viewModel::setDumbDuration,
+                onPickSlot = viewModel::openDrawerForDumbPick,
+                onClearSlot = viewModel::clearDumbSlot,
+                onStart = viewModel::startDumb,
                 onDone = viewModel::backToHome
             )
 
@@ -203,6 +236,10 @@ fun LauncherApp(
                 ) {
                     showEmptyPageMenu = false
                     viewModel.openDim()
+                },
+                MenuAction("Modalità DUMB") {
+                    showEmptyPageMenu = false
+                    viewModel.openDumbSettings()
                 }
             ),
             onDismiss = { showEmptyPageMenu = false }
