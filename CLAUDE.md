@@ -512,7 +512,8 @@ gesture di questo progetto venivano da lì.
 |---|---|---|
 | `HomeLayoutRepository` | `DOCK_COLUMNS` / `DOCK_ROWS` / `DOCK_SIZE` | 5 / 3 / 15 |
 | `HomeScreen` | `HOME_COLUMNS` | 4 |
-| `HomeScreen` | `HOME_TILE_HEIGHT` | 60dp (senza etichetta) |
+| `HomeScreen` | `HOME_TILE_HEIGHT` | 52dp (senza etichetta) |
+| `HomeScreen` | `PAGE_PADDING_*` / `ROW_SPACING` / `COLUMN_SPACING` | 30·44dp / 26dp / 18dp |
 | `HomeScreen` | `TOP_GESTURE_EXCLUSION` | 56dp |
 | `HomeScreen` | `PAGE_MOVE_THRESHOLD` / `TAP_VS_DRAG_THRESHOLD` | 72dp / 16dp |
 | `HomeScreen` | `DOCK_TOGGLE_THRESHOLD` | 28dp |
@@ -520,7 +521,9 @@ gesture di questo progetto venivano da lì.
 | `DrawerScreen.AppGrid` | colonne | 5 |
 | `AppGridTile` / `HomeIconTile` | icona | 48dp |
 | `AppIcon` | `MUTED_ALPHA` (app in grigio) | 0.4 |
-| `PromptStyle` | superficie dei due popup | `#16171A` al 95% |
+| `PromptStyle` | superficie dei fogli | `HlSurface` `#1C1913`, opaca |
+| `Tokens.kt` | margine di schermata (Carta / Indice) | 26dp / 34dp |
+| `Tokens.kt` | area di tocco minima delle azioni testuali | 44dp |
 | `AppRepository` | `ICON_SIZE_PX` | 128 |
 | `FocusRepository` | `PRESET_MINUTES` | 15/30/45/60/120 |
 | `FocusRepository` | `SHORTCUT_MINUTES` | 30/60/120 (il popup) |
@@ -529,6 +532,60 @@ gesture di questo progetto venivano da lì.
 **Le pagine della home non hanno un numero fisso di righe**: `HomeScreen`
 misura l'altezza reale e riporta `pageSize` al ViewModel. Cambiare
 `HOME_TILE_HEIGHT` cambia quante app stanno in una pagina.
+
+---
+
+## 6-bis. Il sistema visivo (redesign minimalista)
+
+Il linguaggio dell'interfaccia sta in `ui/theme/Tokens.kt` (colori, forme,
+misure), `ui/theme/Theme.kt` (schema scuro fisso + `Typography`) e
+`ui/Minimal.kt` (i pochi componenti riusati ovunque). **Prima di scrivere una
+schermata nuova, guarda lì**: quasi tutto quello che serve esiste già.
+
+Le regole, e il perché — sono tutte funzionali al detox, non estetiche:
+
+- **Un solo accento** (`HlPaper`, bianco sporco caldo). Nessun colore saturo
+  in nessuna schermata: il colore è ciò che fa girare la testa verso lo
+  schermo. Un errore o un permesso mancante si dicono con un'etichetta in
+  maiuscoletto, non con il rosso (`DimScreen` aveva un `#FFB4A3`, tolto).
+- **Il nero è caldo** (`#14120F`). Un nero neutro su OLED al buio vira
+  all'azzurro e si legge come "schermo acceso".
+- **Niente vetro smerigliato.** La ricerca e la pill della Concentrazione
+  erano capsule bianche al 15%: le due cose più luminose del cassetto e della
+  home. Ora sono, rispettivamente, una riga con un filetto sotto e una riga di
+  testo in monospazio.
+- **Niente chrome di Material**: `TopAppBar`, `Scaffold`, `ListItem`,
+  `Switch`, `AlertDialog`, `OutlinedTextField` sono spariti da tutto il
+  progetto (resta solo `HorizontalDivider`, dentro `Hairline`). Portavano
+  altezze fisse, ripple, contenitori squadrati e un titolo in corpo grande per
+  dire quello che ora dicono due parole in maiuscoletto.
+- **Le icone sono quasi tutte diventate testo.** `Close` → "Chiudi",
+  `Settings` → "Impostazioni", `Add` del dock → contorno tratteggiato,
+  `Fingerprint` → "Impronta". Restano `Search` e `VisibilityOff` nei campi di
+  ricerca. Ogni icona è una forma che l'occhio prende prima del testo, ed è
+  esattamente ciò che qui va ridotto.
+- **I popup sono fogli in basso** (`PromptSheet`), allineati a sinistra: una
+  carta centrata è una finestra di sistema, e mette i pulsanti lontano dal
+  pollice.
+- **I numeri sono in monospazio** (`MonoValue`): conteggi, record, countdown,
+  classifiche. Le cifre non cambiano larghezza mentre scorrono, quindi la riga
+  non balla e una classifica si legge come una tabella.
+- **Ogni azione diventata testuale conserva 44dp di area di tocco**
+  (`HlTouchTarget`, usato da `TextAction`, `MinimalSwitch`, `FocusPill`). È il
+  modo tipico in cui questo tipo di interfaccia si rompe: si alleggerisce la
+  grafica e restano bersagli da 16dp.
+
+Trappole già pagate in questo redesign:
+
+- **`HiddenManagerScreen` disegna la carta riga per riga**, arrotondando solo
+  la prima e l'ultima del gruppo. Raccogliere le righe dentro un unico `item`
+  per avere un solo contenitore comporrebbe duecento righe con le loro icone
+  in un colpo all'apertura — la lista deve restare pigra.
+- **`FocusScreen`, sessione in corso**: la durata del tratto di resistenza si
+  ricava da `focusStreakStartMillis` (un **istante**, che cambia solo quando
+  cedi) sottraendo l'ora corrente nella composizione, che sta già ricomponendo
+  per il countdown. Un campo con la durata dentro `uiState` ticchetterebbe una
+  volta al secondo e farebbe ricomporre tutta l'app — vedi §4.
 
 ---
 

@@ -1,54 +1,80 @@
 package com.hiddenlayer.launcher.ui.screens
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
+import com.hiddenlayer.launcher.ui.Hairline
+import com.hiddenlayer.launcher.ui.MinimalSwitch
+import com.hiddenlayer.launcher.ui.MonoValue
+import com.hiddenlayer.launcher.ui.PrimaryPill
+import com.hiddenlayer.launcher.ui.PromptBody
+import com.hiddenlayer.launcher.ui.PromptSheet
+import com.hiddenlayer.launcher.ui.PromptTitle
+import com.hiddenlayer.launcher.ui.ScreenHeader
+import com.hiddenlayer.launcher.ui.SectionLabel
 import com.hiddenlayer.launcher.ui.SecureScreen
+import com.hiddenlayer.launcher.ui.TextAction
 import com.hiddenlayer.launcher.ui.closeOnDragDown
+import com.hiddenlayer.launcher.ui.theme.HlCardShape
+import com.hiddenlayer.launcher.ui.theme.HlPaper
+import com.hiddenlayer.launcher.ui.theme.HlPaper42
+import com.hiddenlayer.launcher.ui.theme.HlPaper55
+import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
+import com.hiddenlayer.launcher.ui.theme.HlSurface
+
+/** Il raggio della carta, ripetuto sulla prima e sull'ultima riga di ogni gruppo. */
+private val CARD_RADIUS = 20.dp
 
 /**
  * Settings screen for the vault: whether opening it needs an unlock, and which apps are in
  * it. Purely a toggle list for the apps — this is not how you open a hidden app (that's the
  * hidden drawer itself), so there is no tap-to-launch here on purpose.
+ *
+ * L'elenco si legge come **una carta**, non come righe a tutta larghezza: una riga che va da
+ * bordo a bordo ha la forma di un elemento di menu, e qui invece è una lista di interruttori.
+ * Come sia costruita davvero — riga per riga, per non perdere la pigrizia della lista — sta
+ * scritto su `AppToggleRow`. Le nascoste stanno in cima, sotto la loro etichetta: sono la
+ * risposta alla domanda per cui si apre questa schermata.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HiddenManagerScreen(
     state: LauncherUiState,
@@ -62,6 +88,13 @@ fun HiddenManagerScreen(
     val listState = rememberLazyListState()
     var showPinDialog by remember { mutableStateOf(false) }
 
+    val hidden = remember(state.allApps, state.hiddenPackages) {
+        state.allApps.filter { it.packageName in state.hiddenPackages }
+    }
+    val visible = remember(state.allApps, state.hiddenPackages) {
+        state.allApps.filter { it.packageName !in state.hiddenPackages }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -72,37 +105,20 @@ fun HiddenManagerScreen(
                 onClose = onDone
             )
     ) {
-        BlurredWallpaperBackground()
+        BlurredWallpaperBackground(scrimAlpha = 0.88f)
 
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                // La barra di stato la paga la Column, non la TopAppBar: sopra di essa
-                // c'e' la maniglia, che altrimenti finirebbe sotto l'orologio di sistema.
-                // Per questo gli inset della TopAppBar sono azzerati — sommati a questi
-                // lascerebbero un buco alto quanto la barra.
-                Column(modifier = Modifier.statusBarsPadding()) {
-                    DragHandle(onClose = onDone)
-                    TopAppBar(
-                        windowInsets = WindowInsets(0, 0, 0, 0),
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                            titleContentColor = Color.White
-                        ),
-                        title = { Text("Impostazioni app nascoste") },
-                        navigationIcon = {
-                            TextButton(onClick = onDone) { Text("Chiudi", color = Color.White) }
-                        }
-                    )
-                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            DragHandle(onClose = onDone)
+            Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                ScreenHeader(label = "App nascoste", actionText = "Chiudi", onAction = onDone)
             }
-        ) { padding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
+
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 if (state.vaultUnavailable) {
                     item {
                         Text(
@@ -110,54 +126,79 @@ fun HiddenManagerScreen(
                                 "questo dispositivo: l'elenco risulta vuoto e le modifiche non " +
                                 "vengono salvate. Di solito succede quando la chiave viene " +
                                 "invalidata da un cambio del blocco schermo.",
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                            color = HlPaper,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 12.dp)
                         )
-                        HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                     }
                 }
 
                 item {
-                    ListItem(
-                        headlineContent = { Text("Richiedi sblocco", color = Color.White) },
-                        supportingContent = {
-                            Text(
-                                "Chiede impronta o PIN prima di aprire le app nascoste.",
-                                color = Color.White.copy(alpha = 0.7f)
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = state.unlockRequired,
-                                onCheckedChange = { enabled ->
-                                    if (enabled) showPinDialog = true else onDisableLock()
-                                }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    Text(
+                        text = "Spariscono da home, cassetto e ricerca. Si aprono solo dal " +
+                            "cassetto riservato.",
+                        color = HlPaper.copy(alpha = 0.50f),
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 14.dp)
                     )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                 }
 
                 item {
-                    Text(
-                        "Scegli quali app nascondere: spariscono dalla home e dal cassetto, ricerca compresa, e restano raggiungibili solo da qui. Per aprirne una, chiudi questa schermata e usa il cassetto delle app nascoste.",
-                        modifier = Modifier.padding(16.dp),
-                        color = Color.White.copy(alpha = 0.85f)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .padding(horizontal = HlScreenMargin)
+                            .fillMaxWidth()
+                            .clip(HlCardShape)
+                            .background(HlSurface)
+                            .padding(start = 20.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Richiedi sblocco", color = HlPaper, fontSize = 15.sp)
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "Impronta, con PIN di riserva.",
+                                color = HlPaper55,
+                                fontSize = 12.sp
+                            )
+                        }
+                        MinimalSwitch(
+                            checked = state.unlockRequired,
+                            onCheckedChange = { enabled ->
+                                if (enabled) showPinDialog = true else onDisableLock()
+                            }
+                        )
+                    }
                 }
 
-                items(state.allApps, key = { it.componentName.flattenToString() }) { app ->
-                    val hidden = app.packageName in state.hiddenPackages
-                    ListItem(
-                        headlineContent = { Text(app.label, color = Color.White) },
-                        leadingContent = { AppIcon(app = app, size = 36.dp) },
-                        trailingContent = {
-                            Switch(checked = hidden, onCheckedChange = { onToggleHidden(app) })
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                if (hidden.isNotEmpty()) {
+                    item { GroupLabel("Nascoste · ${hidden.size}") }
+                    itemsIndexed(
+                        items = hidden,
+                        key = { _, app -> "h-" + app.componentName.flattenToString() }
+                    ) { index, app ->
+                        AppToggleRow(
+                            app = app,
+                            checked = true,
+                            first = index == 0,
+                            last = index == hidden.lastIndex,
+                            onToggle = { onToggleHidden(app) }
+                        )
+                    }
+                }
+
+                item { GroupLabel("Tutte le altre") }
+                itemsIndexed(
+                    items = visible,
+                    key = { _, app -> "v-" + app.componentName.flattenToString() }
+                ) { index, app ->
+                    AppToggleRow(
+                        app = app,
+                        checked = false,
+                        first = index == 0,
+                        last = index == visible.lastIndex,
+                        onToggle = { onToggleHidden(app) }
                     )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
                 }
 
                 // In fondo, la versione installata. Serve a rispondere in un secondo alla
@@ -172,10 +213,12 @@ fun HiddenManagerScreen(
                                 .versionName
                         }.getOrNull() ?: "sconosciuta"
                     }
-                    Text(
-                        text = "Hidden Layer $version",
-                        color = Color.White.copy(alpha = 0.45f),
-                        modifier = Modifier.padding(16.dp)
+                    MonoValue(
+                        text = "HIDDEN LAYER $version",
+                        color = HlPaper55,
+                        fontSize = 11.sp,
+                        letterSpacing = 1.4.sp,
+                        modifier = Modifier.padding(HlScreenMargin)
                     )
                 }
             }
@@ -183,7 +226,7 @@ fun HiddenManagerScreen(
     }
 
     if (showPinDialog) {
-        PinSetupDialog(
+        PinSetupSheet(
             onConfirm = { pin ->
                 showPinDialog = false
                 onSetPin(pin)
@@ -193,54 +236,163 @@ fun HiddenManagerScreen(
     }
 }
 
-/** Enabling the lock always sets a PIN: biometrics can stop working (new fingerprint, wet
- * hands, sensor failure) and there has to be a way back into your own apps. */
+/** Una carta unica al posto di righe a tutta larghezza, che si leggerebbero come un menu di
+ * sistema invece che come una lista di interruttori.
+ *
+ * Il fondo però lo disegna **ogni riga per conto suo**, arrotondando solo la prima e
+ * l'ultima del gruppo: raccoglierle davvero dentro un solo contenitore vorrebbe dire
+ * comporle tutte insieme dentro un unico `item`, cioè duecento righe con la loro icona
+ * costruite in un colpo all'apertura della schermata. Il risultato a schermo è identico, e
+ * la lista resta pigra come deve. */
 @Composable
-private fun PinSetupDialog(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+private fun GroupLabel(text: String) {
+    SectionLabel(
+        text = text,
+        modifier = Modifier.padding(
+            start = HlScreenMargin,
+            end = HlScreenMargin,
+            top = 24.dp,
+            bottom = 10.dp
+        )
+    )
+}
+
+@Composable
+private fun AppToggleRow(
+    app: AppInfo,
+    checked: Boolean,
+    first: Boolean,
+    last: Boolean,
+    onToggle: () -> Unit
+) {
+    val shape = RoundedCornerShape(
+        topStart = if (first) CARD_RADIUS else 0.dp,
+        topEnd = if (first) CARD_RADIUS else 0.dp,
+        bottomStart = if (last) CARD_RADIUS else 0.dp,
+        bottomEnd = if (last) CARD_RADIUS else 0.dp
+    )
+    Column(
+        modifier = Modifier
+            .padding(horizontal = HlScreenMargin)
+            .fillMaxWidth()
+            .clip(shape)
+            .background(HlSurface)
+    ) {
+        if (!first) Hairline(modifier = Modifier.padding(horizontal = 20.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(start = 20.dp, end = 10.dp, top = 6.dp, bottom = 6.dp)
+        ) {
+            // Qui l'icona resta, a differenza dell'elenco della Concentrazione: là si sceglie
+            // cosa mettere in grigio e il nome basta, qui si decide cosa sparirà dalla home e
+            // riconoscere l'icona giusta è metà del compito.
+            AppIcon(app = app, size = 34.dp)
+            Spacer(Modifier.width(14.dp))
+            Text(
+                text = app.label,
+                color = if (checked) HlPaper else HlPaper.copy(alpha = 0.60f),
+                fontSize = 15.sp,
+                modifier = Modifier.weight(1f)
+            )
+            MinimalSwitch(checked = checked, onCheckedChange = { onToggle() })
+        }
+    }
+}
+
+/**
+ * Enabling the lock always sets a PIN: biometrics can stop working (new fingerprint, wet
+ * hands, sensor failure) and there has to be a way back into your own apps.
+ *
+ * Era un `AlertDialog` di Material — superficie squadrata, pulsanti in maiuscoletto, due
+ * `OutlinedTextField` con etichetta fluttuante: la finestra di sistema che tutto il resto del
+ * launcher ha smesso di usare. Ora è lo stesso foglio in basso degli altri popup, con due
+ * campi ridotti a una riga e un filetto. **La validazione non cambia**: minimo quattro cifre,
+ * e i due PIN devono coincidere.
+ */
+@Composable
+private fun PinSetupSheet(onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
     var pin by remember { mutableStateOf("") }
     var confirmPin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Imposta un PIN") },
-        text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text("Serve come alternativa all'impronta, per non restare fuori dalle tue app.")
-                OutlinedTextField(
-                    value = pin,
-                    onValueChange = { if (it.length <= 8) pin = it.filter(Char::isDigit) },
-                    label = { Text("PIN (min. 4 cifre)") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-                OutlinedTextField(
-                    value = confirmPin,
-                    onValueChange = { if (it.length <= 8) confirmPin = it.filter(Char::isDigit) },
-                    label = { Text("Conferma PIN") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-                error?.let {
-                    Text(it, color = androidx.compose.material3.MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 8.dp))
+    PromptSheet(onDismiss = onDismiss) {
+        Text(
+            text = "Imposta un PIN",
+            color = PromptTitle,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Light
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = "Serve come alternativa all'impronta, per non restare fuori dalle tue app.",
+            color = PromptBody,
+            fontSize = 13.sp
+        )
+
+        Spacer(Modifier.height(22.dp))
+
+        PinLine(value = pin, placeholder = "PIN, almeno 4 cifre") {
+            pin = it
+            error = null
+        }
+        Spacer(Modifier.height(18.dp))
+        PinLine(value = confirmPin, placeholder = "Ripetilo") {
+            confirmPin = it
+            error = null
+        }
+
+        error?.let {
+            Spacer(Modifier.height(12.dp))
+            // Nessun rosso: il messaggio dice già cosa non va, e un colore d'allarme qui
+            // sarebbe l'unico colore saturo di tutta l'interfaccia.
+            Text(text = it, color = HlPaper, fontSize = 13.sp)
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PrimaryPill(
+                text = "Conferma",
+                onClick = {
+                    when {
+                        pin.length < 4 -> error = "Il PIN deve avere almeno 4 cifre"
+                        pin != confirmPin -> error = "I PIN non coincidono"
+                        else -> onConfirm(pin)
+                    }
+                },
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(18.dp))
+            TextAction(text = "Annulla", onClick = onDismiss, color = HlPaper42, fontSize = 14.sp)
+        }
+    }
+}
+
+/** Un campo PIN ridotto all'osso: testo, un filetto sotto, niente contenitore. */
+@Composable
+private fun PinLine(value: String, placeholder: String, onValueChange: (String) -> Unit) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        BasicTextField(
+            value = value,
+            onValueChange = { if (it.length <= 8) onValueChange(it.filter(Char::isDigit)) },
+            singleLine = true,
+            textStyle = TextStyle(color = HlPaper, fontSize = 20.sp, letterSpacing = 6.sp),
+            cursorBrush = SolidColor(HlPaper),
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+            modifier = Modifier.fillMaxWidth(),
+            decorationBox = { inner ->
+                Box(modifier = Modifier.height(34.dp), contentAlignment = Alignment.CenterStart) {
+                    if (value.isEmpty()) {
+                        Text(text = placeholder, color = HlPaper42, fontSize = 15.sp)
+                    }
+                    inner()
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                when {
-                    pin.length < 4 -> error = "Il PIN deve avere almeno 4 cifre"
-                    pin != confirmPin -> error = "I PIN non coincidono"
-                    else -> onConfirm(pin)
-                }
-            }) { Text("Conferma") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annulla") }
-        }
-    )
+        )
+        Hairline()
+    }
 }

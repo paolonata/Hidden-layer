@@ -5,45 +5,48 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.DumbRepository
 import com.hiddenlayer.launcher.ui.BlurredWallpaperBackground
 import com.hiddenlayer.launcher.ui.DragHandle
+import com.hiddenlayer.launcher.ui.Hairline
+import com.hiddenlayer.launcher.ui.PrimaryPill
+import com.hiddenlayer.launcher.ui.ScreenHeader
+import com.hiddenlayer.launcher.ui.SectionLabel
+import com.hiddenlayer.launcher.ui.TextAction
 import com.hiddenlayer.launcher.ui.closeOnDragDown
 import com.hiddenlayer.launcher.ui.durationLabel
+import com.hiddenlayer.launcher.ui.theme.HlPaper
+import com.hiddenlayer.launcher.ui.theme.HlPaper42
+import com.hiddenlayer.launcher.ui.theme.HlPaper55
+import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
 
 /**
  * Dove si prepara la modalità DUMB: le tre posizioni libere e la durata. Poi si entra, e da
  * lì non c'è più niente da regolare — è il punto della modalità.
+ *
+ * Segue lo stesso linguaggio della Concentrazione, che è la funzione a cui somiglia: durata
+ * come numeri in fila con la selezione sottolineata, righe senza icone, un solo pulsante
+ * pieno. Le due schermate si aprono dallo stesso menu e fanno cose vicine — se avessero due
+ * grafiche diverse sembrerebbero due app.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DumbSettingsScreen(
     state: LauncherUiState,
@@ -68,176 +71,122 @@ fun DumbSettingsScreen(
                 onClose = onDone
             )
     ) {
-        BlurredWallpaperBackground()
+        BlurredWallpaperBackground(scrimAlpha = 0.88f)
 
-        Scaffold(
-            containerColor = Color.Transparent,
-            topBar = {
-                // La barra di stato la paga la Column, non la TopAppBar: sopra di essa
-                // c'e' la maniglia, che altrimenti finirebbe sotto l'orologio di sistema.
-                // Per questo gli inset della TopAppBar sono azzerati — sommati a questi
-                // lascerebbero un buco alto quanto la barra.
-                Column(modifier = Modifier.statusBarsPadding()) {
-                    DragHandle(onClose = onDone)
-                    TopAppBar(
-                        windowInsets = WindowInsets(0, 0, 0, 0),
-                        colors = TopAppBarDefaults.topAppBarColors(
-                            containerColor = Color.Transparent,
-                            titleContentColor = Color.White
-                        ),
-                        title = { Text("Modalità DUMB") },
-                        navigationIcon = {
-                            TextButton(onClick = onDone) { Text("Chiudi", color = Color.White) }
-                        }
-                    )
-                }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .statusBarsPadding()
+                .navigationBarsPadding()
+        ) {
+            DragHandle(onClose = onDone)
+            Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                ScreenHeader(label = "Modalità DUMB", actionText = "Chiudi", onAction = onDone)
             }
-        ) { padding ->
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.padding(padding).fillMaxSize()
-            ) {
+
+            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
                 item {
                     Text(
                         text = "Per il tempo che scegli il telefono diventa un elenco di cinque " +
                             "nomi su fondo nero. Niente icone, niente cassetto, niente ricerca: " +
                             "non c'è un gesto da evitare, non c'è proprio più niente da toccare.",
-                        color = Color.White.copy(alpha = 0.8f),
-                        modifier = Modifier.padding(16.dp)
+                        color = HlPaper55,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 16.dp)
                     )
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
                 }
 
-                item {
-                    SectionLabel("Sempre disponibili")
-                }
+                item { Label("Sempre disponibili") }
+
                 if (fixed.isEmpty()) {
                     item {
                         Text(
                             text = "Il sistema non riporta un telefono o un'app di messaggi " +
                                 "predefiniti con un'icona nel launcher: quelle due posizioni " +
                                 "resteranno vuote.",
-                            color = Color.White.copy(alpha = 0.6f),
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            color = HlPaper.copy(alpha = 0.45f),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = HlScreenMargin)
                         )
                     }
                 } else {
                     items(fixed.size) { index ->
                         val app = byComponent[fixed[index]]
-                        ListItem(
-                            headlineContent = {
-                                Text(app?.label ?: "—", color = Color.White)
-                            },
-                            supportingContent = {
-                                Text(
-                                    // Non sono modificabili, e va detto perché: sono lette dal
-                                    // sistema, quindi seguono l'app che usi davvero.
-                                    "Telefono e messaggi predefiniti di sistema. Non modificabili.",
-                                    color = Color.White.copy(alpha = 0.6f)
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                        SlotRow(
+                            title = app?.label ?: "—",
+                            // Non sono modificabili, e va detto perché: sono lette dal sistema,
+                            // quindi seguono l'app che usi davvero.
+                            subtitle = "Predefinita di sistema, non modificabile",
+                            dimmed = false
                         )
                     }
                 }
 
                 item {
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    SectionLabel("Le tue tre")
+                    Label("Le tue tre")
                 }
 
                 items(DumbRepository.CHOSEN_SLOTS) { slot ->
                     val app = state.dumbChosen.getOrNull(slot)?.let { byComponent[it] }
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                text = app?.label ?: "Posizione libera",
-                                color = if (app != null) Color.White else Color.White.copy(alpha = 0.5f)
-                            )
-                        },
-                        supportingContent = {
-                            Text(
-                                text = if (app != null) "Tocca per sostituirla" else "Tocca per sceglierne una",
-                                color = Color.White.copy(alpha = 0.6f)
-                            )
-                        },
-                        trailingContent = {
-                            if (app != null) {
-                                TextButton(onClick = { onClearSlot(slot) }) {
-                                    Text("Togli", color = Color.White.copy(alpha = 0.8f))
-                                }
-                            }
-                        },
-                        modifier = Modifier.clickable { onPickSlot(slot) },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    SlotRow(
+                        title = app?.label ?: "Posizione libera",
+                        subtitle = if (app != null) "Tocca per sostituirla" else "Tocca per sceglierne una",
+                        dimmed = app == null,
+                        onClick = { onPickSlot(slot) },
+                        action = if (app != null) {
+                            { TextAction("Togli", { onClearSlot(slot) }, color = HlPaper42) }
+                        } else {
+                            null
+                        }
                     )
                 }
 
                 item {
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
-                    SectionLabel("Durata — ${durationLabel(state.dumbDurationMinutes)}")
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        DumbRepository.PRESET_MINUTES.forEach { minutes ->
-                            val selected = minutes == state.dumbDurationMinutes
-                            Button(
-                                onClick = { onSetDuration(minutes) },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (selected) {
-                                        Color.White.copy(alpha = 0.9f)
-                                    } else {
-                                        Color.White.copy(alpha = 0.15f)
-                                    },
-                                    contentColor = if (selected) Color(0xFF17181B) else Color.White
-                                ),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(durationLabel(minutes), maxLines = 1)
+                    Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                        Spacer(Modifier.height(24.dp))
+                        SectionLabel("Durata")
+                        Spacer(Modifier.height(12.dp))
+                        // Come nella Concentrazione: numeri in fila, il selezionato
+                        // sottolineato. Nessuna pill, nessun riquadro.
+                        Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                            DumbRepository.PRESET_MINUTES.forEach { minutes ->
+                                val selected = minutes == state.dumbDurationMinutes
+                                Text(
+                                    text = durationLabel(minutes),
+                                    color = if (selected) HlPaper else HlPaper42,
+                                    fontSize = 15.sp,
+                                    textDecoration = if (selected) TextDecoration.Underline else null,
+                                    modifier = Modifier
+                                        .clickable { onSetDuration(minutes) }
+                                        .padding(vertical = 14.dp)
+                                )
                             }
                         }
-                    }
-                    HorizontalDivider(
-                        color = Color.White.copy(alpha = 0.2f),
-                        modifier = Modifier.padding(top = 12.dp)
-                    )
-                }
-
-                item {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Button(
+                        Spacer(Modifier.height(14.dp))
+                        PrimaryPill(
+                            text = "Entra in DUMB per ${durationLabel(state.dumbDurationMinutes)}",
                             onClick = onStart,
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.White.copy(alpha = 0.92f),
-                                contentColor = Color(0xFF17181B)
-                            )
-                        ) {
-                            Text("Entra in DUMB per ${durationLabel(state.dumbDurationMinutes)}")
-                        }
+                            modifier = Modifier.fillMaxWidth()
+                        )
                         if (state.dumbEarlyExits > 0) {
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(14.dp))
                             Text(
-                                "Finora l'hai interrotta ${state.dumbEarlyExits} volte prima della scadenza.",
-                                color = Color.White.copy(alpha = 0.6f)
+                                text = "Finora l'hai interrotta ${state.dumbEarlyExits} volte " +
+                                    "prima della scadenza.",
+                                color = HlPaper.copy(alpha = 0.45f),
+                                fontSize = 12.sp
                             )
                         }
+                        Spacer(Modifier.height(24.dp))
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
                 }
 
                 item {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Scala di grigi su tutto il telefono",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(6.dp))
+                    Column(modifier = Modifier.padding(HlScreenMargin)) {
+                        SectionLabel("Scala di grigi su tutto il telefono", color = HlPaper)
+                        Spacer(Modifier.height(10.dp))
                         Text(
                             text = if (state.dumbGrayscaleAvailable) {
                                 "Attiva. Entrando in DUMB tutto il telefono passa in bianco e " +
@@ -252,10 +201,12 @@ fun DumbSettingsScreen(
                                     "android.permission.WRITE_SECURE_SETTINGS\n\n" +
                                     "Se preferisci non farlo, la modalità funziona lo stesso."
                             },
-                            color = Color.White.copy(alpha = 0.75f)
+                            color = HlPaper.copy(alpha = 0.55f),
+                            fontSize = 12.sp,
+                            lineHeight = 20.sp
                         )
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
                 }
 
                 item {
@@ -268,8 +219,10 @@ fun DumbSettingsScreen(
                             "intercettare quel tocco. Restano raggiungibili anche le app " +
                             "recenti e la ricerca di sistema. DUMB toglie la strada normale — " +
                             "quella che percorri senza accorgertene — non tutte le strade.",
-                        color = Color.White.copy(alpha = 0.75f),
-                        modifier = Modifier.padding(16.dp)
+                        color = HlPaper.copy(alpha = 0.40f),
+                        fontSize = 12.sp,
+                        lineHeight = 20.sp,
+                        modifier = Modifier.padding(HlScreenMargin)
                     )
                 }
             }
@@ -278,11 +231,45 @@ fun DumbSettingsScreen(
 }
 
 @Composable
-private fun SectionLabel(text: String) {
-    Text(
+private fun Label(text: String) {
+    SectionLabel(
         text = text,
-        color = Color.White.copy(alpha = 0.55f),
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+        modifier = Modifier.padding(
+            start = HlScreenMargin,
+            end = HlScreenMargin,
+            top = 24.dp,
+            bottom = 8.dp
+        )
     )
+}
+
+/** Una posizione della modalità: nome, una riga di spiegazione, ed eventualmente un'azione.
+ * Senza icona — in DUMB le icone non ci sono, e mostrarle qui prometterebbe una schermata
+ * diversa da quella in cui si entra. */
+@Composable
+private fun SlotRow(
+    title: String,
+    subtitle: String,
+    dimmed: Boolean,
+    onClick: (() -> Unit)? = null,
+    action: (@Composable () -> Unit)? = null
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(start = HlScreenMargin, end = HlScreenMargin, top = 12.dp, bottom = 12.dp)
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = if (dimmed) HlPaper.copy(alpha = 0.50f) else HlPaper,
+                fontSize = 15.sp
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(text = subtitle, color = HlPaper.copy(alpha = 0.45f), fontSize = 12.sp)
+        }
+        action?.invoke()
+    }
 }

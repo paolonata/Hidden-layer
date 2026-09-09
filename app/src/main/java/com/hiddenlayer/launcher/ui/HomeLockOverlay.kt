@@ -6,15 +6,13 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
@@ -25,20 +23,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
+import com.hiddenlayer.launcher.ui.theme.HlPaper
+import com.hiddenlayer.launcher.ui.theme.HlWideMargin
 
 /** Quanto ci mette la macchia ad aprirsi una volta che hai chiesto il telefono. */
 private const val REVEAL_MILLIS = 900
@@ -118,7 +117,7 @@ fun HomeLockOverlay(requestsSoFar: Int, onUnlock: () -> Unit) {
                     // proprio: senza Offscreen cancellerebbe anche ciò che sta sotto nel buffer.
                     .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             ) {
-                BlurredWallpaperBackground(scrimAlpha = 0.62f)
+                BlurredWallpaperBackground(scrimAlpha = 0.88f)
 
                 if (reveal > 0f) {
                     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -145,39 +144,45 @@ fun HomeLockOverlay(requestsSoFar: Int, onUnlock: () -> Unit) {
                 }
             }
 
+            // In basso a sinistra, non al centro. Al centro era una finestra di dialogo
+            // travestita; qui il testo comincia dove comincia ogni altra riga del launcher, e
+            // il pulsante finisce dove il pollice è già — che conta, visto che è l'unica cosa
+            // toccabile della schermata.
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(32.dp)
+                    .align(Alignment.BottomStart)
+                    .systemBarsPadding()
+                    .padding(start = HlWideMargin, end = HlWideMargin, bottom = 60.dp)
                     // Sparisce mentre la macchia si apre: resta solo lo schermo che si scopre.
                     .alpha(1f - reveal)
             ) {
                 Text(
-                    text = "Sessione di concentrazione in corso",
-                    color = PromptCaption,
-                    fontSize = 14.sp,
-                    textAlign = TextAlign.Center
+                    text = "SESSIONE IN CORSO",
+                    color = HlPaper.copy(alpha = 0.35f),
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    letterSpacing = 1.8.sp
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(18.dp))
 
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier
-                        .clip(PromptPillShape)
-                        .background(PromptSecondary)
-                        .border(1.dp, PromptSecondaryBorder, PromptPillShape)
-                        .clickable(enabled = !opening) { opening = true }
-                        .padding(horizontal = 28.dp, vertical = 15.dp)
-                ) {
-                    Text(
-                        text = "Mi serve il telefono",
-                        color = PromptSecondaryContent,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+                // Due righe grandi e sottili al posto della didascalia che c'era prima: è la
+                // sola cosa che questa schermata ha da dire, e detta piano si legge davvero
+                // invece di essere scavalcata come un avviso di sistema.
+                Text(
+                    text = "La home è chiusa.\nPer usare il telefono, chiedilo.",
+                    color = HlPaper,
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.W200,
+                    lineHeight = 42.sp
+                )
+
+                Spacer(Modifier.height(28.dp))
+
+                OutlinePill(
+                    text = "Mi serve il telefono",
+                    onClick = { if (!opening) opening = true }
+                )
 
                 // Dalla seconda volta in poi: la prima può avere un motivo, è la ripetizione a
                 // essere il sintomo. Detto e basta, senza rimproveri — il numero parla da solo.
@@ -185,9 +190,8 @@ fun HomeLockOverlay(requestsSoFar: Int, onUnlock: () -> Unit) {
                     Spacer(Modifier.height(16.dp))
                     Text(
                         text = "Sarebbe la ${requestsSoFar + 1}ª volta in questa sessione",
-                        color = PromptCaption,
-                        fontSize = 13.sp,
-                        textAlign = TextAlign.Center
+                        color = HlPaper.copy(alpha = 0.38f),
+                        fontSize = 12.sp
                     )
                 }
             }
