@@ -164,6 +164,7 @@ fun LauncherApp(
                 onSetDuration = viewModel::setDumbDuration,
                 onPickSlot = viewModel::openDrawerForDumbPick,
                 onClearSlot = viewModel::clearDumbSlot,
+                onResetSlots = viewModel::resetDumbSlots,
                 onStart = viewModel::startDumb,
                 onDone = viewModel::backToHome
             )

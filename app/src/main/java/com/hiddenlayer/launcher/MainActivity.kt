@@ -1,6 +1,7 @@
 package com.hiddenlayer.launcher
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.activity.compose.setContent
@@ -33,6 +34,22 @@ class MainActivity : FragmentActivity() {
         // riempiono tutto lo schermo, mentre il contenuto toccabile si tiene dentro
         // `statusBarsPadding` / `navigationBarsPadding`.
         WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // **E questo è il pezzo che mancava.** Andare edge-to-edge non basta: da Android 10 il
+        // sistema, vedendo una barra dichiarata trasparente, ci disegna dietro un velo scuro
+        // per conto suo — si chiama *contrast enforcement*, e serve a garantire che le icone
+        // di sistema si leggano sopra qualunque contenuto. Il risultato, per chi guarda, sono
+        // le due bande in cima e in fondo che non appartengono al launcher: non è la finestra
+        // che si ferma lì, è il sistema che ci dipinge sopra. Segnalato due volte.
+        //
+        // Disattivarlo è lecito proprio perché qui la condizione è già soddisfatta: il
+        // launcher è scuro ovunque e le icone di sistema sono forzate chiare, quindi il
+        // contrasto c'è senza bisogno del velo.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            window.isStatusBarContrastEnforced = false
+            window.isNavigationBarContrastEnforced = false
+        }
+
         // Il launcher è scuro ovunque: le icone di sistema restano chiare in entrambe le
         // barre. Senza dirlo, su una ROM in tema chiaro diventerebbero nere su nero.
         WindowInsetsControllerCompat(window, window.decorView).apply {

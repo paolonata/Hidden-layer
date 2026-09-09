@@ -39,8 +39,8 @@ import com.hiddenlayer.launcher.ui.theme.HlPaper55
 import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
 
 /**
- * Dove si prepara la modalità DUMB: le tre posizioni libere e la durata. Poi si entra, e da
- * lì non c'è più niente da regolare — è il punto della modalità.
+ * Dove si prepara la modalità DUMB: le cinque posizioni e la durata. Poi si entra, e da lì
+ * non c'è più niente da regolare — è il punto della modalità.
  *
  * Segue lo stesso linguaggio della Concentrazione, che è la funzione a cui somiglia: durata
  * come numeri in fila con la selezione sottolineata, righe senza icone, un solo pulsante
@@ -53,12 +53,12 @@ fun DumbSettingsScreen(
     onSetDuration: (Int) -> Unit,
     onPickSlot: (Int) -> Unit,
     onClearSlot: (Int) -> Unit,
+    onResetSlots: () -> Unit,
     onStart: () -> Unit,
     onDone: () -> Unit
 ) {
     BackHandler(onBack = onDone)
     val listState = rememberLazyListState()
-    val fixed = state.dumbFixed
     val byComponent = state.allApps.associateBy { it.componentName }
 
     Box(
@@ -97,38 +97,10 @@ fun DumbSettingsScreen(
                     Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
                 }
 
-                item { Label("Sempre disponibili") }
+                item { Label("Le cinque app") }
 
-                if (fixed.isEmpty()) {
-                    item {
-                        Text(
-                            text = "Il sistema non riporta un telefono o un'app di messaggi " +
-                                "predefiniti con un'icona nel launcher: quelle due posizioni " +
-                                "resteranno vuote.",
-                            color = HlPaper.copy(alpha = 0.45f),
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(horizontal = HlScreenMargin)
-                        )
-                    }
-                } else {
-                    items(fixed.size) { index ->
-                        val app = byComponent[fixed[index]]
-                        SlotRow(
-                            title = app?.label ?: "—",
-                            // Non sono modificabili, e va detto perché: sono lette dal sistema,
-                            // quindi seguono l'app che usi davvero.
-                            subtitle = "Predefinita di sistema, non modificabile",
-                            dimmed = false
-                        )
-                    }
-                }
-
-                item {
-                    Label("Le tue tre")
-                }
-
-                items(DumbRepository.CHOSEN_SLOTS) { slot ->
-                    val app = state.dumbChosen.getOrNull(slot)?.let { byComponent[it] }
+                items(DumbRepository.SLOT_COUNT) { slot ->
+                    val app = state.dumbSlots.getOrNull(slot)?.let { byComponent[it] }
                     SlotRow(
                         title = app?.label ?: "Posizione libera",
                         subtitle = if (app != null) "Tocca per sostituirla" else "Tocca per sceglierne una",
@@ -140,6 +112,28 @@ fun DumbSettingsScreen(
                             null
                         }
                     )
+                }
+
+                item {
+                    Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                        Text(
+                            // Le prime due erano fisse e non si potevano cambiare: erano il
+                            // telefono e i messaggi che il *sistema* considera predefiniti.
+                            // Ora sono solo il punto di partenza.
+                            text = "Le prime due partono dal telefono e dai messaggi " +
+                                "predefiniti di sistema. Da lì in poi decidi tu.",
+                            color = HlPaper.copy(alpha = 0.40f),
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
+                        TextAction(
+                            text = "Riparti dai predefiniti",
+                            onClick = onResetSlots,
+                            color = HlPaper55,
+                            fontSize = 12.sp
+                        )
+                    }
+                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
                 }
 
                 item {

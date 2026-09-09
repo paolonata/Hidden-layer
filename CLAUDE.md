@@ -168,6 +168,34 @@ riduce la luce in modo esatto. **Non aggiungere una tinta qui** — un velo
 colorato *aggiunge* luce sul nero e appiattisce il contrasto (§ storia della
 modalità rossa, provata e rimossa su richiesta dell'utente).
 
+#### Il limite del velo, e come si aggira (`SystemDim`)
+
+**Un overlay non può coprire le barre di sistema.** `TYPE_APPLICATION_OVERLAY`
+sta in un livello di finestre *sotto* la barra di stato e quella di
+navigazione: il velo copre tutta l'area dello schermo, ma il sistema disegna
+le sue barre sopra, quindi orologio, batteria e tasti restano a piena
+luminosità. Non è un bug del velo, è dove finisce quello che un overlay può
+fare — non cercare di correggerlo lì dentro.
+
+Da Android 12 esiste "Riduci luminosità" (*Reduce Bright Colors*), che agisce
+nella pipeline del display e quindi **scurisce tutto, barre comprese**, senza
+nessuno dei limiti dell'overlay (non sparisce sulle app bancarie, il risparmio
+energetico non la tocca, non c'è una finestra da tenere in piedi). Si accende
+da `Settings.Secure`, che richiede `WRITE_SECURE_SETTINGS` — lo stesso
+permesso via ADB già usato dalla scala di grigi di DUMB.
+
+`SystemDim.isAvailable()` chiede **tre** cose, e la terza è quella che sembra
+superflua e non lo è: Android 12+, permesso concesso, **e la ROM che dichiara
+di avere la funzione** (`config_reduceBrightColorsAvailable`, letto per nome
+dalle risorse di sistema). Senza il terzo controllo, su una ROM che non la
+implementa spegneremmo il velo per accendere qualcosa che nessuno legge:
+`Settings.Secure.putInt` riesce comunque, e lo schermo resterebbe com'era
+senza nessun errore da nessuna parte.
+
+`applyDim` sceglie la strada e **spegne sempre l'altra**: passando da senza a
+con permesso — o riavviando dopo un `pm grant` — velo e riduzione resterebbero
+accesi insieme, cioè uno schermo scurito il doppio.
+
 ### Modalità DUMB (`DumbScreen`, `DumbRepository`, `SystemGrayscale`)
 
 Cinque app e basta, per il tempo scelto. Le decisioni di struttura, tutte
@@ -180,12 +208,24 @@ prese per una ragione precisa:
   doppio tap). Disabilitarli sarebbe stato equivalente sulla carta e diverso
   nei fatti: un gesto che "non fa niente" si scopre in due minuti di dita che
   scorrono per abitudine. Non spostare DUMB dentro l'enum `Screen`.
-- **Telefono e messaggi non si salvano.** Sono risolti a runtime da
-  `TelecomManager.getDefaultDialerPackage()` e
-  `Telephony.Sms.getDefaultSmsPackage()` (nessun permesso, nessuna voce
-  `<queries>`: tornano un package, e la componente si ripesca dall'elenco già
-  caricato). Salvarli vorrebbe dire che cambiando app predefinita ti ritrovi
-  una modalità di autodisciplina che non ti fa più chiamare nessuno.
+- **Le cinque posizioni sono tutte modificabili, e i predefiniti di sistema
+  sono solo il seme.** Prima le prime due — telefono e messaggi — erano
+  risolte a runtime da `TelecomManager.getDefaultDialerPackage()` e
+  `Telephony.Sms.getDefaultSmsPackage()` e non si potevano cambiare; il
+  ragionamento era che salvarle sarebbe stato fragile (cambi app predefinita e
+  ti ritrovi una modalità di autodisciplina che non ti fa più scrivere a
+  nessuno). Il prezzo era peggiore, e l'utente l'ha chiesto esplicitamente: se
+  il tuo telefono o i tuoi messaggi non sono quelli che il sistema considera
+  predefiniti, non c'era modo di dirlo. Ora i due package di sistema seminano
+  le prime due posizioni al primo avvio (nessun permesso, nessuna voce
+  `<queries>`: tornano un nome, e la componente si ripesca dall'elenco già
+  caricato) e "Riparti dai predefiniti" ci riporta.
+- Le posizioni stanno in `DumbRepository` come **una stringa sola separata da
+  a capo**, non come `StringSet`: un set non conserva l'ordine, e una riga
+  vuota è una posizione libera — cosa che una lista di nomi non saprebbe dire.
+  `legacyChosen()` esiste solo per non far ritrovare le posizioni vuote a chi
+  aggiorna dalla versione con le due fisse; si può togliere quando nessuno
+  aggiorna più da lì.
 - **`endsAt` è un orario assoluto su disco**, come per la Concentrazione: con
   un contatore in memoria, per uscire dalla modalità basterebbe aspettare che
   MIUI chiuda il launcher. Il `delay` che chiude la sessione **non scorre a
@@ -233,9 +273,23 @@ Le regole che ne discendono, da rispettare in ogni schermata nuova:
   dentro `statusBarsPadding` / `navigationBarsPadding` / `systemBarsPadding`.
   È tutto il punto: `BlurredWallpaperBackground`, il pannello del dock e il
   nero di `DumbScreen` devono arrivare ai bordi fisici.
+- **Edge-to-edge da solo non basta, e questo è costato due segnalazioni.** Da
+  Android 10 il sistema, vedendo una barra dichiarata trasparente, ci disegna
+  dietro un velo scuro per conto suo (*contrast enforcement*, così le sue
+  icone si leggono sopra qualunque contenuto). Da fuori sono esattamente le
+  due bande in cima e in fondo che "non appartengono al launcher": non è la
+  finestra che si ferma lì, è il sistema che ci dipinge sopra. Servono
+  `window.isStatusBarContrastEnforced = false` e
+  `isNavigationBarContrastEnforced = false` (API 29+), lecito qui perché il
+  launcher è scuro ovunque e le icone sono forzate chiare — il contrasto c'è
+  già senza il velo.
 - Le barre di sistema sono già trasparenti da `themes.xml`; le icone sono
   forzate chiare (`isAppearanceLight*Bars = false`), perché il launcher è
   scuro ovunque e su una ROM in tema chiaro diventerebbero nere su nero.
+- **Se una schermata disegna un fondo suo, va disegnato sulla radice, non
+  dentro la `Column` che si paga gli inset.** È il caso della sessione in
+  corso della Concentrazione: col fondo dentro la `Column` si fermava prima
+  delle barre e lasciava due strisce di sfondo sfocato.
 - **Il padding va alla `Column` che contiene maniglia + `TopAppBar`, e gli
   inset della `TopAppBar` vanno azzerati** (`windowInsets = WindowInsets(0,
   0, 0, 0)`). La `TopAppBar` di Material3 si paga da sola la barra di stato:

@@ -60,6 +60,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Il fondo della sessione in corso: piatto e ancora più cupo del resto, perché lì non c'è
+ * niente da guardare. */
+private val RunningBackground = Color(0xFF100F0D)
+
 /**
  * Focus sessions. A launcher can't actually stop an app from opening, so this works on the
  * thing that matters instead: reaching for a distracting app is a reflex, and both levers
@@ -108,7 +112,15 @@ fun FocusScreen(
                 onClose = onDone
             )
     ) {
-        BlurredWallpaperBackground(scrimAlpha = 0.82f)
+        // Il fondo va disegnato **qui**, sulla radice, e non dentro RunningSession: quella sta
+        // dentro la Column che si paga gli inset, quindi un fondo suo si fermerebbe prima
+        // delle barre di sistema e lascerebbe due strisce di sfondo sfocato in cima e in
+        // fondo a una schermata che dev'essere piatta.
+        if (state.focusActive) {
+            Box(modifier = Modifier.fillMaxSize().background(RunningBackground))
+        } else {
+            BlurredWallpaperBackground(scrimAlpha = 0.82f)
+        }
 
         Column(
             modifier = Modifier
@@ -319,12 +331,7 @@ private fun RunningSession(
     }
     val toRecord = (state.focusRecordSeconds - streakSeconds).coerceAtLeast(0)
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFF100F0D))
-            .padding(HlWideMargin)
-    ) {
+    Column(modifier = Modifier.fillMaxSize().padding(HlWideMargin)) {
         Text(
             text = "SESSIONE IN CORSO",
             color = HlPaper.copy(alpha = 0.35f),

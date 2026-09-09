@@ -19,6 +19,7 @@ import com.hiddenlayer.launcher.data.FocusStatsRepository
 import com.hiddenlayer.launcher.data.HiddenAppsRepository
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.dim.ScreenDimService
+import com.hiddenlayer.launcher.dim.SystemDim
 import com.hiddenlayer.launcher.dumb.SystemGrayscale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -129,29 +130,40 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     private fun restoreDim() {
         _uiState.value = _uiState.value.copy(
             dimEnabled = dimRepository.isEnabled(),
-            dimLevel = dimRepository.getLevel()
+            dimLevel = dimRepository.getLevel(),
+            dimSystemAvailable = SystemDim.isAvailable(getApplication<Application>())
         )
     }
 
     fun setDimEnabled(enabled: Boolean) {
         dimRepository.setEnabled(enabled)
         _uiState.value = _uiState.value.copy(dimEnabled = enabled)
-        applyDim(enabled && _uiState.value.dimOverlayAllowed)
+        applyDim(enabled && canDim())
     }
 
     fun setDimLevel(value: Float) {
         dimRepository.setLevel(value)
         _uiState.value = _uiState.value.copy(dimLevel = dimRepository.getLevel())
-        val current = _uiState.value
-        if (current.dimEnabled && current.dimOverlayAllowed) applyDim(true)
+        if (_uiState.value.dimEnabled && canDim()) applyDim(true)
     }
+
+    /** Il permesso di overlay serve solo alla strada del velo: con la riduzione di sistema
+     * disponibile, l'attenuazione funziona anche senza. */
+    private fun canDim(): Boolean =
+        _uiState.value.dimSystemAvailable || _uiState.value.dimOverlayAllowed
 
     /** Richiamato a ogni rientro nel launcher: il permesso si concede da una schermata di
      * sistema, quindi può essere cambiato mentre eravamo fuori. È anche il punto in cui il
      * velo riparte da solo se il risparmio energetico di MIUI ha ucciso il servizio. */
     fun onOverlayPermissionChanged(canDrawOverlays: Boolean) {
-        _uiState.value = _uiState.value.copy(dimOverlayAllowed = canDrawOverlays)
-        if (_uiState.value.dimEnabled && canDrawOverlays) applyDim(true)
+        _uiState.value = _uiState.value.copy(
+            dimOverlayAllowed = canDrawOverlays,
+            // Anche questa va riletta a ogni rientro: `WRITE_SECURE_SETTINGS` si concede da
+            // computer mentre il launcher è aperto, e senza rileggerla resterebbe sul velo
+            // fino al riavvio del processo.
+            dimSystemAvailable = SystemDim.isAvailable(getApplication<Application>())
+        )
+        if (_uiState.value.dimEnabled && canDim()) applyDim(true)
     }
 
     /** False quando il sistema non espone la schermata del permesso: chi chiama lo dice
@@ -162,9 +174,32 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(screen = Screen.DIM)
     }
 
+    /**
+     * Due strade per la stessa cosa, e si prende la migliore che c'è.
+     *
+     * Se il sistema espone "Riduci luminosità" e il permesso è concesso, si usa quella:
+     * agisce sul display, quindi **scurisce anche la barra di stato e quella di navigazione**,
+     * che un velo non può coprire per costruzione (vedi `SystemDim`). Altrimenti si torna al
+     * velo di sempre.
+     *
+     * Quando si accende una delle due, l'altra va spenta esplicitamente: passando da un
+     * telefono senza permesso a uno con permesso — o riavviando dopo un `pm grant` — si
+     * finirebbe altrimenti con velo e riduzione accesi insieme, cioè uno schermo scurito il
+     * doppio.
+     */
     private fun applyDim(show: Boolean) {
         val context = getApplication<Application>()
-        if (show) ScreenDimService.start(context) else ScreenDimService.stop(context)
+        val useSystem = SystemDim.isAvailable(context)
+        if (show && useSystem) {
+            ScreenDimService.stop(context)
+            SystemDim.enable(context, dimRepository.getLevel())
+        } else if (show) {
+            SystemDim.disable(context)
+            ScreenDimService.start(context)
+        } else {
+            SystemDim.disable(context)
+            ScreenDimService.stop(context)
+        }
     }
 
     fun onLauncherPaused() {
@@ -269,15 +304,14 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 homeLayoutRepository.markSeeded()
             }
 
-            if (apps.isNotEmpty()) seedDumbChosen(apps, hidden)
+            if (apps.isNotEmpty()) seedDumbSlots(apps, hidden)
 
             _uiState.value = _uiState.value.copy(
                 allApps = apps,
                 hiddenPackages = hidden,
                 homeComponents = home,
                 dockComponents = dock,
-                dumbFixed = resolveDumbFixed(apps),
-                dumbChosen = dumbRepository.getChosen().orEmpty(),
+                dumbSlots = dumbRepository.getSlots().orEmpty(),
                 dumbDurationMinutes = dumbRepository.getDurationMinutes(),
                 dumbEarlyExits = dumbRepository.getEarlyExits(),
                 dumbGrayscaleAvailable = SystemGrayscale.isAvailable(getApplication<Application>()),
@@ -522,35 +556,62 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     // siano "vietate" — semplicemente da qui non c'è più niente da toccare per arrivarci.
 
     /**
-     * Telefono e messaggi, ripescati dall'elenco già caricato a partire dai package predefiniti
-     * di sistema. Se il dialer predefinito non ha un'icona nel launcher (capita con certe app
-     * di sistema) la posizione resta vuota invece di riempirsi con qualcosa a caso.
-     */
-    private fun resolveDumbFixed(apps: List<AppInfo>): List<ComponentName> =
-        listOfNotNull(appRepository.defaultDialerPackage(), appRepository.defaultSmsPackage())
-            .distinct()
-            .mapNotNull { pkg -> apps.firstOrNull { it.packageName == pkg }?.componentName }
-
-    /**
-     * La prima volta riempie le tre posizioni libere col default chiesto — WhatsApp, Amazon
-     * Music, Fotocamera — saltando quello che non è installato.
+     * Le cinque posizioni come si presentano la **prima volta**: telefono e messaggi
+     * predefiniti di sistema, poi WhatsApp, Amazon Music e la fotocamera.
      *
-     * Solo la prima volta, e la differenza è tutta in `getChosen() == null`: dopo, un elenco
-     * vuoto vuol dire che hai tolto tutto di proposito, e riseminarlo ti rimetterebbe in mano
-     * proprio le app da cui volevi stare lontano.
+     * I due predefiniti si ripescano dall'elenco già caricato a partire dai package che il
+     * sistema dichiara (nessun permesso, nessuna voce in `<queries>`). Se il dialer
+     * predefinito non ha un'icona nel launcher — capita con certe app di sistema — la
+     * posizione resta vuota invece di riempirsi con qualcosa a caso.
      */
-    private fun seedDumbChosen(apps: List<AppInfo>, hidden: Set<String>) {
-        if (dumbRepository.getChosen() != null) return
+    private fun defaultDumbSlots(apps: List<AppInfo>, hidden: Set<String>): List<ComponentName?> {
         val visible = apps.filter { it.packageName !in hidden }
-        val byDefaults = DumbRepository.DEFAULT_PACKAGES.mapNotNull { pkg ->
-            visible.firstOrNull { it.packageName == pkg }?.componentName
-        }
+        fun byPackage(pkg: String?): ComponentName? =
+            pkg?.let { p -> visible.firstOrNull { it.packageName == p }?.componentName }
+
         // La fotocamera cambia package su ogni ROM (com.android.camera, com.miui.camera,
         // com.google.android.GoogleCamera…), quindi si cerca per sottostringa.
         val camera = visible
             .firstOrNull { it.packageName.contains(DumbRepository.CAMERA_HINT, ignoreCase = true) }
             ?.componentName
-        dumbRepository.setChosen((byDefaults + listOfNotNull(camera)).take(DumbRepository.CHOSEN_SLOTS))
+
+        val seeds = listOf(
+            byPackage(appRepository.defaultDialerPackage()),
+            byPackage(appRepository.defaultSmsPackage())
+        ) + DumbRepository.DEFAULT_PACKAGES.map { byPackage(it) } + listOf(camera)
+
+        return List(DumbRepository.SLOT_COUNT) { seeds.getOrNull(it) }
+    }
+
+    /**
+     * Semina le posizioni **solo la prima volta**, e la differenza è tutta in
+     * `getSlots() == null`: dopo, delle posizioni vuote vogliono dire che le hai svuotate di
+     * proposito, e riseminarle ti rimetterebbe in mano proprio le app da cui volevi stare
+     * lontano.
+     *
+     * Chi aggiorna dalla versione in cui telefono e messaggi erano fissi ritrova le sue tre
+     * scelte nelle ultime tre posizioni, invece di ripartire dal default.
+     */
+    private fun seedDumbSlots(apps: List<AppInfo>, hidden: Set<String>) {
+        if (dumbRepository.getSlots() != null) return
+        val legacy = dumbRepository.legacyChosen()
+        val slots = if (legacy != null) {
+            val defaults = defaultDumbSlots(apps, hidden)
+            listOf(defaults[0], defaults[1]) + List(DumbRepository.SLOT_COUNT - 2) { legacy.getOrNull(it) }
+        } else {
+            defaultDumbSlots(apps, hidden)
+        }
+        dumbRepository.setSlots(slots)
+    }
+
+    /** "Riparti dai predefiniti" dalle impostazioni DUMB: rimette le cinque posizioni com'erano
+     * al primo avvio. Esiste perché ora sono tutte modificabili, e una configurazione che si
+     * può disfare deve potersi anche rifare senza reinstallare l'app. */
+    fun resetDumbSlots() {
+        val current = _uiState.value
+        val slots = defaultDumbSlots(current.allApps, current.hiddenPackages)
+        dumbRepository.setSlots(slots)
+        _uiState.value = current.copy(dumbSlots = slots)
     }
 
     fun openDumbSettings() {
@@ -575,8 +636,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
     }
 
     private fun setDumbSlot(slot: Int, component: ComponentName?) {
-        val slots = MutableList<ComponentName?>(DumbRepository.CHOSEN_SLOTS) { index ->
-            _uiState.value.dumbChosen.getOrNull(index)
+        val slots = MutableList<ComponentName?>(DumbRepository.SLOT_COUNT) { index ->
+            _uiState.value.dumbSlots.getOrNull(index)
         }
         if (slot !in slots.indices) return
         slots[slot] = component
@@ -586,9 +647,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
                 if (index != slot && existing == component) slots[index] = null
             }
         }
-        val chosen = slots.filterNotNull()
-        dumbRepository.setChosen(chosen)
-        _uiState.value = _uiState.value.copy(dumbChosen = chosen)
+        dumbRepository.setSlots(slots)
+        _uiState.value = _uiState.value.copy(dumbSlots = slots)
     }
 
     fun clearDumbSlot(slot: Int) = setDumbSlot(slot, null)

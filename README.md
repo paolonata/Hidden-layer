@@ -193,33 +193,48 @@ Per scendere **sotto la luminosità minima di sistema**, quando anche il minimo
 vuoto della home → "Luminosità extra"**, dove c'è anche il cursore
 dell'intensità. Vale su tutto il telefono, non solo sul launcher.
 
-Tecnicamente è un velo nero sovrapposto a tutto. È l'unica cosa che un
-overlay sa fare *bene*: sovrapporre del nero riduce la luce in modo esatto,
-senza gli effetti collaterali che avrebbe un velo colorato. Per questo c'è un
-cursore solo e nessuna tinta.
+Dietro c'è **una funzione sola con due motori**, e la schermata ti dice quale
+sta girando.
 
-Serve il permesso **"Visualizza sopra altre app"**, che si concede solo da una
-schermata di sistema: te la apre il pulsante nella schermata, e viene chiesto
-**solo se accendi l'attenuazione**. Senza permesso non succede niente, e la
-schermata te lo dice invece di far finta di funzionare.
+### Il motore buono: la riduzione del display
 
-**Il cursore non arriva al 100% di proposito**: il velo non riceve i tocchi,
-quindi con uno schermo completamente nero non vedresti più dove premere per
-riaccenderlo. Per spegnerla da qualunque app c'è il pulsante **"Spegni"**
-sulla notifica — con lo schermo molto scuro, tornare alla home a cercare un
-interruttore è scomodo.
+Se il tuo Android è il 12 o più recente e gli dai il permesso qui sotto, il
+launcher usa la **riduzione di luminosità del display** — la stessa che
+l'accessibilità chiama "Luminosità extra". Scurisce *tutto*, **barre di
+sistema comprese**, nessuna app può farla sparire e il risparmio energetico
+non c'entra:
 
-Limiti dichiarati: non copre la schermata di blocco né alcune finestre di
-sistema, e le app che dichiarano `HIDE_OVERLAY_WINDOWS` (tipicamente quelle
-bancarie) la fanno sparire di proposito mentre sono in primo piano. **Su
-MIUI/HyperOS** il velo vive in un servizio in foreground con notifica
-persistente, e il risparmio energetico lo chiude volentieri: se l'attenuazione
-sparisce da sola è quello, e va messo Hidden Layer tra le app **senza
-restrizioni di batteria**. Rientrando nel launcher riparte comunque da sé.
+```bash
+adb shell pm grant com.hiddenlayer.launcher android.permission.WRITE_SECURE_SETTINGS
+```
 
-**Se il tuo Android ha già "Luminosità extra" tra le impostazioni di
-accessibilità, usa quella**: agisce sul display invece di sovrapporre un velo,
-quindi non ha nessuno di questi limiti.
+È lo stesso identico permesso della scala di grigi della modalità DUMB: se
+l'hai già dato per quella, qui non devi fare niente.
+
+### Il motore di ripiego: il velo
+
+Senza quel permesso (o su Android più vecchi, o su ROM che non hanno la
+funzione) resta il velo nero sovrapposto. Funziona, ma ha dei limiti che il
+primo non ha:
+
+- serve il permesso **"Visualizza sopra altre app"**, che si concede da una
+  schermata di sistema — te la apre il pulsante nella schermata, e viene
+  chiesto solo se accendi l'attenuazione;
+- **il cursore non arriva al 100%**: il velo non riceve i tocchi, quindi con
+  uno schermo completamente nero non vedresti più dove premere per
+  riaccenderlo. Per spegnerla da qualunque app c'è il pulsante **"Spegni"**
+  sulla notifica;
+- **le barre di sistema restano illuminate.** Un overlay di un'app normale sta
+  in un livello di finestre *sotto* la barra di stato e quella di navigazione:
+  copre tutto lo schermo, ma il sistema ci disegna sopra le sue barre. Non c'è
+  modo di passarci sopra senza root — è esattamente il limite che il primo
+  motore non ha;
+- non copre la schermata di blocco né alcune finestre di sistema, e le app
+  bancarie possono farla sparire mentre sono aperte;
+- **su MIUI/HyperOS** vive in un servizio in foreground e il risparmio
+  energetico lo chiude volentieri: se l'attenuazione sparisce da sola è
+  quello, e va messo Hidden Layer tra le app **senza restrizioni di
+  batteria**. Rientrando nel launcher riparte comunque da sé.
 
 ## Modalità DUMB
 
@@ -230,12 +245,11 @@ diventa un elenco di cinque nomi su fondo nero.
 
 Si prepara da **tocco lungo su un punto vuoto della home → "Modalità DUMB"**.
 
-**Cinque app, di cui due fisse.** Telefono e messaggi ci sono sempre e non si
-tolgono: sono la ragione per cui la modalità è usabile e non un esperimento.
-Non sono nemmeno salvate — vengono lette dal **dialer e dall'app SMS
-predefiniti di sistema**, così seguono l'app che usi davvero invece di
-diventare sbagliate il giorno che ne cambi una. Le altre tre le scegli tu; la
-prima volta sono già riempite con WhatsApp, Amazon Music e la fotocamera.
+**Cinque app, tutte tue.** Le scegli una per una, e la prima volta le trovi
+già riempite: telefono e messaggi predefiniti di sistema, WhatsApp, Amazon
+Music e la fotocamera. Se il tuo telefono o i tuoi messaggi non sono quelli
+che il sistema considera predefiniti, li cambi come tutti gli altri; se fai
+pasticci, **"Riparti dai predefiniti"** rimette tutto com'era.
 
 **Niente icone.** Un'icona è un logo, cioè la cosa progettata apposta per
 farsi notare da mezzo metro. Cinque nomi scritti in grigio chiaro si leggono

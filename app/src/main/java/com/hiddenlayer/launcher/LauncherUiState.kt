@@ -71,6 +71,11 @@ data class LauncherUiState(
      * e va detto, invece di lasciar credere che sia rotto. Riletto a ogni rientro nel launcher,
      * perché si concede da una schermata di sistema. */
     val dimOverlayAllowed: Boolean = false,
+    /** Se il sistema può attenuare **da solo** ("Riduci luminosità" di Android 12+, con
+     * `WRITE_SECURE_SETTINGS` concesso). Quando è vero si usa quella invece del velo: agisce
+     * sul display, quindi scurisce anche la barra di stato e quella di navigazione, che un
+     * overlay non può coprire. Cambia solo quando si concede il permesso. */
+    val dimSystemAvailable: Boolean = false,
     // --- Modalità DUMB ---
     /** Se una sessione DUMB è in corso. Quando è true il launcher non compone nient'altro:
      * niente cassetto, niente dock, niente gesti. Non è "nascosto", è proprio assente. */
@@ -79,12 +84,10 @@ data class LauncherUiState(
      * rovescia: guardare i minuti scendere è già un modo di stare al telefono. */
     val dumbEndsAt: Long = 0L,
     val dumbDurationMinutes: Int = DumbRepository.DEFAULT_DURATION_MINUTES,
-    /** Telefono e messaggi, risolti dal dialer e dall'app SMS predefiniti di sistema e non
-     * modificabili: sono la ragione per cui questa modalità è utilizzabile e non un
-     * esperimento. Ricalcolati a ogni avvio, non salvati. */
-    val dumbFixed: List<ComponentName> = emptyList(),
-    /** Le tre posizioni scelte da te. Una posizione può restare vuota. */
-    val dumbChosen: List<ComponentName> = emptyList(),
+    /** Le cinque posizioni, in ordine; `null` dove è vuota. **Tutte modificabili**: le prime
+     * due sono seminate col telefono e i messaggi predefiniti di sistema, ma da lì in poi le
+     * decidi tu — vedi `DumbRepository`. */
+    val dumbSlots: List<ComponentName?> = emptyList(),
     /** Quante volte hai chiuso una sessione prima della scadenza, da sempre. */
     val dumbEarlyExits: Int = 0,
     /** L'uscita anticipata chiede conferma. */
@@ -131,13 +134,15 @@ data class LauncherUiState(
      * asks for confirmation before it will open. */
     fun isMuted(app: AppInfo): Boolean = focusActive && app.packageName in focusPackages
 
-    /** Le cinque (o meno) app raggiungibili in DUMB: prima le due fisse, poi le tue.
-     * Le nascoste sono escluse per costruzione — non sono mai in `dumbChosen`, e la regola
-     * vale anche qui: nessuna schermata non protetta le mostra. */
+    /** Le app raggiungibili in DUMB, nell'ordine delle posizioni. Le nascoste sono escluse
+     * per costruzione — il cassetto in modalità scelta non le mostra — e il filtro qui è la
+     * rete di sicurezza: la regola vale anche in DUMB, nessuna schermata non protetta le
+     * mostra. */
     val dumbApps: List<AppInfo>
         get() {
             val byComponent = allApps.associateBy { it.componentName }
-            return (dumbFixed + dumbChosen)
+            return dumbSlots
+                .filterNotNull()
                 .distinct()
                 .mapNotNull { byComponent[it] }
                 .filter { it.packageName !in hiddenPackages }

@@ -53,7 +53,12 @@ import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
 import com.hiddenlayer.launcher.ui.theme.HlTouchTarget
 
 /**
- * La luminosità extra: un velo nero sopra tutto, per scendere sotto il minimo di sistema.
+ * L'attenuazione extra dello schermo, per scendere sotto il minimo di sistema.
+ *
+ * Dietro c'è **una funzione sola con due motori**, e la schermata dice quale sta girando:
+ * la riduzione del display di Android 12+ quando è disponibile — scurisce tutto, barre di
+ * sistema comprese — e altrimenti il velo nero sovrapposto, che le barre non può coprire.
+ * Vedi `SystemDim` per il perché di quel limite.
  *
  * Attenuare è l'unica cosa che un overlay sa fare bene — sovrapporre del nero riduce la luce
  * in modo esatto, senza gli effetti collaterali di un velo colorato. Per questo qui c'è un
@@ -148,7 +153,11 @@ fun DimScreen(
                             Text("Attenuazione", color = HlPaper, fontSize = 15.sp)
                             Spacer(Modifier.height(2.dp))
                             Text(
-                                text = "Vale su tutto il telefono",
+                                text = if (state.dimSystemAvailable) {
+                                    "Tutto il telefono, barre di sistema comprese"
+                                } else {
+                                    "Vale su tutto il telefono"
+                                },
                                 color = HlPaper.copy(alpha = 0.45f),
                                 fontSize = 12.sp
                             )
@@ -161,7 +170,7 @@ fun DimScreen(
                 // L'avviso compare solo quando serve davvero: attenuazione accesa ma overlay
                 // non concesso, cioè il caso in cui non succede niente e sembrerebbe che la
                 // funzione sia rotta.
-                if (state.dimEnabled && !state.dimOverlayAllowed) {
+                if (state.dimEnabled && !state.dimOverlayAllowed && !state.dimSystemAvailable) {
                     item {
                         Column(modifier = Modifier.padding(HlScreenMargin)) {
                             SectionLabel("Permesso mancante", color = HlPaper)
@@ -185,41 +194,89 @@ fun DimScreen(
                 }
 
                 item {
+                    SectionLabel(
+                        text = if (state.dimSystemAvailable) "Riduzione di sistema" else "Velo sovrapposto",
+                        modifier = Modifier.padding(
+                            start = HlScreenMargin,
+                            end = HlScreenMargin,
+                            top = 24.dp,
+                            bottom = 10.dp
+                        )
+                    )
                     Text(
-                        text = "Il cursore non arriva al 100% di proposito: il velo non riceve " +
-                            "i tocchi, quindi con uno schermo tutto nero non vedresti più dove " +
-                            "premere per riaccenderlo.\n\n" +
-                            "Puoi spegnerla da qualunque app con il pulsante sulla notifica, " +
-                            "senza tornare qui.\n\n" +
-                            "Non copre la schermata di blocco né alcune finestre di sistema, e " +
-                            "le app bancarie possono farla sparire mentre sono aperte.",
+                        // Le due strade hanno limiti diversi, e vale la pena dire quale è in
+                        // uso: se un giorno l'attenuazione smette di comportarsi come qui
+                        // sotto, la prima cosa da guardare è se è cambiata strada.
+                        text = if (state.dimSystemAvailable) {
+                            "Sta attenuando il display, non sovrapponendo un velo: scurisce " +
+                                "tutto, comprese la barra di stato e quella di navigazione. " +
+                                "Nessuna app può farla sparire e il risparmio energetico non " +
+                                "c'entra.\n\n" +
+                                "È la stessa \"Luminosità extra\" che trovi nelle impostazioni " +
+                                "di accessibilità, accesa da qui."
+                        } else {
+                            "Il cursore non arriva al 100% di proposito: il velo non riceve i " +
+                                "tocchi, quindi con uno schermo tutto nero non vedresti più " +
+                                "dove premere per riaccenderlo.\n\n" +
+                                "Puoi spegnerla da qualunque app con il pulsante sulla " +
+                                "notifica, senza tornare qui.\n\n" +
+                                "Non copre la schermata di blocco né alcune finestre di " +
+                                "sistema, e le app bancarie possono farla sparire mentre sono " +
+                                "aperte. Le barre di sistema restano illuminate: un " +
+                                "overlay di un'app normale sta sotto di loro, e non c'è modo " +
+                                "di passarci sopra."
+                        },
                         color = HlPaper.copy(alpha = 0.45f),
                         fontSize = 12.sp,
                         lineHeight = 20.sp,
-                        modifier = Modifier.padding(HlScreenMargin)
+                        modifier = Modifier.padding(horizontal = HlScreenMargin)
                     )
+                }
+
+                // Come passare alla strada migliore, detto solo a chi non ce l'ha già.
+                if (!state.dimSystemAvailable) {
+                    item {
+                        Text(
+                            text = "Per scurire anche le barre di sistema serve un permesso che " +
+                                "Android non concede a un'app normale. Si dà una volta sola, da " +
+                                "computer col telefono collegato — è lo stesso della scala di " +
+                                "grigi della modalità DUMB:\n\n" +
+                                "adb shell pm grant com.hiddenlayer.launcher " +
+                                "android.permission.WRITE_SECURE_SETTINGS\n\n" +
+                                "Da lì in poi il launcher usa la riduzione del display invece " +
+                                "del velo, e nessuno di questi limiti vale più.",
+                            color = HlPaper.copy(alpha = 0.45f),
+                            fontSize = 12.sp,
+                            lineHeight = 20.sp,
+                            modifier = Modifier.padding(
+                                start = HlScreenMargin,
+                                end = HlScreenMargin,
+                                top = 20.dp
+                            )
+                        )
+                    }
                 }
 
                 // Documentazione, non interfaccia: sta in fondo perché si legge una volta
                 // sola, quando qualcosa non torna.
-                item {
-                    Text(
-                        text = "Su MIUI/HyperOS il risparmio energetico può chiudere il servizio " +
-                            "e far sparire l'attenuazione: metti Hidden Layer tra le app senza " +
-                            "restrizioni di batteria. Rientrando nel launcher riparte comunque " +
-                            "da sé.\n\n" +
-                            "Se il tuo Android ha già \"Luminosità extra\" tra le impostazioni " +
-                            "di accessibilità, quella è preferibile: agisce sul display invece " +
-                            "di sovrapporre un velo, quindi non ha nessuno di questi limiti.",
-                        color = HlPaper.copy(alpha = 0.32f),
-                        fontSize = 12.sp,
-                        lineHeight = 20.sp,
-                        modifier = Modifier.padding(
-                            start = HlScreenMargin,
-                            end = HlScreenMargin,
-                            bottom = HlScreenMargin
+                if (!state.dimSystemAvailable) {
+                    item {
+                        Text(
+                            text = "Su MIUI/HyperOS il risparmio energetico può chiudere il " +
+                                "servizio e far sparire l'attenuazione: metti Hidden Layer tra " +
+                                "le app senza restrizioni di batteria. Rientrando nel launcher " +
+                                "riparte comunque da sé.",
+                            color = HlPaper.copy(alpha = 0.32f),
+                            fontSize = 12.sp,
+                            lineHeight = 20.sp,
+                            modifier = Modifier.padding(
+                                start = HlScreenMargin,
+                                end = HlScreenMargin,
+                                top = 20.dp,
+                                bottom = HlScreenMargin
+                            )
                         )
-                    )
+                    }
                 }
             }
         }
