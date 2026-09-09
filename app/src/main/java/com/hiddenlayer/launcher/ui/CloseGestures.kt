@@ -17,12 +17,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.hiddenlayer.launcher.ui.theme.HlPaper
 import kotlin.math.abs
 
 private val CLOSE_DRAG_THRESHOLD = 64.dp
@@ -100,12 +100,15 @@ fun DragHandle(onClose: () -> Unit, modifier: Modifier = Modifier) {
             },
         contentAlignment = Alignment.Center
     ) {
+        // 26×2dp e non più 40×4: resta un'affordance riconoscibile senza essere una barra
+        // luminosa in cima a ogni schermata. L'area di tocco è il Box da 28dp che la
+        // contiene, quindi rimpicciolire il disegno non rende il gesto più difficile.
         Box(
             modifier = Modifier
-                .width(40.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.6f))
+                .width(26.dp)
+                .height(2.dp)
+                .clip(RoundedCornerShape(1.dp))
+                .background(HlPaper.copy(alpha = 0.28f))
         )
     }
 }

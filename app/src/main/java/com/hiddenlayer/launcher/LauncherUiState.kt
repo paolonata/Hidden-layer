@@ -101,6 +101,14 @@ data class LauncherUiState(
      * secondo dentro questo stato farebbe ricomporre l'intera app a ogni tick — cassetto
      * compreso. Questo invece cambia due volte per sessione. */
     val focusActive: Boolean = false,
+    /** Quando finisce la sessione, epoch millis (0 se non ce n'è una). La schermata della
+     * sessione in corso lo mostra come "fino alle 21:06": un orario assoluto si legge una
+     * volta e si sa, mentre il countdown da solo invita a ricontrollare. Cambia due volte per
+     * sessione, quindi può stare qui. */
+    val focusEndsAt: Long = 0L,
+    /** Da quando dura il tratto di resistenza in corso, epoch millis. È l'**inizio**, non la
+     * durata: la durata ticchetterebbe, questo cambia solo quando cedi. */
+    val focusStreakStartMillis: Long = 0L,
     /** Il doppio tap sulla home ha chiesto per quanto tempo. */
     val focusPickerVisible: Boolean = false,
     /** La pill col countdown è una conferma, non un elemento fisso della home: resta accesa

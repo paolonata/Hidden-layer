@@ -33,12 +33,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -50,7 +47,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -61,27 +60,41 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.MenuOrigin
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.FocusPill
+import com.hiddenlayer.launcher.ui.dashedBorder
+import com.hiddenlayer.launcher.ui.theme.HlHairline
+import com.hiddenlayer.launcher.ui.theme.HlPaper
+import com.hiddenlayer.launcher.ui.theme.HlTileShape
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
 private const val HOME_COLUMNS = 4
-// Solo l'icona, senza etichetta sotto: 76dp servivano a far stare anche il nome.
-private val HOME_TILE_HEIGHT = 60.dp
-private val PAGE_PADDING = 12.dp
-private val ROW_SPACING = 12.dp
+// Solo l'icona, senza etichetta sotto: 76dp servivano a far stare anche il nome, 60 erano
+// ancora la cornice di quella misura.
+private val HOME_TILE_HEIGHT = 52.dp
+// La griglia respira molto più di prima (era 12/12/8). Non è gusto: quattro colonne strette
+// e vicine si leggono come un blocco unico da scandagliare, ed è esattamente il movimento —
+// scorrere le icone senza cercarne una — che questo launcher vuole scoraggiare. Con lo
+// spazio attorno, ogni icona torna a essere una cosa sola che o stai cercando o no.
+private val PAGE_PADDING_HORIZONTAL = 30.dp
+private val PAGE_PADDING_VERTICAL = 44.dp
+private val COLUMN_SPACING = 18.dp
+private val ROW_SPACING = 26.dp
 private val TOP_GESTURE_EXCLUSION = 56.dp
 private const val SWIPE_OPEN_THRESHOLD_PX = 40f
 private val PAGE_MOVE_THRESHOLD = 72.dp
 private val TAP_VS_DRAG_THRESHOLD = 16.dp
 private val DRAG_ICON_SIZE = 56.dp
 private val DOCK_TOGGLE_THRESHOLD = 28.dp
-private val DOCK_FALLBACK_HEIGHT = 132.dp
+// Stima dell'altezza del dock finché onZonePositioned non l'ha misurata davvero: filetto +
+// maniglia da 18dp + una riga di 46dp col suo padding. Scesa da 132 col dock nuovo.
+private val DOCK_FALLBACK_HEIGHT = 124.dp
 // Quanto bisogna salire con due dita per aprire le app nascoste. Corto: è una scorciatoia,
 // deve costare un movimento solo — ma non così corto da scattare su un pizzico sbagliato.
 private val SECRET_SWIPE_THRESHOLD = 48.dp
@@ -363,7 +376,7 @@ fun HomeScreen(
                 // As many rows as physically fit the screen, so a page fills up instead of
                 // stopping at a hardcoded row count.
                 val rowsPerPage = remember(maxHeight) {
-                    ((maxHeight - PAGE_PADDING * 2 + ROW_SPACING) / (HOME_TILE_HEIGHT + ROW_SPACING))
+                    ((maxHeight - PAGE_PADDING_VERTICAL * 2 + ROW_SPACING) / (HOME_TILE_HEIGHT + ROW_SPACING))
                         .toInt()
                         .coerceAtLeast(1)
                 }
@@ -390,19 +403,22 @@ fun HomeScreen(
                 }
             }
 
+            // Segmenti, non pallini. Un pallino pieno è una forma, e a schermo ce n'erano
+            // tanti quante le pagine: tre puntini bianchi in mezzo alla home sono tre cose
+            // che si guardano. Un trattino da 2dp dice la stessa identica informazione —
+            // quante pagine e dove sei — senza mai diventare un elemento.
             if (pages.size > 1) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    horizontalArrangement = Arrangement.Center
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp, Alignment.CenterHorizontally)
                 ) {
                     repeat(pages.size) { index ->
                         val selected = pagerState.currentPage == index
                         Box(
                             modifier = Modifier
-                                .padding(3.dp)
-                                .size(if (selected) 7.dp else 5.dp)
-                                .clip(CircleShape)
-                                .background(if (selected) Color.White else Color.White.copy(alpha = 0.5f))
+                                .width(18.dp)
+                                .height(2.dp)
+                                .background(if (selected) HlPaper else HlPaper.copy(alpha = 0.22f))
                         )
                     }
                 }
@@ -490,8 +506,11 @@ private fun HomePage(
         LazyVerticalGrid(
             columns = GridCells.Fixed(HOME_COLUMNS),
             userScrollEnabled = false,
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = PAGE_PADDING),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(
+                horizontal = PAGE_PADDING_HORIZONTAL,
+                vertical = PAGE_PADDING_VERTICAL
+            ),
+            horizontalArrangement = Arrangement.spacedBy(COLUMN_SPACING),
             verticalArrangement = Arrangement.spacedBy(ROW_SPACING),
             modifier = Modifier.fillMaxSize()
         ) {
@@ -561,10 +580,22 @@ private fun Dock(
     val toggleThresholdPx = remember(density) { with(density) { DOCK_TOGGLE_THRESHOLD.toPx() } }
     var dragAccum by remember { mutableStateOf(0f) }
 
+    // Il pannello nero al 25% è diventato **un filetto**. Su uno sfondo qualunque quella
+    // fascia scura in fondo era una barra che tagliava la foto in due; il filetto dice la
+    // stessa cosa — "sotto questa linea si comanda il dock" — senza posare una superficie.
+    // Il gesto non cambia: la zona è la stessa, misurata come prima da onZonePositioned.
     Surface(
-        color = Color.Black.copy(alpha = 0.25f),
+        color = Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
+            .drawBehind {
+                val strokePx = 1.dp.toPx()
+                drawRect(
+                    color = HlHairline,
+                    topLeft = Offset(0f, 0f),
+                    size = Size(size.width, strokePx)
+                )
+            }
             .onGloballyPositioned { onZonePositioned(it.positionInRoot().y) }
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
@@ -643,10 +674,10 @@ private fun DockHandle(expanded: Boolean) {
     ) {
         Box(
             modifier = Modifier
-                .width(if (expanded) 22.dp else 36.dp)
-                .height(4.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(Color.White.copy(alpha = 0.6f))
+                .width(if (expanded) 18.dp else 26.dp)
+                .height(2.dp)
+                .clip(RoundedCornerShape(1.dp))
+                .background(HlPaper.copy(alpha = 0.28f))
         )
     }
 }
@@ -669,15 +700,18 @@ private fun DockRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(horizontal = 22.dp, vertical = 6.dp),
+        // SpaceBetween e non SpaceEvenly: gli slot si allineano ai bordi del margine, come
+        // fa la griglia sopra. Con SpaceEvenly le colonne del dock non cadevano mai sotto
+        // quelle della home, e le due griglie si leggevano come due cose scollegate.
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         slots.forEachIndexed { index, app ->
             val slot = slotOffset + index
             Box(
                 modifier = Modifier
-                    .size(52.dp)
+                    .size(46.dp)
                     .combinedClickable(
                         onClick = { if (app != null) onAppTap(app) else onEmptySlot(slot) },
                         onLongClick = {
@@ -696,11 +730,22 @@ private fun DockRow(
                         )
                     )
                 } else {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Aggiungi al dock",
-                        tint = Color.White.copy(alpha = 0.6f)
-                    )
+                    // Un contorno tratteggiato invece dell'icona "+" piena: un posto vuoto
+                    // deve leggersi come vuoto. Il `+` resta al centro, appena percepibile,
+                    // perché è l'unica cosa che dice "si può toccare" — e il tocco (oltre al
+                    // tocco lungo) apre il selettore, come prima.
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .dashedBorder(HlPaper.copy(alpha = 0.20f), HlTileShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "+",
+                            color = HlPaper.copy(alpha = 0.35f),
+                            fontSize = 18.sp
+                        )
+                    }
                 }
             }
         }

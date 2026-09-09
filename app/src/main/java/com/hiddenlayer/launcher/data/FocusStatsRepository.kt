@@ -39,6 +39,15 @@ class FocusStatsRepository(context: Context) {
 
     fun getSessionCount(): Int = prefs.getInt(KEY_SESSIONS, 0)
 
+    /** Da quando dura il tratto di resistenza in corso, o 0 se non ce n'è uno.
+     *
+     * Esposto come **istante di inizio** e non solo come durata perché la schermata della
+     * sessione in corso lo mostra mentre scorre: un campo con la durata dentro `uiState`
+     * ticchetterebbe una volta al secondo e farebbe ricomporre tutta l'app (vedi il commento
+     * su `focusRemainingSeconds`), mentre un istante fisso cambia solo quando cedi. La
+     * sottrazione la fa chi disegna, che sta già ricomponendo per conto suo. */
+    fun getStreakStartMillis(): Long = prefs.getLong(KEY_STREAK_START, 0L)
+
     /** Da quanto stai resistendo adesso; 0 se non c'è nessuna sessione in corso. */
     fun currentStreakSeconds(nowMillis: Long): Int {
         val start = prefs.getLong(KEY_STREAK_START, 0L)

@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmap
+import com.hiddenlayer.launcher.ui.theme.HlBackground
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -50,8 +51,22 @@ import kotlinx.coroutines.withContext
  */
 private var cachedBlur: Bitmap? = null
 
+/**
+ * Il velo sopra lo sfondo sfocato è **nero caldo**, non nero puro: è lo stesso fondo delle
+ * schermate piene, quindi passando da una all'altra il colore non cambia temperatura. Con un
+ * nero neutro sopra uno sfondo qualunque il risultato virava al grigio-azzurro, che al buio
+ * si legge come "schermo acceso".
+ *
+ * Gli alpha sono saliti parecchio rispetto a prima (0.28 → 0.80 nel cassetto, 0.45 → 0.82
+ * nella Concentrazione): lo sfondo del telefono resta percepibile come profondità, ma smette
+ * di essere un'immagine da guardare dietro il contenuto.
+ */
 @Composable
-fun BlurredWallpaperBackground(modifier: Modifier = Modifier, scrimAlpha: Float = 0.28f) {
+fun BlurredWallpaperBackground(
+    modifier: Modifier = Modifier,
+    scrimAlpha: Float = 0.80f,
+    scrimColor: Color = HlBackground
+) {
     val context = LocalContext.current
     val blurredBitmap by produceState<Bitmap?>(initialValue = cachedBlur) {
         if (value != null) return@produceState
@@ -75,7 +90,7 @@ fun BlurredWallpaperBackground(modifier: Modifier = Modifier, scrimAlpha: Float 
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = scrimAlpha))
+                .background(scrimColor.copy(alpha = scrimAlpha))
         )
     }
 }

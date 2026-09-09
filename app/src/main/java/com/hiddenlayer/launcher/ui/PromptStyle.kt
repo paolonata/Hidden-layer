@@ -1,42 +1,51 @@
 package com.hiddenlayer.launcher.ui
 
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import com.hiddenlayer.launcher.ui.theme.HlBackground
+import com.hiddenlayer.launcher.ui.theme.HlPaper
+import com.hiddenlayer.launcher.ui.theme.HlPaper42
+import com.hiddenlayer.launcher.ui.theme.HlPaper55
+import com.hiddenlayer.launcher.ui.theme.HlScrim
+import com.hiddenlayer.launcher.ui.theme.HlSheetShape
+import com.hiddenlayer.launcher.ui.theme.HlSurface
+import com.hiddenlayer.launcher.ui.theme.HlPillShape
 
 /**
- * L'aspetto condiviso dei due popup (scelta della durata e conferma di apertura). Stanno qui
- * e non duplicati nei due file perché sono la stessa carta: separati, prima o poi divergono.
+ * L'aspetto condiviso dei tre popup (scelta della durata, conferma di apertura, uscita da
+ * DUMB). Stanno qui e non duplicati nei tre file perché sono lo stesso foglio: separati,
+ * prima o poi divergono.
  *
- * La superficie è **scura e piena**, non un velo traslucido. Il velo funzionava sulla home,
- * dove sotto c'è lo sfondo; sopra il cassetto, che è una griglia di icone colorate, il testo
- * bianco ci finiva dentro e non si leggeva più. Un fondo pieno tiene lo stesso carattere —
- * angoli morbidi, bordo appena accennato, niente superficie squadrata di sistema — e il
- * contrasto non dipende più da cosa c'è dietro né da quanto è colorato.
+ * **Sono diventati fogli ancorati in basso**, non carte centrate. Una carta al centro dello
+ * schermo è una finestra di sistema: interrompe, chiede attenzione e sta dove non arriva il
+ * pollice. Un foglio in basso si legge dall'alto in basso come il resto dell'interfaccia, e
+ * il pulsante finisce dove la mano è già.
  *
- * Opaco e non "quasi": con un filo di trasparenza il contrasto torna a dipendere dallo
- * sfondo, e questo problema è già stato segnalato due volte.
+ * La superficie resta **scura e piena**, non un velo traslucido: il velo funzionava sulla
+ * home ma non sopra il cassetto, che è una griglia di icone colorate. Opaco e non "quasi":
+ * con un filo di trasparenza il contrasto torna a dipendere da cosa c'è dietro, ed è già
+ * stato segnalato due volte.
  */
-val PromptCardShape = RoundedCornerShape(28.dp)
-val PromptPillShape = RoundedCornerShape(percent = 50)
+val PromptCardShape = HlSheetShape
+val PromptPillShape = HlPillShape
 
-/** Il velo dietro la carta: abbastanza scuro da staccare il popup da una griglia di icone. */
-val PromptScrim = Color.Black.copy(alpha = 0.72f)
+/** Il velo dietro il foglio: quasi opaco, così quello che c'è sotto smette di competere. */
+val PromptScrim = HlScrim
 
-val PromptSurface = Color(0xFF16171A)
-val PromptBorder = Color.White.copy(alpha = 0.16f)
+val PromptSurface = HlSurface
 
-/** Il pulsante che vuoi che si prema: bianco pieno, testo scuro. */
-val PromptAccent = Color.White.copy(alpha = 0.94f)
-val PromptAccentContent = Color(0xFF17181B)
+/** Nessun bordo: la carta si stacca dal velo per luminosità, non per contorno. Il bordo era
+ * un residuo di quando il velo era chiaro. */
+val PromptBorder = Color.Transparent
 
-/** Il pulsante secondario. Il contenuto disabilitato resta ben visibile: deve leggersi che
- * l'attesa sta scorrendo, non sembrare un pulsante spento. */
-val PromptSecondary = Color.White.copy(alpha = 0.16f)
-val PromptSecondaryBorder = Color.White.copy(alpha = 0.30f)
-val PromptSecondaryContent = Color.White.copy(alpha = 0.90f)
-val PromptDisabledContent = Color.White.copy(alpha = 0.55f)
+/** Il pulsante che vuoi che si prema: carta piena, testo scuro. */
+val PromptAccent = HlPaper
+val PromptAccentContent = HlBackground
 
-val PromptTitle = Color.White
-val PromptBody = Color.White.copy(alpha = 0.88f)
-val PromptCaption = Color.White.copy(alpha = 0.68f)
+/** L'azione secondaria non è più un pulsante: è testo. Se una scelta va scoraggiata, il modo
+ * onesto è darle meno peso, non toglierla. */
+val PromptSecondaryContent = HlPaper42
+val PromptDisabledContent = HlPaper42
+
+val PromptTitle = HlPaper
+val PromptBody = HlPaper55
+val PromptCaption = HlPaper42

@@ -343,7 +343,10 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _uiState.value = _uiState.value.copy(
             focusRecordSeconds = focusStatsRepository.getRecordSeconds(),
             focusBreaks = focusStatsRepository.getBreaks(),
-            focusSessionCount = focusStatsRepository.getSessionCount()
+            focusSessionCount = focusStatsRepository.getSessionCount(),
+            // Il tratto di resistenza riparte a ogni cedimento: qui viaggia insieme al resto
+            // dello storico, che è esattamente quando cambia.
+            focusStreakStartMillis = focusStatsRepository.getStreakStartMillis()
         )
     }
 
@@ -442,6 +445,8 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _focusRemainingSeconds.value = 0
         _uiState.value = _uiState.value.copy(
             focusActive = false,
+            focusEndsAt = 0L,
+            focusStreakStartMillis = 0L,
             focusToastVisible = false,
             frictionApp = null,
             // Se la sessione scade mentre la home è chiusa, il blocco cade con lei: altrimenti
@@ -487,7 +492,11 @@ class LauncherViewModel(application: Application) : AndroidViewModel(application
         _focusRemainingSeconds.value = ((endsAt - System.currentTimeMillis()) / 1000L)
             .toInt()
             .coerceAtLeast(0)
-        _uiState.value = _uiState.value.copy(focusActive = true)
+        _uiState.value = _uiState.value.copy(
+            focusActive = true,
+            focusEndsAt = endsAt,
+            focusStreakStartMillis = focusStatsRepository.getStreakStartMillis()
+        )
 
         focusTicker = viewModelScope.launch {
             while (true) {
