@@ -2,6 +2,8 @@ package com.hiddenlayer.launcher.ui.screens
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -17,14 +20,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hiddenlayer.launcher.LauncherUiState
@@ -40,6 +50,7 @@ import com.hiddenlayer.launcher.ui.theme.HlBackground
 import com.hiddenlayer.launcher.ui.theme.HlPaper
 import com.hiddenlayer.launcher.ui.theme.HlPaper55
 import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
+import com.hiddenlayer.launcher.ui.theme.HlTouchTarget
 
 /**
  * La luminosità extra: un velo nero sopra tutto, per scendere sotto il minimo di sistema.
@@ -109,54 +120,11 @@ fun DimScreen(
 
                         Spacer(Modifier.height(14.dp))
 
-                        // Traccia da 2dp e pallino pieno: il cursore di Material ha una
-                        // traccia da 4dp, un pallino da 20 e un alone attorno — su uno
-                        // schermo scuro è la cosa più luminosa della pagina, ed è il comando
-                        // di una funzione che serve proprio a togliere luce.
-                        Slider(
+                        ThinSlider(
                             value = state.dimLevel,
-                            onValueChange = onLevelChange,
                             valueRange = DimRepository.MIN_LEVEL..DimRepository.MAX_LEVEL,
                             enabled = state.dimEnabled,
-                            colors = SliderDefaults.colors(
-                                thumbColor = HlPaper,
-                                activeTrackColor = HlPaper,
-                                inactiveTrackColor = HlPaper.copy(alpha = 0.18f)
-                            ),
-                            track = {
-                                val range = DimRepository.MAX_LEVEL - DimRepository.MIN_LEVEL
-                                val fraction = if (range > 0f) {
-                                    ((state.dimLevel - DimRepository.MIN_LEVEL) / range).coerceIn(0f, 1f)
-                                } else {
-                                    0f
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(2.dp)
-                                        .background(HlPaper.copy(alpha = 0.18f))
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxWidth(fraction)
-                                            .height(2.dp)
-                                            .background(
-                                                if (state.dimEnabled) HlPaper else HlPaper.copy(alpha = 0.35f)
-                                            )
-                                    )
-                                }
-                            },
-                            thumb = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .clip(RoundedCornerShape(percent = 50))
-                                        .background(
-                                            if (state.dimEnabled) HlPaper else HlPaper.copy(alpha = 0.35f)
-                                        )
-                                )
-                            },
-                            modifier = Modifier.fillMaxWidth()
+                            onValueChange = onLevelChange
                         )
 
                         Spacer(Modifier.height(24.dp))
@@ -255,5 +223,94 @@ fun DimScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * Il cursore: una traccia da 2dp e un pallino pieno.
+ *
+ * È disegnato a mano invece di essere lo `Slider` di Material, per due ragioni. La prima si
+ * vede: quello ha una traccia da 4dp, un pallino da 20 con un alone attorno e dei fermi alle
+ * estremità — su uno schermo scuro diventa la cosa più luminosa della pagina, ed è il comando
+ * della funzione che serve proprio a togliere luce. La seconda è pratica: per personalizzarlo
+ * bisogna passargli `track` e `thumb`, e di quell'overload ne esistono due — uno deprecato che
+ * prende `SliderPositions` e uno che prende `SliderState` — che con una lambda a parametro
+ * implicito il compilatore non sempre distingue. Qui non si compila in locale (§2 di
+ * `CLAUDE.md`), quindi un'ambiguità del genere costa un giro di build per scoprirla.
+ *
+ * L'altezza toccabile è [HlTouchTarget] anche se il disegno è alto 2dp: la stessa regola di
+ * tutte le altre azioni alleggerite.
+ */
+@Composable
+private fun ThinSlider(
+    value: Float,
+    valueRange: ClosedFloatingPointRange<Float>,
+    enabled: Boolean,
+    onValueChange: (Float) -> Unit
+) {
+    val density = LocalDensity.current
+    val thumbSize = 16.dp
+    val thumbPx = with(density) { thumbSize.toPx() }
+    var widthPx by remember { mutableFloatStateOf(0f) }
+
+    // I rilevatori di gesto sopravvivono alle ricomposizioni e si portano dietro le lambda
+    // catturate: senza `rememberUpdatedState`, un `onValueChange` sostituito resterebbe
+    // quello vecchio per sempre.
+    val report by rememberUpdatedState<(Float) -> Unit> { x ->
+        val travel = (widthPx - thumbPx).coerceAtLeast(1f)
+        val fraction = ((x - thumbPx / 2f) / travel).coerceIn(0f, 1f)
+        onValueChange(valueRange.start + fraction * (valueRange.endInclusive - valueRange.start))
+    }
+
+    val span = valueRange.endInclusive - valueRange.start
+    val fraction = if (span > 0f) ((value - valueRange.start) / span).coerceIn(0f, 1f) else 0f
+    val filled = if (enabled) HlPaper else HlPaper.copy(alpha = 0.35f)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(HlTouchTarget)
+            .onSizeChanged { widthPx = it.width.toFloat() }
+            .then(
+                if (!enabled) {
+                    Modifier
+                } else {
+                    Modifier
+                        .pointerInput(Unit) {
+                            detectHorizontalDragGestures { change, _ ->
+                                change.consume()
+                                report(change.position.x)
+                            }
+                        }
+                        // Un tocco secco porta il cursore dove hai premuto. Senza, toccare la
+                        // traccia non farebbe niente — ed è il gesto che l'elemento promette.
+                        .pointerInput(Unit) {
+                            detectTapGestures { report(it.x) }
+                        }
+                }
+            ),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(2.dp)
+                .background(HlPaper.copy(alpha = 0.18f))
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(fraction)
+                .height(2.dp)
+                .background(filled)
+        )
+        Box(
+            modifier = Modifier
+                // Il pallino scorre fra 0 e (larghezza − pallino), così alle estremità resta
+                // dentro la traccia invece di sbordare di mezza larghezza.
+                .offset { IntOffset((fraction * (widthPx - thumbPx)).toInt(), 0) }
+                .size(thumbSize)
+                .clip(RoundedCornerShape(percent = 50))
+                .background(filled)
+        )
     }
 }
