@@ -7,11 +7,15 @@ import android.app.PendingIntent
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Point
+import android.hardware.display.DisplayManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.view.Gravity
 import android.view.View
@@ -38,11 +42,62 @@ import com.hiddenlayer.launcher.data.DimRepository
 class ScreenDimService : Service() {
 
     private var overlay: View? = null
+
+    /** Tenuti perché servono a **ridimensionare** la finestra quando lo schermo ruota: senza
+     * conservarli non ci sarebbe niente da passare a `updateViewLayout`. */
+    private var overlayParams: WindowManager.LayoutParams? = null
     private lateinit var repository: DimRepository
+
+    /**
+     * La rotazione dello schermo, ascoltata dal `DisplayManager` e non solo da
+     * `onConfigurationChanged`.
+     *
+     * Il velo vive quasi sempre **sopra l'app di qualcun altro**, non sopra il launcher: è il
+     * caso per cui esiste. In quella situazione questo processo non ha nessuna activity
+     * visibile, e la sua configurazione può benissimo non cambiare quando ruota lo schermo —
+     * quindi `onConfigurationChanged` non è garantito. `onDisplayChanged` invece arriva per il
+     * display in sé: rotazione, risoluzione, densità, chiunque le abbia provocate.
+     */
+    private val displayListener = object : DisplayManager.DisplayListener {
+        override fun onDisplayAdded(displayId: Int) = Unit
+        override fun onDisplayRemoved(displayId: Int) = Unit
+        override fun onDisplayChanged(displayId: Int) = resizeOverlay()
+    }
 
     override fun onCreate() {
         super.onCreate()
         repository = DimRepository(this)
+        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        // Handler sul main looper: `updateViewLayout` va chiamato da lì.
+        displayManager.registerDisplayListener(displayListener, Handler(Looper.getMainLooper()))
+    }
+
+    /** Arriva quando il launcher è in primo piano. Fa la stessa cosa del listener sul display,
+     * e le due strade convivono senza darsi noia perché `resizeOverlay` non fa niente se la
+     * misura non è cambiata. */
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        resizeOverlay()
+    }
+
+    /**
+     * Rimette la finestra grande quanto lo schermo **di adesso**.
+     *
+     * Serve perché le dimensioni sono in pixel fisici espliciti (vedi `showOrUpdateOverlay`):
+     * ruotando il telefono, larghezza e altezza si scambiano ma la finestra resta com'era, e
+     * un velo 1080×2400 su uno schermo diventato 2400×1080 ne copre solo una parte —
+     * segnalato dall'utente come "metà schermo attenuato e metà no". È il prezzo da pagare
+     * per non usare `MATCH_PARENT`, che su MIUI ha il problema opposto e peggiore.
+     */
+    private fun resizeOverlay() {
+        val view = overlay ?: return
+        val params = overlayParams ?: return
+        val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        val size = realScreenSize(windowManager)
+        if (params.width == size.x && params.height == size.y) return
+        params.width = size.x
+        params.height = size.y
+        runCatching { windowManager.updateViewLayout(view, params) }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -77,6 +132,8 @@ class ScreenDimService : Service() {
     }
 
     override fun onDestroy() {
+        val displayManager = getSystemService(Context.DISPLAY_SERVICE) as DisplayManager
+        runCatching { displayManager.unregisterDisplayListener(displayListener) }
         removeOverlay()
         super.onDestroy()
     }
@@ -88,6 +145,9 @@ class ScreenDimService : Service() {
         val existing = overlay
         if (existing != null) {
             existing.setBackgroundColor(veil)
+            // Anche qui: il servizio può essere ripartito dopo una rotazione, e riaccendere
+            // il velo senza rimisurarlo lo lascerebbe della misura sbagliata.
+            resizeOverlay()
             return
         }
 
@@ -133,7 +193,10 @@ class ScreenDimService : Service() {
         // Se il sistema rifiuta comunque (ROM che revoca il permesso di fatto, come sa fare
         // MIUI), si spegne in modo pulito invece di far cadere il processo.
         runCatching { windowManager.addView(view, params) }
-            .onSuccess { overlay = view }
+            .onSuccess {
+                overlay = view
+                overlayParams = params
+            }
             .onFailure {
                 repository.setEnabled(false)
                 stopSelf()
@@ -156,6 +219,7 @@ class ScreenDimService : Service() {
         val windowManager = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         runCatching { windowManager.removeView(view) }
         overlay = null
+        overlayParams = null
     }
 
     private fun buildNotification(): Notification {

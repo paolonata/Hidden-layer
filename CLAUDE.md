@@ -150,6 +150,17 @@ questo file o se ne scrive un altro simile:
   ma l'unico modo fino a `minSdk` 26) e li passa come larghezza/altezza
   esplicite invece di `MATCH_PARENT`. Se si tocca di nuovo questo file, non
   tornare a `MATCH_PARENT` "perché è più pulito": è quello che causava il bug.
+- **Pixel espliciti vuol dire che la rotazione va gestita a mano**, ed è il
+  rovescio della medaglia del punto qui sopra. La finestra viene misurata una
+  volta, quando nasce: ruotando il telefono larghezza e altezza si scambiano
+  ma la finestra resta com'era, e un velo 1080×2400 su uno schermo diventato
+  2400×1080 ne copre solo una parte — segnalato dall'utente come "metà schermo
+  attenuato e metà no". `resizeOverlay()` rimette la misura giusta, ed è
+  chiamata da **due** parti: `onConfigurationChanged` e, soprattutto, un
+  `DisplayManager.DisplayListener`. Il secondo non è ridondante: il velo vive
+  quasi sempre sopra l'app di qualcun altro, quindi questo processo non ha
+  activity visibili e la sua configurazione può non cambiare affatto quando
+  ruota lo schermo. `onDisplayChanged` invece arriva per il display in sé.
 - `FLAG_NOT_TOUCHABLE` è ciò che rende il velo attraversabile. Di conseguenza
   `MAX_LEVEL` non arriva a 1: un velo opaco su una finestra che non riceve
   tocchi lascerebbe uno schermo nero senza modo di vedere dove premere per
