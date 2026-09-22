@@ -22,7 +22,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -395,6 +399,18 @@ fun HomeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                // **Solo il lato, non il basso.** In orizzontale la barra di navigazione sta
+                // su un fianco, e va scansata da *tutto* il contenuto insieme: prima la
+                // pagava solo la fila inferiore del dock, che essendo centrata nel suo
+                // contenitore finiva spostata di mezza barra rispetto alle due sopra —
+                // tre file di icone che non stavano in colonna, visibile in uno screenshot.
+                //
+                // Paddare orizzontalmente questa Column è lecito, mentre paddarla in
+                // verticale no: il tracker qui sotto confronta `offset.y` (coordinate della
+                // Column) con `dockZoneTop` (coordinate della radice), e i due restano
+                // allineati finché si sposta solo la x. È la stessa ragione per cui la barra
+                // di stato la paga la griglia e non questa Column.
+                .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal))
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
                         onDragStart = { offset ->
@@ -739,7 +755,10 @@ private fun Dock(
                 iconSize = iconSize,
                 onSlotsBounds = onSlotsBounds,
                 modifier = Modifier
-                    .navigationBarsPadding()
+                    // Solo il basso: il fianco lo scansa già la Column di HomeScreen, per
+                    // tutte e tre le file insieme. Tenere qui anche i lati rimetterebbe la
+                    // fila inferiore fuori asse rispetto alle altre due.
+                    .windowInsetsPadding(WindowInsets.navigationBars.only(WindowInsetsSides.Bottom))
                     .onGloballyPositioned { onRowPositioned(0, it.positionInRoot().y) }
             )
         }
