@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -60,6 +61,7 @@ import com.hiddenlayer.launcher.ui.theme.HlPaper42
 import com.hiddenlayer.launcher.ui.theme.HlPaper55
 import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
 import com.hiddenlayer.launcher.ui.theme.HlSurface
+import com.hiddenlayer.launcher.ui.theme.readableWidth
 
 /** Il raggio della carta, ripetuto sulla prima e sull'ultima riga di ogni gruppo. */
 private val CARD_RADIUS = 20.dp
@@ -113,113 +115,125 @@ fun HiddenManagerScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            DragHandle(onClose = onDone)
-            Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
-                ScreenHeader(label = "App nascoste", actionText = "Chiudi", onAction = onDone)
-            }
-
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                if (state.vaultUnavailable) {
-                    item {
-                        Text(
-                            text = "L'archivio cifrato delle app nascoste non è leggibile su " +
-                                "questo dispositivo: l'elenco risulta vuoto e le modifiche non " +
-                                "vengono salvate. Di solito succede quando la chiave viene " +
-                                "invalidata da un cambio del blocco schermo.",
-                            color = HlPaper,
-                            fontSize = 13.sp,
-                            modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 12.dp)
-                        )
-                    }
+            // Tutto quello che si legge sta in una colonna di larghezza limitata e
+            // centrata: su un tablet una riga di testo larga 1280dp è illeggibile, e un
+            // elenco con l'interruttore all'altro capo dello schermo pure. Sotto i 600dp —
+            // cioè su qualunque telefono — il limite non viene mai raggiunto e il layout
+            // resta identico a prima.
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .readableWidth()
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                DragHandle(onClose = onDone)
+                Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                    ScreenHeader(label = "App nascoste", actionText = "Chiudi", onAction = onDone)
                 }
 
-                item {
-                    Text(
-                        text = "Spariscono da home, cassetto e ricerca. Si aprono solo dal " +
-                            "cassetto riservato.",
-                        color = HlPaper.copy(alpha = 0.50f),
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 14.dp)
-                    )
-                }
-
-                item {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .padding(horizontal = HlScreenMargin)
-                            .fillMaxWidth()
-                            .clip(HlCardShape)
-                            .background(HlSurface)
-                            .padding(start = 20.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Richiedi sblocco", color = HlPaper, fontSize = 15.sp)
-                            Spacer(Modifier.height(2.dp))
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    if (state.vaultUnavailable) {
+                        item {
                             Text(
-                                text = "Impronta, con PIN di riserva.",
-                                color = HlPaper55,
-                                fontSize = 12.sp
+                                text = "L'archivio cifrato delle app nascoste non è leggibile su " +
+                                    "questo dispositivo: l'elenco risulta vuoto e le modifiche non " +
+                                    "vengono salvate. Di solito succede quando la chiave viene " +
+                                    "invalidata da un cambio del blocco schermo.",
+                                color = HlPaper,
+                                fontSize = 13.sp,
+                                modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 12.dp)
                             )
                         }
-                        MinimalSwitch(
-                            checked = state.unlockRequired,
-                            onCheckedChange = { enabled ->
-                                if (enabled) showPinDialog = true else onDisableLock()
-                            }
+                    }
+
+                    item {
+                        Text(
+                            text = "Spariscono da home, cassetto e ricerca. Si aprono solo dal " +
+                                "cassetto riservato.",
+                            color = HlPaper.copy(alpha = 0.50f),
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 14.dp)
                         )
                     }
-                }
 
-                if (hidden.isNotEmpty()) {
-                    item { GroupLabel("Nascoste · ${hidden.size}") }
+                    item {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(horizontal = HlScreenMargin)
+                                .fillMaxWidth()
+                                .clip(HlCardShape)
+                                .background(HlSurface)
+                                .padding(start = 20.dp, end = 10.dp, top = 12.dp, bottom = 12.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Richiedi sblocco", color = HlPaper, fontSize = 15.sp)
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = "Impronta, con PIN di riserva.",
+                                    color = HlPaper55,
+                                    fontSize = 12.sp
+                                )
+                            }
+                            MinimalSwitch(
+                                checked = state.unlockRequired,
+                                onCheckedChange = { enabled ->
+                                    if (enabled) showPinDialog = true else onDisableLock()
+                                }
+                            )
+                        }
+                    }
+
+                    if (hidden.isNotEmpty()) {
+                        item { GroupLabel("Nascoste · ${hidden.size}") }
+                        itemsIndexed(
+                            items = hidden,
+                            key = { _, app -> "h-" + app.componentName.flattenToString() }
+                        ) { index, app ->
+                            AppToggleRow(
+                                app = app,
+                                checked = true,
+                                first = index == 0,
+                                last = index == hidden.lastIndex,
+                                onToggle = { onToggleHidden(app) }
+                            )
+                        }
+                    }
+
+                    item { GroupLabel("Tutte le altre") }
                     itemsIndexed(
-                        items = hidden,
-                        key = { _, app -> "h-" + app.componentName.flattenToString() }
+                        items = visible,
+                        key = { _, app -> "v-" + app.componentName.flattenToString() }
                     ) { index, app ->
                         AppToggleRow(
                             app = app,
-                            checked = true,
+                            checked = false,
                             first = index == 0,
-                            last = index == hidden.lastIndex,
+                            last = index == visible.lastIndex,
                             onToggle = { onToggleHidden(app) }
                         )
                     }
-                }
 
-                item { GroupLabel("Tutte le altre") }
-                itemsIndexed(
-                    items = visible,
-                    key = { _, app -> "v-" + app.componentName.flattenToString() }
-                ) { index, app ->
-                    AppToggleRow(
-                        app = app,
-                        checked = false,
-                        first = index == 0,
-                        last = index == visible.lastIndex,
-                        onToggle = { onToggleHidden(app) }
-                    )
-                }
-
-                // In fondo, la versione installata. Serve a rispondere in un secondo alla
-                // domanda che è già costata due giri di segnalazioni: "questo APK contiene
-                // davvero la correzione di cui stiamo parlando?".
-                item {
-                    val context = LocalContext.current
-                    val version = remember(context) {
-                        runCatching {
-                            context.packageManager
-                                .getPackageInfo(context.packageName, 0)
-                                .versionName
-                        }.getOrNull() ?: "sconosciuta"
+                    // In fondo, la versione installata. Serve a rispondere in un secondo alla
+                    // domanda che è già costata due giri di segnalazioni: "questo APK contiene
+                    // davvero la correzione di cui stiamo parlando?".
+                    item {
+                        val context = LocalContext.current
+                        val version = remember(context) {
+                            runCatching {
+                                context.packageManager
+                                    .getPackageInfo(context.packageName, 0)
+                                    .versionName
+                            }.getOrNull() ?: "sconosciuta"
+                        }
+                        MonoValue(
+                            text = "HIDDEN LAYER $version",
+                            color = HlPaper55,
+                            fontSize = 11.sp,
+                            letterSpacing = 1.4.sp,
+                            modifier = Modifier.padding(HlScreenMargin)
+                        )
                     }
-                    MonoValue(
-                        text = "HIDDEN LAYER $version",
-                        color = HlPaper55,
-                        fontSize = 11.sp,
-                        letterSpacing = 1.4.sp,
-                        modifier = Modifier.padding(HlScreenMargin)
-                    )
                 }
             }
         }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -37,6 +38,7 @@ import com.hiddenlayer.launcher.ui.theme.HlPaper
 import com.hiddenlayer.launcher.ui.theme.HlPaper42
 import com.hiddenlayer.launcher.ui.theme.HlPaper55
 import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
+import com.hiddenlayer.launcher.ui.theme.readableWidth
 
 /**
  * Dove si prepara la modalità DUMB: le cinque posizioni e la durata. Poi si entra, e da lì
@@ -79,145 +81,157 @@ fun DumbSettingsScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            DragHandle(onClose = onDone)
-            Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
-                ScreenHeader(label = "Modalità DUMB", actionText = "Chiudi", onAction = onDone)
-            }
-
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                item {
-                    Text(
-                        text = "Per il tempo che scegli il telefono diventa un elenco di cinque " +
-                            "nomi su fondo nero. Niente icone, niente cassetto, niente ricerca: " +
-                            "non c'è un gesto da evitare, non c'è proprio più niente da toccare.",
-                        color = HlPaper55,
-                        fontSize = 13.sp,
-                        modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 16.dp)
-                    )
-                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
+            // Tutto quello che si legge sta in una colonna di larghezza limitata e
+            // centrata: su un tablet una riga di testo larga 1280dp è illeggibile, e un
+            // elenco con l'interruttore all'altro capo dello schermo pure. Sotto i 600dp —
+            // cioè su qualunque telefono — il limite non viene mai raggiunto e il layout
+            // resta identico a prima.
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .readableWidth()
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                DragHandle(onClose = onDone)
+                Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                    ScreenHeader(label = "Modalità DUMB", actionText = "Chiudi", onAction = onDone)
                 }
 
-                item { Label("Le cinque app") }
-
-                items(DumbRepository.SLOT_COUNT) { slot ->
-                    val app = state.dumbSlots.getOrNull(slot)?.let { byComponent[it] }
-                    SlotRow(
-                        title = app?.label ?: "Posizione libera",
-                        subtitle = if (app != null) "Tocca per sostituirla" else "Tocca per sceglierne una",
-                        dimmed = app == null,
-                        onClick = { onPickSlot(slot) },
-                        action = if (app != null) {
-                            { TextAction("Togli", { onClearSlot(slot) }, color = HlPaper42) }
-                        } else {
-                            null
-                        }
-                    )
-                }
-
-                item {
-                    Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    item {
                         Text(
-                            // Le prime due erano fisse e non si potevano cambiare: erano il
-                            // telefono e i messaggi che il *sistema* considera predefiniti.
-                            // Ora sono solo il punto di partenza.
-                            text = "Le prime due partono dal telefono e dai messaggi " +
-                                "predefiniti di sistema. Da lì in poi decidi tu.",
-                            color = HlPaper.copy(alpha = 0.40f),
-                            fontSize = 12.sp,
-                            lineHeight = 18.sp
-                        )
-                        TextAction(
-                            text = "Riparti dai predefiniti",
-                            onClick = onResetSlots,
+                            text = "Per il tempo che scegli il telefono diventa un elenco di cinque " +
+                                "nomi su fondo nero. Niente icone, niente cassetto, niente ricerca: " +
+                                "non c'è un gesto da evitare, non c'è proprio più niente da toccare.",
                             color = HlPaper55,
-                            fontSize = 12.sp
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 16.dp)
+                        )
+                        Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
+                    }
+
+                    item { Label("Le cinque app") }
+
+                    items(DumbRepository.SLOT_COUNT) { slot ->
+                        val app = state.dumbSlots.getOrNull(slot)?.let { byComponent[it] }
+                        SlotRow(
+                            title = app?.label ?: "Posizione libera",
+                            subtitle = if (app != null) "Tocca per sostituirla" else "Tocca per sceglierne una",
+                            dimmed = app == null,
+                            onClick = { onPickSlot(slot) },
+                            action = if (app != null) {
+                                { TextAction("Togli", { onClearSlot(slot) }, color = HlPaper42) }
+                            } else {
+                                null
+                            }
                         )
                     }
-                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
-                }
 
-                item {
-                    Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
-                        Spacer(Modifier.height(24.dp))
-                        SectionLabel("Durata")
-                        Spacer(Modifier.height(12.dp))
-                        // Come nella Concentrazione: numeri in fila, il selezionato
-                        // sottolineato. Nessuna pill, nessun riquadro.
-                        Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                            DumbRepository.PRESET_MINUTES.forEach { minutes ->
-                                val selected = minutes == state.dumbDurationMinutes
-                                Text(
-                                    text = durationLabel(minutes),
-                                    color = if (selected) HlPaper else HlPaper42,
-                                    fontSize = 15.sp,
-                                    textDecoration = if (selected) TextDecoration.Underline else null,
-                                    modifier = Modifier
-                                        .clickable { onSetDuration(minutes) }
-                                        .padding(vertical = 14.dp)
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        PrimaryPill(
-                            text = "Entra in DUMB per ${durationLabel(state.dumbDurationMinutes)}",
-                            onClick = onStart,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                        if (state.dumbEarlyExits > 0) {
-                            Spacer(Modifier.height(14.dp))
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
                             Text(
-                                text = "Finora l'hai interrotta ${state.dumbEarlyExits} volte " +
-                                    "prima della scadenza.",
-                                color = HlPaper.copy(alpha = 0.45f),
+                                // Le prime due erano fisse e non si potevano cambiare: erano il
+                                // telefono e i messaggi che il *sistema* considera predefiniti.
+                                // Ora sono solo il punto di partenza.
+                                text = "Le prime due partono dal telefono e dai messaggi " +
+                                    "predefiniti di sistema. Da lì in poi decidi tu.",
+                                color = HlPaper.copy(alpha = 0.40f),
+                                fontSize = 12.sp,
+                                lineHeight = 18.sp
+                            )
+                            TextAction(
+                                text = "Riparti dai predefiniti",
+                                onClick = onResetSlots,
+                                color = HlPaper55,
                                 fontSize = 12.sp
                             )
                         }
-                        Spacer(Modifier.height(24.dp))
+                        Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
                     }
-                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
-                }
 
-                item {
-                    Column(modifier = Modifier.padding(HlScreenMargin)) {
-                        SectionLabel("Scala di grigi su tutto il telefono", color = HlPaper)
-                        Spacer(Modifier.height(10.dp))
+                    item {
+                        Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                            Spacer(Modifier.height(24.dp))
+                            SectionLabel("Durata")
+                            Spacer(Modifier.height(12.dp))
+                            // Come nella Concentrazione: numeri in fila, il selezionato
+                            // sottolineato. Nessuna pill, nessun riquadro.
+                            Row(horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                                DumbRepository.PRESET_MINUTES.forEach { minutes ->
+                                    val selected = minutes == state.dumbDurationMinutes
+                                    Text(
+                                        text = durationLabel(minutes),
+                                        color = if (selected) HlPaper else HlPaper42,
+                                        fontSize = 15.sp,
+                                        textDecoration = if (selected) TextDecoration.Underline else null,
+                                        modifier = Modifier
+                                            .clickable { onSetDuration(minutes) }
+                                            .padding(vertical = 14.dp)
+                                    )
+                                }
+                            }
+                            Spacer(Modifier.height(14.dp))
+                            PrimaryPill(
+                                text = "Entra in DUMB per ${durationLabel(state.dumbDurationMinutes)}",
+                                onClick = onStart,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (state.dumbEarlyExits > 0) {
+                                Spacer(Modifier.height(14.dp))
+                                Text(
+                                    text = "Finora l'hai interrotta ${state.dumbEarlyExits} volte " +
+                                        "prima della scadenza.",
+                                    color = HlPaper.copy(alpha = 0.45f),
+                                    fontSize = 12.sp
+                                )
+                            }
+                            Spacer(Modifier.height(24.dp))
+                        }
+                        Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
+                    }
+
+                    item {
+                        Column(modifier = Modifier.padding(HlScreenMargin)) {
+                            SectionLabel("Scala di grigi su tutto il telefono", color = HlPaper)
+                            Spacer(Modifier.height(10.dp))
+                            Text(
+                                text = if (state.dumbGrayscaleAvailable) {
+                                    "Attiva. Entrando in DUMB tutto il telefono passa in bianco e " +
+                                        "nero — anche dentro le app — e torna a colori all'uscita."
+                                } else {
+                                    "Non attiva: senza, il grigio resta dentro il launcher e le app " +
+                                        "che apri restano a colori.\n\n" +
+                                        "Per estenderlo a tutto il telefono serve un permesso di " +
+                                        "sistema che Android non concede a un'app normale. Si dà " +
+                                        "una volta sola, da computer con il telefono collegato:\n\n" +
+                                        "adb shell pm grant com.hiddenlayer.launcher " +
+                                        "android.permission.WRITE_SECURE_SETTINGS\n\n" +
+                                        "Se preferisci non farlo, la modalità funziona lo stesso."
+                                },
+                                color = HlPaper.copy(alpha = 0.55f),
+                                fontSize = 12.sp,
+                                lineHeight = 20.sp
+                            )
+                        }
+                        Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
+                    }
+
+                    item {
                         Text(
-                            text = if (state.dumbGrayscaleAvailable) {
-                                "Attiva. Entrando in DUMB tutto il telefono passa in bianco e " +
-                                    "nero — anche dentro le app — e torna a colori all'uscita."
-                            } else {
-                                "Non attiva: senza, il grigio resta dentro il launcher e le app " +
-                                    "che apri restano a colori.\n\n" +
-                                    "Per estenderlo a tutto il telefono serve un permesso di " +
-                                    "sistema che Android non concede a un'app normale. Si dà " +
-                                    "una volta sola, da computer con il telefono collegato:\n\n" +
-                                    "adb shell pm grant com.hiddenlayer.launcher " +
-                                    "android.permission.WRITE_SECURE_SETTINGS\n\n" +
-                                    "Se preferisci non farlo, la modalità funziona lo stesso."
-                            },
-                            color = HlPaper.copy(alpha = 0.55f),
+                            text = "Puoi uscire prima della scadenza: la via d'uscita c'è sempre, " +
+                                "perché una modalità da cui non si esce la disinstalli al primo " +
+                                "imprevisto. Ma costa una conferma e viene contata.\n\n" +
+                                "Quello che DUMB non può fare: le notifiche continuano ad arrivare " +
+                                "e toccarle apre l'app, perché nessun launcher senza root può " +
+                                "intercettare quel tocco. Restano raggiungibili anche le app " +
+                                "recenti e la ricerca di sistema. DUMB toglie la strada normale — " +
+                                "quella che percorri senza accorgertene — non tutte le strade.",
+                            color = HlPaper.copy(alpha = 0.40f),
                             fontSize = 12.sp,
-                            lineHeight = 20.sp
+                            lineHeight = 20.sp,
+                            modifier = Modifier.padding(HlScreenMargin)
                         )
                     }
-                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
-                }
-
-                item {
-                    Text(
-                        text = "Puoi uscire prima della scadenza: la via d'uscita c'è sempre, " +
-                            "perché una modalità da cui non si esce la disinstalli al primo " +
-                            "imprevisto. Ma costa una conferma e viene contata.\n\n" +
-                            "Quello che DUMB non può fare: le notifiche continuano ad arrivare " +
-                            "e toccarle apre l'app, perché nessun launcher senza root può " +
-                            "intercettare quel tocco. Restano raggiungibili anche le app " +
-                            "recenti e la ricerca di sistema. DUMB toglie la strada normale — " +
-                            "quella che percorri senza accorgertene — non tutte le strade.",
-                        color = HlPaper.copy(alpha = 0.40f),
-                        fontSize = 12.sp,
-                        lineHeight = 20.sp,
-                        modifier = Modifier.padding(HlScreenMargin)
-                    )
                 }
             }
         }

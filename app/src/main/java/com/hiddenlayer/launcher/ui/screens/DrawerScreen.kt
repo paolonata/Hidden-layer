@@ -48,6 +48,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.hiddenlayer.launcher.DrawerMode
@@ -68,11 +69,20 @@ import com.hiddenlayer.launcher.ui.theme.HlPaper
 import com.hiddenlayer.launcher.ui.theme.HlPaper42
 import com.hiddenlayer.launcher.ui.theme.HlPaper55
 import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
+import com.hiddenlayer.launcher.ui.theme.HlSheetWidth
+import com.hiddenlayer.launcher.ui.theme.readableWidth
+import com.hiddenlayer.launcher.ui.theme.columnsFor
+import com.hiddenlayer.launcher.ui.theme.isLargeScreen
 import com.hiddenlayer.launcher.ui.theme.HlWideMargin
 
 /** Quanto dura la dissolvenza fra richiesta di sblocco e app nascoste. Corta: è un cambio di
  * posto, non un'animazione da guardare. */
 private const val FADE_MILLIS = 200
+
+private val DRAWER_ICON = 48.dp
+private val DRAWER_ICON_LARGE = 60.dp
+private val DRAWER_TARGET_CELL = 72.dp
+private val DRAWER_TARGET_CELL_LARGE = 104.dp
 
 /** L'accento delle app nascoste. Era il grigio-azzurro incognito di Chrome (#BDC1C6): fuori
  * posto ora che tutto il launcher ha un unico accento caldo, e comunque un colore in più. */
@@ -359,8 +369,12 @@ private fun UnlockPage(
             .background(Color(0xFF0B0A09))
             .systemBarsPadding()
             .padding(HlWideMargin),
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        // Su uno schermo largo il blocco resta della sua misura e si centra, invece di
+        // lasciare quattro caselle appoggiate al bordo sinistro di un tablet.
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Column(modifier = Modifier.readableWidth(HlSheetWidth)) {
         Text(
             text = "RISERVATE",
             color = HlPaper42,
@@ -461,6 +475,7 @@ private fun UnlockPage(
             }
             TextAction(text = "Chiudi", onClick = onClose, color = HlPaper42, fontSize = 15.sp)
         }
+        }
     }
 }
 
@@ -473,6 +488,12 @@ private fun AppGrid(
     onAppLongPress: (AppInfo) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // La griglia occupa sempre tutta la larghezza della finestra, quindi la misura da sé
+    // invece di farsela passare: `screenWidthDp` è la finestra, non il display, quindi vale
+    // anche a schermo diviso.
+    val gridWidth = LocalConfiguration.current.screenWidthDp.dp
+    val large = isLargeScreen()
+
     // Separate solo quando serve: fuori da una sessione isMuted è sempre falso per tutti, e
     // "bloccate" resta vuoto — niente intestazione, griglia unica come prima. Durante una
     // sessione invece le icone bloccate finiscono in mezzo a quelle disponibili, ed è proprio
@@ -480,11 +501,21 @@ private fun AppGrid(
     val blocked = apps.filter(isMuted)
     val available = if (blocked.isEmpty()) apps else apps.filterNot(isMuted)
 
+    // Cinque per riga era giusto su un telefono e sbagliato su uno schermo largo, dove le
+    // stesse cinque icone finivano a duecento dp l'una dall'altra. Il numero si ricava dalla
+    // larghezza, col cinque come **minimo**: su un telefono il conto dà quattro, il minimo lo
+    // riporta a cinque, e lì non cambia niente rispetto a prima.
+    val columns = columnsFor(
+        available = gridWidth - HlScreenMargin * 2,
+        targetCell = if (large) DRAWER_TARGET_CELL_LARGE else DRAWER_TARGET_CELL,
+        spacing = 12.dp,
+        min = 5,
+        max = 10
+    )
+
     LazyVerticalGrid(
         state = gridState,
-        // Five per row, come il dock: senza etichette sotto le icone la riga da quattro
-        // lasciava troppo vuoto ai lati.
-        columns = GridCells.Fixed(5),
+        columns = GridCells.Fixed(columns),
         contentPadding = PaddingValues(HlScreenMargin),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp),
@@ -495,7 +526,8 @@ private fun AppGrid(
                 app = app,
                 onTap = { onAppClick(app) },
                 onLongPress = { onAppLongPress(app) },
-                grayscale = isMuted(app)
+                grayscale = isMuted(app),
+                iconSize = if (large) DRAWER_ICON_LARGE else DRAWER_ICON
             )
         }
 
@@ -513,6 +545,7 @@ private fun AppGrid(
                     onTap = { onAppClick(app) },
                     onLongPress = { onAppLongPress(app) },
                     grayscale = true,
+                    iconSize = if (large) DRAWER_ICON_LARGE else DRAWER_ICON,
                     // Il fondo appena accennato è il **secondo** segnale, oltre alla
                     // desaturazione: togliere il colore a un'icona già in bianco e nero non
                     // cambia un pixel, ed è per questo che serve qualcosa che agisca sul

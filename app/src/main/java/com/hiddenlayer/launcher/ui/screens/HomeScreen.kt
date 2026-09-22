@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -58,6 +59,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,16 +70,38 @@ import com.hiddenlayer.launcher.data.HomeLayoutRepository
 import com.hiddenlayer.launcher.ui.AppIcon
 import com.hiddenlayer.launcher.ui.FocusPill
 import com.hiddenlayer.launcher.ui.dashedBorder
+import com.hiddenlayer.launcher.ui.theme.HlDockWidth
 import com.hiddenlayer.launcher.ui.theme.HlHairline
 import com.hiddenlayer.launcher.ui.theme.HlPaper
 import com.hiddenlayer.launcher.ui.theme.HlTileShape
+import com.hiddenlayer.launcher.ui.theme.columnsFor
+import com.hiddenlayer.launcher.ui.theme.isLargeScreen
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.math.roundToInt
 
-private const val HOME_COLUMNS = 4
+// **Le colonne non sono più un numero fisso: si calcolano dalla larghezza.** Quattro colonne
+// erano giuste su un telefono in verticale e sbagliate ovunque altro — su un tablet in
+// orizzontale lasciavano quattro icone in mezzo a trecento dp di vuoto l'una dall'altra.
+// Il minimo resta 4, quindi su un telefono in verticale non cambia niente: il conto lì dà
+// tre, e il minimo lo riporta a quattro come prima.
+private const val HOME_MIN_COLUMNS = 4
+// Il massimo esiste perché una griglia di dodici colonne su un tablet non è un launcher, è un
+// foglio di francobolli.
+private const val HOME_MAX_COLUMNS = 8
+
 // Solo l'icona, senza etichetta sotto: 76dp servivano a far stare anche il nome, 60 erano
 // ancora la cornice di quella misura.
 private val HOME_TILE_HEIGHT = 52.dp
+private val HOME_ICON = 48.dp
+// Su un tablet la cella cresce insieme allo schermo, invece di moltiplicare le colonne: la
+// densità visiva resta quella di un telefono, che è quella giusta.
+private val HOME_TILE_HEIGHT_LARGE = 72.dp
+private val HOME_ICON_LARGE = 62.dp
+
+/** Quanto è larga una cella "ideale": da qui si ricava quante ne stanno. */
+private val HOME_TARGET_CELL = 96.dp
+private val HOME_TARGET_CELL_LARGE = 128.dp
+
 // La griglia respira molto più di prima (era 12/12/8). Non è gusto: quattro colonne strette
 // e vicine si leggono come un blocco unico da scandagliare, ed è esattamente il movimento —
 // scorrere le icone senza cercarne una — che questo launcher vuole scoraggiare. Con lo
@@ -92,6 +116,10 @@ private val PAGE_MOVE_THRESHOLD = 72.dp
 private val TAP_VS_DRAG_THRESHOLD = 16.dp
 private val DRAG_ICON_SIZE = 56.dp
 private val DOCK_TOGGLE_THRESHOLD = 28.dp
+private val DOCK_SLOT = 46.dp
+private val DOCK_ICON = 44.dp
+private val DOCK_SLOT_LARGE = 64.dp
+private val DOCK_ICON_LARGE = 60.dp
 // Stima dell'altezza del dock finché onZonePositioned non l'ha misurata davvero: filetto +
 // maniglia da 18dp + una riga di 46dp col suo padding. Scesa da 132 col dock nuovo.
 private val DOCK_FALLBACK_HEIGHT = 124.dp
@@ -145,6 +173,15 @@ fun HomeScreen(
 
     val density = LocalDensity.current
     val haptics = LocalHapticFeedback.current
+    // Icona e cella crescono solo sui tablet veri (lato corto ≥ 600dp), non su un telefono
+    // girato in orizzontale: quello è largo quanto un tablet ma alto 400dp, e icone grandi lì
+    // vorrebbero dire due righe schiacciate.
+    val large = isLargeScreen()
+    val tileHeight = if (large) HOME_TILE_HEIGHT_LARGE else HOME_TILE_HEIGHT
+    val iconSize = if (large) HOME_ICON_LARGE else HOME_ICON
+    val targetCell = if (large) HOME_TARGET_CELL_LARGE else HOME_TARGET_CELL
+    val dockSlotSize = if (large) DOCK_SLOT_LARGE else DOCK_SLOT
+    val dockIconSize = if (large) DOCK_ICON_LARGE else DOCK_ICON
     val topExclusionPx = remember(density) { with(density) { TOP_GESTURE_EXCLUSION.toPx() } }
     val pageMoveThresholdPx = remember(density) { with(density) { PAGE_MOVE_THRESHOLD.toPx() } }
     val tapVsDragThresholdPx = remember(density) { with(density) { TAP_VS_DRAG_THRESHOLD.toPx() } }
@@ -170,6 +207,11 @@ fun HomeScreen(
     }
     var rootWidthPx by remember { mutableStateOf(0f) }
     var rootHeightPx by remember { mutableStateOf(0f) }
+    // Dove sta davvero la fila di slot del dock. Da quando ha una larghezza massima non
+    // coincide più col bordo dello schermo, e senza queste due misure il trascinamento
+    // sbaglierebbe slot su qualunque schermo largo.
+    var dockSlotsLeftPx by remember { mutableStateOf(0f) }
+    var dockSlotsWidthPx by remember { mutableStateOf(0f) }
     // Dock icons can be dragged too, so the release handler has to know where the icon came
     // from: back onto the grid means "take it out of the dock", not "move it a page along".
     var draggedFromDock by remember { mutableStateOf(false) }
@@ -314,7 +356,15 @@ fun HomeScreen(
                             // from y when the fold-out row is open.
                             overDock && rootWidthPx > 0f -> {
                                 val columns = HomeLayoutRepository.DOCK_COLUMNS
-                                val column = ((dragCurrent.x / rootWidthPx) * columns)
+                                // Misurata sulla fila di slot, non sullo schermo: da quando
+                                // il dock ha una larghezza massima e sta al centro, i due
+                                // non coincidono più, e dividere la larghezza dello schermo
+                                // farebbe cadere il drop su uno slot che non è quello sotto
+                                // il dito. Il ripiego sullo schermo intero serve solo al
+                                // primo frame, prima che la fila abbia riportato la misura.
+                                val slotsLeft = if (dockSlotsWidthPx > 0f) dockSlotsLeftPx else 0f
+                                val slotsWidth = if (dockSlotsWidthPx > 0f) dockSlotsWidthPx else rootWidthPx
+                                val column = (((dragCurrent.x - slotsLeft) / slotsWidth) * columns)
                                     .toInt()
                                     .coerceIn(0, columns - 1)
                                 val row = if (!dockExpanded) {
@@ -375,16 +425,31 @@ fun HomeScreen(
             BoxWithConstraints(modifier = Modifier.weight(1f).statusBarsPadding()) {
                 // As many rows as physically fit the screen, so a page fills up instead of
                 // stopping at a hardcoded row count.
-                val rowsPerPage = remember(maxHeight) {
-                    ((maxHeight - PAGE_PADDING_VERTICAL * 2 + ROW_SPACING) / (HOME_TILE_HEIGHT + ROW_SPACING))
+                val rowsPerPage = remember(maxHeight, tileHeight) {
+                    ((maxHeight - PAGE_PADDING_VERTICAL * 2 + ROW_SPACING) / (tileHeight + ROW_SPACING))
                         .toInt()
                         .coerceAtLeast(1)
                 }
-                LaunchedEffect(rowsPerPage) { onPageSizeChanged(rowsPerPage * HOME_COLUMNS) }
+                // Le colonne si ricavano dalla larghezza davvero disponibile, non dallo
+                // schermo: così valgono anche in finestra affiancata, dove il launcher può
+                // occupare metà tablet.
+                val columns = remember(maxWidth, targetCell) {
+                    columnsFor(
+                        available = maxWidth - PAGE_PADDING_HORIZONTAL * 2,
+                        targetCell = targetCell,
+                        spacing = COLUMN_SPACING,
+                        min = HOME_MIN_COLUMNS,
+                        max = HOME_MAX_COLUMNS
+                    )
+                }
+                LaunchedEffect(rowsPerPage, columns) { onPageSizeChanged(rowsPerPage * columns) }
 
                 HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { pageIndex ->
                     HomePage(
                         apps = pages.getOrElse(pageIndex) { emptyList() },
+                        columns = columns,
+                        tileHeight = tileHeight,
+                        iconSize = iconSize,
                         draggedApp = if (dragVisible) draggedApp else null,
                         onAppTap = onAppTap,
                         onAppLongPress = { app ->
@@ -449,6 +514,12 @@ fun HomeScreen(
                 },
                 onZonePositioned = { top -> dockZoneTop = top },
                 onRowPositioned = { rowIndex, top -> dockRowTops[rowIndex] = top },
+                onSlotsBounds = { left, width ->
+                    dockSlotsLeftPx = left
+                    dockSlotsWidthPx = width
+                },
+                slotSize = dockSlotSize,
+                iconSize = dockIconSize,
                 onAppTap = onAppTap,
                 draggedApp = if (dragVisible) draggedApp else null,
                 isMuted = state::isMuted,
@@ -483,6 +554,9 @@ fun HomeScreen(
 @Composable
 private fun HomePage(
     apps: List<AppInfo>,
+    columns: Int,
+    tileHeight: Dp,
+    iconSize: Dp,
     draggedApp: AppInfo?,
     isMuted: (AppInfo) -> Boolean,
     onAppTap: (AppInfo) -> Unit,
@@ -504,7 +578,7 @@ private fun HomePage(
             }
     ) {
         LazyVerticalGrid(
-            columns = GridCells.Fixed(HOME_COLUMNS),
+            columns = GridCells.Fixed(columns),
             userScrollEnabled = false,
             contentPadding = PaddingValues(
                 horizontal = PAGE_PADDING_HORIZONTAL,
@@ -517,6 +591,8 @@ private fun HomePage(
             items(apps, key = { it.componentName.flattenToString() }) { app ->
                 HomeIconTile(
                     app = app,
+                    tileHeight = tileHeight,
+                    iconSize = iconSize,
                     isBeingDragged = draggedApp?.componentName == app.componentName,
                     onTap = { onAppTap(app) },
                     onLongPress = { onAppLongPress(app) },
@@ -537,6 +613,8 @@ private fun HomePage(
 @Composable
 private fun HomeIconTile(
     app: AppInfo,
+    tileHeight: Dp,
+    iconSize: Dp,
     isBeingDragged: Boolean,
     onTap: () -> Unit,
     onLongPress: () -> Unit,
@@ -547,12 +625,12 @@ private fun HomeIconTile(
         contentAlignment = Alignment.Center,
         modifier = modifier
             .fillMaxWidth()
-            .height(HOME_TILE_HEIGHT)
+            .height(tileHeight)
             .alpha(if (isBeingDragged) 0.3f else 1f)
             .combinedClickable(onClick = onTap, onLongClick = onLongPress)
             .padding(4.dp)
     ) {
-        AppIcon(app = app, size = 48.dp, grayscale = grayscale)
+        AppIcon(app = app, size = iconSize, grayscale = grayscale)
     }
 }
 
@@ -572,9 +650,12 @@ private fun Dock(
     onExpandedChange: (Boolean) -> Unit,
     onZonePositioned: (Float) -> Unit,
     onRowPositioned: (Int, Float) -> Unit,
+    onSlotsBounds: (Float, Float) -> Unit,
     onAppTap: (AppInfo) -> Unit,
     onAppLongPress: (AppInfo, Int) -> Unit,
-    onEmptySlot: (Int) -> Unit
+    onEmptySlot: (Int) -> Unit,
+    slotSize: Dp,
+    iconSize: Dp
 ) {
     val density = LocalDensity.current
     val toggleThresholdPx = remember(density) { with(density) { DOCK_TOGGLE_THRESHOLD.toPx() } }
@@ -633,6 +714,11 @@ private fun Dock(
                             onAppTap = onAppTap,
                             onAppLongPress = onAppLongPress,
                             onEmptySlot = onEmptySlot,
+                            slotSize = slotSize,
+                            iconSize = iconSize,
+                            // Le file hanno tutte la stessa geometria orizzontale: basta che
+                            // la riporti una sola, ed è quella sempre visibile.
+                            onSlotsBounds = { _, _ -> },
                             modifier = Modifier.onGloballyPositioned {
                                 onRowPositioned(rowIndex, it.positionInRoot().y)
                             }
@@ -649,6 +735,9 @@ private fun Dock(
                 onAppTap = onAppTap,
                 onAppLongPress = onAppLongPress,
                 onEmptySlot = onEmptySlot,
+                slotSize = slotSize,
+                iconSize = iconSize,
+                onSlotsBounds = onSlotsBounds,
                 modifier = Modifier
                     .navigationBarsPadding()
                     .onGloballyPositioned { onRowPositioned(0, it.positionInRoot().y) }
@@ -695,56 +784,74 @@ private fun DockRow(
     // lì suggerisce un tap, non un tocco lungo — prima rispondeva solo al secondo, e il tap
     // (l'unico gesto suggerito dall'interfaccia) non faceva niente.
     onEmptySlot: (Int) -> Unit,
+    slotSize: Dp,
+    iconSize: Dp,
+    /** Dove stanno davvero gli slot, in coordinate della radice: sinistra e larghezza. Chi
+     * gestisce il trascinamento ne ha bisogno per capire su quale slot hai lasciato l'icona,
+     * e da quando la fila ha una larghezza massima non può più ricavarlo dallo schermo. */
+    onSlotsBounds: (Float, Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 22.dp, vertical = 6.dp),
-        // SpaceBetween e non SpaceEvenly: gli slot si allineano ai bordi del margine, come
-        // fa la griglia sopra. Con SpaceEvenly le colonne del dock non cadevano mai sotto
-        // quelle della home, e le due griglie si leggevano come due cose scollegate.
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+    // Una fila di cinque icone distribuite su tutta la larghezza di un tablet non si legge
+    // più come una fila: si legge come cinque icone lontanissime. Oltre questa misura la
+    // fila smette di allargarsi e si centra, e il resto della larghezza resta vuoto.
+    Box(
+        modifier = modifier.fillMaxWidth().padding(vertical = 6.dp),
+        contentAlignment = Alignment.Center
     ) {
-        slots.forEachIndexed { index, app ->
-            val slot = slotOffset + index
-            Box(
-                modifier = Modifier
-                    .size(46.dp)
-                    .combinedClickable(
-                        onClick = { if (app != null) onAppTap(app) else onEmptySlot(slot) },
-                        onLongClick = {
-                            if (app != null) onAppLongPress(app, slot) else onEmptySlot(slot)
+        Row(
+            modifier = Modifier
+                .widthIn(max = HlDockWidth)
+                .fillMaxWidth()
+                .padding(horizontal = 22.dp)
+                .onGloballyPositioned {
+                    onSlotsBounds(it.positionInRoot().x, it.size.width.toFloat())
+                },
+            // SpaceBetween e non SpaceEvenly: gli slot si allineano ai bordi del margine,
+            // come fa la griglia sopra. Con SpaceEvenly le colonne del dock non cadevano mai
+            // sotto quelle della home, e le due griglie si leggevano come due cose scollegate.
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            slots.forEachIndexed { index, app ->
+                val slot = slotOffset + index
+                Box(
+                    modifier = Modifier
+                        .size(slotSize)
+                        .combinedClickable(
+                            onClick = { if (app != null) onAppTap(app) else onEmptySlot(slot) },
+                            onLongClick = {
+                                if (app != null) onAppLongPress(app, slot) else onEmptySlot(slot)
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (app != null) {
+                        AppIcon(
+                            app = app,
+                            size = iconSize,
+                            grayscale = isMuted(app),
+                            modifier = Modifier.alpha(
+                                if (draggedApp?.componentName == app.componentName) 0.3f else 1f
+                            )
+                        )
+                    } else {
+                        // Un contorno tratteggiato invece dell'icona "+" piena: un posto
+                        // vuoto deve leggersi come vuoto. Il `+` resta al centro, appena
+                        // percepibile, perché è l'unica cosa che dice "si può toccare" — e il
+                        // tocco (oltre al tocco lungo) apre il selettore, come prima.
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .dashedBorder(HlPaper.copy(alpha = 0.20f), HlTileShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "+",
+                                color = HlPaper.copy(alpha = 0.35f),
+                                fontSize = 18.sp
+                            )
                         }
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (app != null) {
-                    AppIcon(
-                        app = app,
-                        size = 44.dp,
-                        grayscale = isMuted(app),
-                        modifier = Modifier.alpha(
-                            if (draggedApp?.componentName == app.componentName) 0.3f else 1f
-                        )
-                    )
-                } else {
-                    // Un contorno tratteggiato invece dell'icona "+" piena: un posto vuoto
-                    // deve leggersi come vuoto. Il `+` resta al centro, appena percepibile,
-                    // perché è l'unica cosa che dice "si può toccare" — e il tocco (oltre al
-                    // tocco lungo) apre il selettore, come prima.
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .dashedBorder(HlPaper.copy(alpha = 0.20f), HlTileShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "+",
-                            color = HlPaper.copy(alpha = 0.35f),
-                            fontSize = 18.sp
-                        )
                     }
                 }
             }

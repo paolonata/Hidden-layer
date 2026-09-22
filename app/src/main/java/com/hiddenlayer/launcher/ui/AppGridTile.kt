@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.theme.HlPaper
@@ -29,7 +30,8 @@ fun AppGridTile(
     onTap: () -> Unit,
     onLongPress: () -> Unit,
     grayscale: Boolean = false,
-    tinted: Boolean = false
+    tinted: Boolean = false,
+    iconSize: Dp = 48.dp
 ) {
     Box(
         contentAlignment = Alignment.Center,
@@ -40,6 +42,6 @@ fun AppGridTile(
             .combinedClickable(onClick = onTap, onLongClick = onLongPress)
             .padding(6.dp)
     ) {
-        AppIcon(app = app, size = 48.dp, grayscale = grayscale)
+        AppIcon(app = app, size = iconSize, grayscale = grayscale)
     }
 }

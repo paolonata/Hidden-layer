@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -55,6 +56,7 @@ import com.hiddenlayer.launcher.ui.theme.HlPaper42
 import com.hiddenlayer.launcher.ui.theme.HlPaper55
 import com.hiddenlayer.launcher.ui.theme.HlScreenMargin
 import com.hiddenlayer.launcher.ui.theme.HlWideMargin
+import com.hiddenlayer.launcher.ui.theme.readableWidth
 import kotlinx.coroutines.flow.StateFlow
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -128,92 +130,104 @@ fun FocusScreen(
                 .statusBarsPadding()
                 .navigationBarsPadding()
         ) {
-            DragHandle(onClose = onDone)
+            // Tutto quello che si legge sta in una colonna di larghezza limitata e
+            // centrata: su un tablet una riga di testo larga 1280dp è illeggibile, e un
+            // elenco con l'interruttore all'altro capo dello schermo pure. Sotto i 600dp —
+            // cioè su qualunque telefono — il limite non viene mai raggiunto e il layout
+            // resta identico a prima.
+            Column(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .readableWidth()
+                    .align(Alignment.CenterHorizontally)
+            ) {
+                DragHandle(onClose = onDone)
 
-            // Sessione in corso: niente elenco, niente storico, niente da regolare. Guardare
-            // le impostazioni di una sessione mentre è in corso è già un modo di starci sopra.
-            if (state.focusActive) {
-                RunningSession(
-                    state = state,
-                    remaining = focusRemaining,
-                    onStop = onStop,
-                    onClose = onDone
-                )
-                return@Column
-            }
-
-            Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
-                ScreenHeader(label = "Concentrazione", actionText = "Chiudi", onAction = onDone)
-            }
-
-            LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
-                item {
-                    DurationPicker(
-                        minutes = state.focusDurationMinutes,
-                        onSetDuration = onSetDuration,
-                        onStart = onStart
+                // Sessione in corso: niente elenco, niente storico, niente da regolare. Guardare
+                // le impostazioni di una sessione mentre è in corso è già un modo di starci sopra.
+                if (state.focusActive) {
+                    RunningSession(
+                        state = state,
+                        remaining = focusRemaining,
+                        onStop = onStop,
+                        onClose = onDone
                     )
+                    return@Column
                 }
 
-                item { FocusHistory(state = state, onResetStats = onResetStats) }
-
-                item {
-                    Text(
-                        text = "Le app che selezioni qui sotto, durante una sessione, perdono " +
-                            "il colore e chiedono conferma prima di aprirsi. Restano comunque " +
-                            "raggiungibili: l'obiettivo è farti fermare un attimo, non " +
-                            "impedirtelo.",
-                        modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 12.dp),
-                        color = HlPaper55,
-                        fontSize = 13.sp
-                    )
+                Column(modifier = Modifier.padding(horizontal = HlScreenMargin)) {
+                    ScreenHeader(label = "Concentrazione", actionText = "Chiudi", onAction = onDone)
                 }
 
-                item {
-                    // The choice is saved as you make it and reused by every future session,
-                    // so this is a one-off setup rather than something to redo each time.
-                    Text(
-                        text = when (val selected = state.focusPackages.size) {
-                            0 -> "Nessuna app selezionata"
-                            1 -> "1 app selezionata · scelta permanente"
-                            else -> "$selected app selezionate · scelta permanente"
-                        },
-                        modifier = Modifier.padding(horizontal = HlScreenMargin),
-                        color = HlPaper,
-                        fontSize = 14.sp
-                    )
-                }
-
-                item {
-                    AppSearchField(
-                        value = query,
-                        onValueChange = { query = it },
-                        placeholder = "Cerca app",
-                        modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 10.dp)
-                    )
-                }
-
-                items(apps, key = { it.componentName.flattenToString() }) { app ->
-                    val muted = app.packageName in state.focusPackages
-                    // Niente icona nella riga: qui l'informazione è il **nome** e lo stato
-                    // dell'interruttore. Venti icone a colori in una lista da scorrere sono
-                    // venti richiami in una schermata che serve a toglierne.
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onToggleApp(app) }
-                            .padding(start = HlScreenMargin, end = HlScreenMargin - 10.dp)
-                    ) {
-                        Text(
-                            text = app.label,
-                            color = if (muted) HlPaper else HlPaper.copy(alpha = 0.72f),
-                            fontSize = 15.sp,
-                            modifier = Modifier.weight(1f)
+                LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                    item {
+                        DurationPicker(
+                            minutes = state.focusDurationMinutes,
+                            onSetDuration = onSetDuration,
+                            onStart = onStart
                         )
-                        MinimalSwitch(checked = muted, onCheckedChange = { onToggleApp(app) })
                     }
-                    Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
+
+                    item { FocusHistory(state = state, onResetStats = onResetStats) }
+
+                    item {
+                        Text(
+                            text = "Le app che selezioni qui sotto, durante una sessione, perdono " +
+                                "il colore e chiedono conferma prima di aprirsi. Restano comunque " +
+                                "raggiungibili: l'obiettivo è farti fermare un attimo, non " +
+                                "impedirtelo.",
+                            modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 12.dp),
+                            color = HlPaper55,
+                            fontSize = 13.sp
+                        )
+                    }
+
+                    item {
+                        // The choice is saved as you make it and reused by every future session,
+                        // so this is a one-off setup rather than something to redo each time.
+                        Text(
+                            text = when (val selected = state.focusPackages.size) {
+                                0 -> "Nessuna app selezionata"
+                                1 -> "1 app selezionata · scelta permanente"
+                                else -> "$selected app selezionate · scelta permanente"
+                            },
+                            modifier = Modifier.padding(horizontal = HlScreenMargin),
+                            color = HlPaper,
+                            fontSize = 14.sp
+                        )
+                    }
+
+                    item {
+                        AppSearchField(
+                            value = query,
+                            onValueChange = { query = it },
+                            placeholder = "Cerca app",
+                            modifier = Modifier.padding(horizontal = HlScreenMargin, vertical = 10.dp)
+                        )
+                    }
+
+                    items(apps, key = { it.componentName.flattenToString() }) { app ->
+                        val muted = app.packageName in state.focusPackages
+                        // Niente icona nella riga: qui l'informazione è il **nome** e lo stato
+                        // dell'interruttore. Venti icone a colori in una lista da scorrere sono
+                        // venti richiami in una schermata che serve a toglierne.
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onToggleApp(app) }
+                                .padding(start = HlScreenMargin, end = HlScreenMargin - 10.dp)
+                        ) {
+                            Text(
+                                text = app.label,
+                                color = if (muted) HlPaper else HlPaper.copy(alpha = 0.72f),
+                                fontSize = 15.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            MinimalSwitch(checked = muted, onCheckedChange = { onToggleApp(app) })
+                        }
+                        Hairline(modifier = Modifier.padding(horizontal = HlScreenMargin))
+                    }
                 }
             }
         }

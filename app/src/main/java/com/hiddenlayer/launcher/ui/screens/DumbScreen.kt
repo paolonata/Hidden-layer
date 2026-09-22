@@ -32,6 +32,7 @@ import com.hiddenlayer.launcher.LauncherUiState
 import com.hiddenlayer.launcher.data.AppInfo
 import com.hiddenlayer.launcher.ui.theme.HlBackgroundDumb
 import com.hiddenlayer.launcher.ui.theme.HlTouchTarget
+import com.hiddenlayer.launcher.ui.theme.readableWidth
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -94,57 +95,67 @@ fun DumbScreen(
             .fillMaxSize()
             .background(DumbBackground)
     ) {
+        // Il blocco resta allineato a sinistra — è il suo carattere — ma su uno schermo largo
+        // si ferma e si centra, invece di lasciare cinque nomi appiccicati al bordo sinistro
+        // di un tablet con un metro di vuoto accanto.
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .systemBarsPadding()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 34.dp),
-            horizontalAlignment = Alignment.Start
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(Modifier.height(88.dp))
+            Column(
+                modifier = Modifier
+                    .readableWidth()
+                    .fillMaxWidth()
+                    .padding(horizontal = 34.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Spacer(Modifier.height(88.dp))
 
-            Text(
-                text = clockFormat.format(Date(nowMillis)),
-                color = DumbSecondary,
-                fontSize = 60.sp,
-                fontWeight = FontWeight.W200,
-                letterSpacing = (-2.5).sp
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                // Un orario di fine, non un conto alla rovescia: guardare i minuti scendere è
-                // già un modo di stare al telefono, e sapere che mancano "47 minuti" invita a
-                // ricontrollare. Un'ora fissa la si legge una volta e si sa.
-                text = "fino alle ${clockFormat.format(Date(state.dumbEndsAt))}",
-                color = DumbFaint,
-                fontSize = 13.sp
-            )
-
-            Spacer(Modifier.height(56.dp))
-
-            if (apps.isEmpty()) {
                 Text(
-                    text = "Nessuna app disponibile.\nEsci e scegline qualcuna.",
+                    text = clockFormat.format(Date(nowMillis)),
                     color = DumbSecondary,
-                    fontSize = 18.sp
+                    fontSize = 60.sp,
+                    fontWeight = FontWeight.W200,
+                    letterSpacing = (-2.5).sp
                 )
-            } else {
-                apps.forEach { app ->
-                    Text(
-                        text = app.label,
-                        color = DumbPrimary,
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Light,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onAppTap(app) }
-                            .padding(vertical = 17.dp)
-                    )
-                }
-            }
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    // Un orario di fine, non un conto alla rovescia: guardare i minuti scendere è
+                    // già un modo di stare al telefono, e sapere che mancano "47 minuti" invita a
+                    // ricontrollare. Un'ora fissa la si legge una volta e si sa.
+                    text = "fino alle ${clockFormat.format(Date(state.dumbEndsAt))}",
+                    color = DumbFaint,
+                    fontSize = 13.sp
+                )
 
-            Spacer(Modifier.height(48.dp))
+                Spacer(Modifier.height(56.dp))
+
+                if (apps.isEmpty()) {
+                    Text(
+                        text = "Nessuna app disponibile.\nEsci e scegline qualcuna.",
+                        color = DumbSecondary,
+                        fontSize = 18.sp
+                    )
+                } else {
+                    apps.forEach { app ->
+                        Text(
+                            text = app.label,
+                            color = DumbPrimary,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Light,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onAppTap(app) }
+                                .padding(vertical = 17.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(48.dp))
+            }
         }
 
         // Una riga sola in fondo, allineata a sinistra come tutto il resto: il conteggio e la
@@ -154,7 +165,11 @@ fun DumbScreen(
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .align(Alignment.BottomStart)
+                // Ancorata in basso al centro come il blocco sopra, così su un tablet le due
+                // cose restano incolonnate invece di finire ai due angoli opposti.
+                .align(Alignment.BottomCenter)
+                .readableWidth()
+                .fillMaxWidth()
                 .systemBarsPadding()
                 .padding(horizontal = 34.dp, vertical = 12.dp)
         ) {

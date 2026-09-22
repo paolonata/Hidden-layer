@@ -11,12 +11,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.hiddenlayer.launcher.ui.theme.HlSheetWidth
 
 /**
  * Il foglio comune ai tre popup: scelta della durata, conferma di apertura, uscita da DUMB.
@@ -57,6 +59,11 @@ fun PromptSheet(
             modifier = Modifier
                 .navigationBarsPadding()
                 .padding(18.dp)
+                // Su uno schermo largo il foglio si ferma qui e resta in mezzo: allargarlo
+                // fino ai bordi di un tablet metterebbe il titolo solo in cima a una fascia
+                // vuota e il pulsante lontano dal pollice, che è l'opposto del motivo per cui
+                // questi popup stanno in basso.
+                .widthIn(max = HlSheetWidth)
                 .fillMaxWidth()
                 .clip(PromptCardShape)
                 .background(PromptSurface)

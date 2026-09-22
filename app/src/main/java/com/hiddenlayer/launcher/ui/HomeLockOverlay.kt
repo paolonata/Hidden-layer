@@ -38,6 +38,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.hiddenlayer.launcher.ui.theme.HlPaper
 import com.hiddenlayer.launcher.ui.theme.HlWideMargin
+import com.hiddenlayer.launcher.ui.theme.readableWidth
 
 /** Quanto ci mette la macchia ad aprirsi una volta che hai chiesto il telefono. */
 private const val REVEAL_MILLIS = 900
@@ -153,6 +154,9 @@ fun HomeLockOverlay(requestsSoFar: Int, onUnlock: () -> Unit) {
                     .align(Alignment.BottomStart)
                     .systemBarsPadding()
                     .padding(start = HlWideMargin, end = HlWideMargin, bottom = 60.dp)
+                    // Resta in basso a sinistra anche su un tablet, ma la frase non si stira:
+                    // due righe larghe 1280dp smetterebbero di leggersi come due righe.
+                    .readableWidth()
                     // Sparisce mentre la macchia si apre: resta solo lo schermo che si scopre.
                     .alpha(1f - reveal)
             ) {
